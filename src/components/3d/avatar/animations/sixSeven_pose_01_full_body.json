@@ -1,0 +1,53 @@
+{
+  "hips": {
+    "x": 0.18,
+    "y": 3.14
+  },
+  "leftShoulder": {
+    "x": -1.59
+  },
+  "rightShoulder": {
+    "x": -1.85,
+    "z": 0
+  },
+  "leftUpperArm": {
+    "x": 0,
+    "z": 0,
+    "y": 1.25
+  },
+  "rightUpperArm": {
+    "y": -1.32,
+    "z": 0.3
+  },
+  "leftLowerArm": {
+    "y": -0.18,
+    "x": 0.39,
+    "z": -1.82
+  },
+  "rightLowerArm": {
+    "z": 0.12
+  },
+  "chest": {
+    "z": -0.12
+  },
+  "leftHand": {
+    "z": -0.75
+  },
+  "rightHand": {
+    "z": 1.1
+  },
+  "leftUpperLeg": {
+    "z": 0.21,
+    "x": -0.15,
+    "y": 0.42
+  },
+  "rightUpperLeg": {
+    "z": -0.21,
+    "y": -0.36
+  },
+  "leftLowerLeg":{
+    "z": -0.06,
+    "y": 0.12,
+    "x": 1.31
+  }
+}
