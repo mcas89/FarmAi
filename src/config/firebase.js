@@ -2,14 +2,14 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-// As chaves de ambiente virão do arquivo .env.local
+// Chaves do Firebase injetadas diretamente (seguro para web app, a segurança real vem do Firestore Rules)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyCaWUnzglJZvWzXbaQvRp4ntVCBC9gzOZY",
+  authDomain: "farmaai-f4f38.firebaseapp.com",
+  projectId: "farmaai-f4f38",
+  storageBucket: "farmaai-f4f38.firebasestorage.app",
+  messagingSenderId: "843504104131",
+  appId: "1:843504104131:web:48ea69020a075d82eae876"
 };
 
 // Inicializa o Firebase
