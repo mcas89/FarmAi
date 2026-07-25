@@ -18,6 +18,9 @@ useGLTF.preload('/itens/mesa_piquinique.glb');
 useGLTF.preload('/itens/poste_luz.glb');
 useGLTF.preload('/itens/foodtruck1.glb');
 useGLTF.preload('/itens/pipoqueiro.glb');
+useGLTF.preload('/itens/predio1.glb');
+useGLTF.preload('/itens/predio2.glb');
+useGLTF.preload('/itens/predio3.glb');
 
 // Componente utilitário para renderizar instâncias de GLTF
 function GLTFModel({ url, position, rotation, scale = 1 }) {
@@ -294,6 +297,66 @@ function ParkFurniture() {
     );
 }
 
+// Prédios ao redor do Parque (City Skyline)
+function CitySkyline() {
+    const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
+    const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
+
+    const buildings = useMemo(() => {
+        const items = [];
+        const random = mulberry32(99999);
+        const types = ['predio1', 'predio2', 'predio3'];
+        
+        // Bordas do parque (Raio aproximado de 45m do centro)
+        // Colocar 12 prédios contornando
+        const totalBuildings = 12;
+        for (let i = 0; i < totalBuildings; i++) {
+            const angle = (Math.PI * 2 / totalBuildings) * i;
+            
+            // Se cair nas entradas principais (Rua em cruz), pula
+            const isStreet = (angle % (Math.PI / 2)) < 0.2 || (angle % (Math.PI / 2)) > (Math.PI / 2 - 0.2);
+            if (isStreet) continue;
+
+            const r = 46; 
+            const x = Math.sin(angle) * r;
+            const z = Math.cos(angle) * r;
+            
+            items.push({
+                id: `building_${i}`,
+                type: types[Math.floor(random() * types.length)],
+                position: [x, 0, z],
+                rotation: [0, angle + Math.PI, 0], // Virado pro centro
+                scale: 1.5 + random() * 1.5, // Prédios de tamanhos variados
+                colRadius: 6.0 
+            });
+        }
+        return items;
+    }, []);
+
+    useEffect(() => {
+        buildings.forEach(item => {
+            registerObstacle(item.id, item.position[0], item.position[2], item.colRadius);
+        });
+        return () => {
+            buildings.forEach(item => removeObstacle(item.id));
+        };
+    }, [buildings, registerObstacle, removeObstacle]);
+
+    return (
+        <group>
+            {buildings.map(item => (
+                <GLTFModel 
+                    key={item.id} 
+                    url={`/itens/${item.type}.glb`} 
+                    position={item.position} 
+                    rotation={item.rotation} 
+                    scale={item.scale} 
+                />
+            ))}
+        </group>
+    );
+}
+
 // ---------------------------------------------------------
 // SISTEMA DE TEXTURAS PROCEDURAIS (Estilo Anime/Pintura)
 // Gera texturas em memória na hora do load, consumindo 0 bytes
@@ -432,8 +495,11 @@ export function ParkEnvironment() {
                 {/* 6.2 Arbustos (Sem colisão) */}
                 <ScatteredBushes />
 
-                {/* 6.3 Mobiliário do Parque (Bancos e Mesas) */}
+                {/* 6.3 Mobiliário do Parque (Bancos, Foodtruck, Postes) */}
                 <ParkFurniture />
+
+                {/* 6.4 Prédios ao Redor */}
+                <CitySkyline />
 
                 {/* 6.5 Parquinho Infantil (Gramado Nordeste) */}
                 <Playground />
