@@ -1,6 +1,5 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
 
 // Chaves do Firebase injetadas diretamente (seguro para web app, a segurança real vem do Firestore Rules)
 const firebaseConfig = {
@@ -12,9 +11,14 @@ const firebaseConfig = {
   appId: "1:843504104131:web:48ea69020a075d82eae876"
 };
 
-// Inicializa o Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+let db;
 
-// Instâncias ativas para exportar
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+try {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+} catch (e) {
+  console.error("🔥 Erro ao inicializar Firebase (possível chave inválida ou erro de rede):", e);
+}
+
+export { db };

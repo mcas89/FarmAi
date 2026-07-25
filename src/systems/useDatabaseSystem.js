@@ -9,6 +9,8 @@ export const useDatabaseSystem = create((set, get) => ({
 
   // Carrega os dados do jogador quando o jogo abre
   loadPlayerData: async () => {
+    if (!db) return null; // Evita crash se a API Key for inválida
+    
     try {
       const docRef = doc(db, 'players', get().playerId);
       const docSnap = await getDoc(docRef);
@@ -29,6 +31,7 @@ export const useDatabaseSystem = create((set, get) => ({
 
   // Salva o estado atual do jogo no Firebase
   saveGameState: async (position, comboCount, activeModel) => {
+    if (!db) return; // Evita crash se a API Key for inválida
     if (get().isSaving) return; // Evita flood de requisições
     
     set({ isSaving: true });
