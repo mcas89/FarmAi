@@ -308,7 +308,7 @@ function CitySkyline() {
         const random = mulberry32(88888); // Seed fixa
         const types = ['predio1', 'predio2', 'predio3'];
         
-        // 1. Prédios Reais 3D (GLB) - Mais perto da rua
+        // 1. Prédios Reais 3D (GLB) - Depois da avenida
         const totalGLB = 24; 
         for (let i = 0; i < totalGLB; i++) {
             const angle = (Math.PI * 2 / totalGLB) * i;
@@ -317,7 +317,9 @@ function CitySkyline() {
             const isStreet = (angle % (Math.PI / 2)) < 0.25 || (angle % (Math.PI / 2)) > (Math.PI / 2 - 0.25);
             if (isStreet) continue;
 
-            const r = 55; // Mais longe do centro (depois da avenida)
+            // O gramado é 100x100 (50m do centro pras bordas). 
+            // 75 metros de raio garante que farão um círculo em volta de todo o parque, fora da grama.
+            const r = 75; 
             const x = Math.sin(angle) * r;
             const z = Math.cos(angle) * r;
             
@@ -335,14 +337,14 @@ function CitySkyline() {
         const totalBG = 60;
         for (let i = 0; i < totalBG; i++) {
             const angle = (Math.PI * 2 / totalBG) * i;
-            // Espalha entre 70m e 85m de distância
-            const r = 70 + random() * 15; 
+            // Espalha entre 95m e 115m de distância (BEM atrás)
+            const r = 95 + random() * 20; 
             const x = Math.sin(angle) * r;
             const z = Math.cos(angle) * r;
             
-            const width = 8 + random() * 12;
-            const depth = 8 + random() * 12;
-            const height = 20 + random() * 60; // Muito altos
+            const width = 12 + random() * 15;
+            const depth = 12 + random() * 15;
+            const height = 30 + random() * 80; // Muito altos
 
             bg.push({
                 id: `bg_building_${i}`,
