@@ -302,49 +302,73 @@ function CitySkyline() {
     const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
     const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
 
-    const buildings = useMemo(() => {
-        const items = [];
-        const random = mulberry32(99999);
+    const { glbBuildings, bgBuildings } = useMemo(() => {
+        const glb = [];
+        const bg = [];
+        const random = mulberry32(88888); // Seed fixa
         const types = ['predio1', 'predio2', 'predio3'];
         
-        // Bordas do parque (Raio aproximado de 45m do centro)
-        // Colocar 12 prédios contornando
-        const totalBuildings = 12;
-        for (let i = 0; i < totalBuildings; i++) {
-            const angle = (Math.PI * 2 / totalBuildings) * i;
+        // 1. Prédios Reais 3D (GLB) - Mais perto da rua
+        const totalGLB = 24; 
+        for (let i = 0; i < totalGLB; i++) {
+            const angle = (Math.PI * 2 / totalGLB) * i;
             
-            // Se cair nas entradas principais (Rua em cruz), pula
-            const isStreet = (angle % (Math.PI / 2)) < 0.2 || (angle % (Math.PI / 2)) > (Math.PI / 2 - 0.2);
+            // Pula as ruas principais
+            const isStreet = (angle % (Math.PI / 2)) < 0.25 || (angle % (Math.PI / 2)) > (Math.PI / 2 - 0.25);
             if (isStreet) continue;
 
-            const r = 46; 
+            const r = 55; // Mais longe do centro (depois da avenida)
             const x = Math.sin(angle) * r;
             const z = Math.cos(angle) * r;
             
-            items.push({
-                id: `building_${i}`,
+            glb.push({
+                id: `glb_building_${i}`,
                 type: types[Math.floor(random() * types.length)],
                 position: [x, 0, z],
                 rotation: [0, angle + Math.PI, 0], // Virado pro centro
-                scale: 1.5 + random() * 1.5, // Prédios de tamanhos variados
-                colRadius: 6.0 
+                scale: 3.5 + random() * 2.5, // Bem grandes e altos
+                colRadius: 8.0 
             });
         }
-        return items;
+
+        // 2. Prédios de Fundo (Caixas Geométricas) - Para dar densidade
+        const totalBG = 60;
+        for (let i = 0; i < totalBG; i++) {
+            const angle = (Math.PI * 2 / totalBG) * i;
+            // Espalha entre 70m e 85m de distância
+            const r = 70 + random() * 15; 
+            const x = Math.sin(angle) * r;
+            const z = Math.cos(angle) * r;
+            
+            const width = 8 + random() * 12;
+            const depth = 8 + random() * 12;
+            const height = 20 + random() * 60; // Muito altos
+
+            bg.push({
+                id: `bg_building_${i}`,
+                position: [x, height / 2, z], // Y = metade da altura para ficar no chão
+                rotation: [0, random() * Math.PI, 0],
+                size: [width, height, depth],
+                color: random() > 0.5 ? '#151522' : '#1a1a2e' // Tons de cidade escura
+            });
+        }
+
+        return { glbBuildings: glb, bgBuildings: bg };
     }, []);
 
     useEffect(() => {
-        buildings.forEach(item => {
+        glbBuildings.forEach(item => {
             registerObstacle(item.id, item.position[0], item.position[2], item.colRadius);
         });
         return () => {
-            buildings.forEach(item => removeObstacle(item.id));
+            glbBuildings.forEach(item => removeObstacle(item.id));
         };
-    }, [buildings, registerObstacle, removeObstacle]);
+    }, [glbBuildings, registerObstacle, removeObstacle]);
 
     return (
         <group>
-            {buildings.map(item => (
+            {/* Prédios Detalhados (3D) */}
+            {glbBuildings.map(item => (
                 <GLTFModel 
                     key={item.id} 
                     url={`/itens/${item.type}.glb`} 
@@ -352,6 +376,14 @@ function CitySkyline() {
                     rotation={item.rotation} 
                     scale={item.scale} 
                 />
+            ))}
+            
+            {/* Prédios de Fundo Geométricos (Silhuetas) */}
+            {bgBuildings.map(item => (
+                <mesh key={item.id} position={item.position} rotation={item.rotation}>
+                    <boxGeometry args={item.size} />
+                    <meshStandardMaterial color={item.color} roughness={0.9} metalness={0.1} />
+                </mesh>
             ))}
         </group>
     );
