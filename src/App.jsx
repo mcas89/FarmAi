@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { Scene } from './components/3d/Scene';
 import { GameInterface } from './components/ui/GameInterface';
 import { useDatabaseSystem } from './systems/useDatabaseSystem';
@@ -35,7 +35,17 @@ function App() {
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#15151e' }}>
       <GameInterface />
-      <Scene />
+      <Suspense fallback={
+        <div style={{ 
+          position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+          display: 'flex', alignItems: 'center', justifyContent: 'center', 
+          color: 'white', fontSize: '24px', fontFamily: 'sans-serif', zIndex: 999 
+        }}>
+          Carregando Metaverso...
+        </div>
+      }>
+        <Scene />
+      </Suspense>
     </div>
   );
 }
