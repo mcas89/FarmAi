@@ -139,7 +139,14 @@ export function MobileHUD() {
                     </h2>
                     
                     <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '400px' }}>
-                        {characters.map((char) => (
+                        {characters.map((char) => {
+                            const CHAR_NAMES = {
+                                'san.vrm': 'Samy',
+                                'deric.vrm': 'Marc',
+                                'carol.vrm': 'Carol',
+                                'rafa.vrm': 'Rafa'
+                            };
+                            return (
                             <button
                                 key={char}
                                 onClick={() => {
@@ -156,14 +163,14 @@ export function MobileHUD() {
                                     fontSize: '1.2rem',
                                     cursor: 'pointer',
                                     minWidth: '150px',
-                                    textTransform: 'capitalize',
+                                    textTransform: 'uppercase',
                                     boxShadow: activeModel === char ? '0 0 15px rgba(168, 85, 247, 0.6)' : 'none',
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                {char.replace('.vrm', '')}
+                                {CHAR_NAMES[char]}
                             </button>
-                        ))}
+                        )})}
                     </div>
 
                     <button
