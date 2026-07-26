@@ -20,6 +20,7 @@ export function MainMenu() {
     // Importando state de Missões
     const [dailyQuests, setDailyQuests] = useState([]);
     const [rankings, setRankings] = useState({ global: [], combo: [], weekly: [], isLoading: true });
+    const [hasUnclaimedAchievements, setHasUnclaimedAchievements] = useState(false);
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showRankingModal, setShowRankingModal] = useState(false);
@@ -32,7 +33,16 @@ export function MainMenu() {
                 setDailyQuests(state.dailyQuests);
             });
             setDailyQuests(m.useQuestSystem.getState().dailyQuests);
-            return unsub;
+            // return unsub; // Não podemos dar return aqui para evitar vazamentos se tivermos multiplos
+        });
+
+        import('../../../systems/useAchievementSystem').then(m => {
+            const unsub = m.useAchievementSystem.subscribe((state) => {
+                const unclaimed = state.achievements.some(a => a.completed && !a.claimed);
+                setHasUnclaimedAchievements(unclaimed);
+            });
+            const unclaimed = m.useAchievementSystem.getState().achievements.some(a => a.completed && !a.claimed);
+            setHasUnclaimedAchievements(unclaimed);
         });
 
         import('../../../systems/useRankingSystem').then(m => {
@@ -45,7 +55,6 @@ export function MainMenu() {
                     isLoading: state.isLoading 
                 });
             });
-            return unsub;
         });
     }, []);
 
@@ -124,6 +133,14 @@ export function MainMenu() {
                 @keyframes pulseGlow {
                     0%, 100% { box-shadow: 0 0 10px rgba(168,85,247,0.3); }
                     50% { box-shadow: 0 0 25px rgba(168,85,247,0.8); }
+                }
+                @keyframes notifPulse {
+                    0%, 100% { box-shadow: 0 0 15px rgba(245,158,11,0.6); border-color: rgba(245,158,11,0.5); transform: translateY(0); background: rgba(245,158,11,0.2); }
+                    50% { box-shadow: 0 0 35px rgba(245,158,11,1); border-color: rgba(245,158,11,1); transform: translateY(-5px) scale(1.1); background: rgba(245,158,11,0.4); }
+                }
+                
+                .icon-circle.has-notif {
+                    animation: notifPulse 1.5s infinite ease-in-out !important;
                 }
                 
                 .drawer {
@@ -345,8 +362,10 @@ export function MainMenu() {
                         <span className="icon-label">PERSONAGENS</span>
                     </div>
                     <div className="icon-btn" onClick={() => setScreen('ACHIEVEMENTS')}>
-                        <div className="icon-circle" style={{ animationDelay: '0.2s' }}><Shield size={20} color="#60a5fa" /></div>
-                        <span className="icon-label">CONQUISTAS</span>
+                        <div className={`icon-circle ${hasUnclaimedAchievements ? 'has-notif' : ''}`} style={{ animationDelay: '0.2s' }}>
+                            <Shield size={20} color={hasUnclaimedAchievements ? '#fbbf24' : '#60a5fa'} />
+                        </div>
+                        <span className="icon-label" style={{ color: hasUnclaimedAchievements ? '#fbbf24' : '#aaa' }}>CONQUISTAS</span>
                     </div>
                     <div className="icon-btn">
                         <div className="icon-circle" style={{ animationDelay: '0.4s' }}><ScrollText size={20} color="#fcd34d" /></div>
