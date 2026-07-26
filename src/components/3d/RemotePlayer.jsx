@@ -5,6 +5,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { AnimationEngine } from '../../systems/animation/AnimationEngine';
 import { Html } from '@react-three/drei';
+import { Diamond } from 'lucide-react';
+import { getPlayerLevel, getPlayerTitle } from '../../systems/progressionRules';
 
 export function RemotePlayer({ playerData }) {
   const [vrm, setVrm] = useState(null);
@@ -104,17 +106,32 @@ export function RemotePlayer({ playerData }) {
     AnimationEngine.update(vrm, delta, false, false, isMoving, isIdle, isRunning);
   });
 
+  const aura = playerData.aura || 0;
+  const level = getPlayerLevel(aura);
+  const title = getPlayerTitle(level);
+
   return vrm ? (
     <group>
         <primitive object={vrm.scene} />
         <Html position={[0, 2.2, 0]} center style={{ pointerEvents: 'none' }}>
             <div style={{
-                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-                color: '#fff', padding: '2px 8px', borderRadius: '8px',
-                fontSize: '12px', fontWeight: 'bold', border: '1px solid rgba(168,85,247,0.3)',
-                whiteSpace: 'nowrap', textShadow: '0 0 5px #000'
+                background: 'rgba(10, 10, 15, 0.7)', backdropFilter: 'blur(6px)',
+                padding: '4px 10px', borderRadius: '12px',
+                border: '1px solid rgba(168,85,247,0.4)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.5)', whiteSpace: 'nowrap'
             }}>
-                {playerData.name || 'Jogador'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ background: '#a855f7', color: '#fff', fontSize: '0.6rem', fontWeight: '900', padding: '1px 4px', borderRadius: '4px' }}>LV {level}</span>
+                    <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900', textShadow: '0 0 5px rgba(255,255,255,0.5)' }}>{playerData.name || 'Jogador'}</span>
+                </div>
+                <div style={{ color: '#d8b4fe', fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
+                    {title}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                    <Diamond size={10} color="#a855f7" />
+                    <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{Math.floor(aura).toLocaleString()}</span>
+                </div>
             </div>
         </Html>
     </group>

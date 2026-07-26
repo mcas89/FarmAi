@@ -87,7 +87,7 @@ export const useMultiplayerSystem = create((setStore, getStore) => ({
         }
     },
 
-    updatePosition: (x, y, z, anim, model) => {
+    updatePosition: (x, y, z, anim, model, aura) => {
         const { currentRoomId } = getStore();
         if (!rtdb || !auth.currentUser || !currentRoomId) return;
         
@@ -103,6 +103,7 @@ export const useMultiplayerSystem = create((setStore, getStore) => ({
             // Só atualiza os campos que mudaram rápido para economizar banda
             const updates = { x, y, z, anim, timestamp: Date.now() };
             if (model) updates.model = model;
+            if (aura !== undefined) updates.aura = aura;
             
             update(playerRef, updates);
         }, 300);

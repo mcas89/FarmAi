@@ -265,7 +265,14 @@ export function Avatar({ url }) {
     setPosition([vrm.scene.position.x, vrm.scene.position.y, vrm.scene.position.z]);
     
     if (useUISystem.getState().isOnlineMode) {
-        useMultiplayerSystem.getState().updatePosition(vrm.scene.position.x, vrm.scene.position.y, vrm.scene.position.z, newState, usePlayerSystem.getState().activeModel);
+        useMultiplayerSystem.getState().updatePosition(
+            vrm.scene.position.x, 
+            vrm.scene.position.y, 
+            vrm.scene.position.z, 
+            newState, 
+            usePlayerSystem.getState().activeModel,
+            useAuraSystem.getState().aura
+        );
     }
   });
 
