@@ -5,8 +5,9 @@ import { CheckCircle, Diamond, Lock } from 'lucide-react';
 
 export function AchievementsScreen() {
     const setScreen = useUISystem(state => state.setScreen);
+    const screenParams = useUISystem(state => state.screenParams);
     const [achievements, setAchievements] = useState([]);
-    const [activeTab, setActiveTab] = useState('PENDING'); // 'PENDING' ou 'CLAIMED'
+    const [activeTab, setActiveTab] = useState(screenParams?.tab || 'PENDING'); // 'PENDING' ou 'CLAIMED'
     const updateStats = useUISystem(state => state.updateStats);
     const stats = useUISystem(state => state.playerStats);
 

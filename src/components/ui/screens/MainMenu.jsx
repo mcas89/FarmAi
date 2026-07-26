@@ -413,7 +413,7 @@ export function MainMenu() {
                         </div>
                         <span className="icon-label" style={{ color: hasUnclaimedAchievements ? '#fbbf24' : '#aaa' }}>CONQUISTAS</span>
                     </div>
-                    <div className="icon-btn">
+                    <div className="icon-btn" onClick={() => setScreen('ACHIEVEMENTS', { tab: 'CLAIMED' })}>
                         <div className="icon-circle" style={{ animationDelay: '0.4s' }}><ScrollText size={20} color="#fcd34d" /></div>
                         <span className="icon-label">MISSÕES</span>
                     </div>

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export const useUISystem = create((set) => ({
     currentScreen: 'LOGIN', // LOGIN, SPLASH, MENU, PROFILE, CHARACTERS, RANKING, ACHIEVEMENTS, GAME
+    screenParams: null,
     
     // Player Stats persistentes (Mockados para o MVP Visual)
     playerStats: {
@@ -12,7 +13,7 @@ export const useUISystem = create((set) => ({
         globalRanking: '#15.241',
     },
 
-    setScreen: (screen) => set({ currentScreen: screen }),
+    setScreen: (screen, params = null) => set({ currentScreen: screen, screenParams: params }),
     
     isOnlineMode: false,
     setIsOnlineMode: (isOnline) => set({ isOnlineMode: isOnline }),
