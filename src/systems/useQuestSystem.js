@@ -11,12 +11,23 @@ const QUEST_TEMPLATES = [
     { type: 'play_time', title: 'Jogar por 5 Minutos', target: 5, reward: 50 },
 ];
 
-// Função auxiliar para gerar 2 missões aleatórias diferentes
+// Função auxiliar para gerar missões aleatórias
 const generateRandomQuests = () => {
     const shuffled = [...QUEST_TEMPLATES].sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, 2);
     
-    return selected.map((q, index) => ({
+    // Missão fixa que sempre aparece completada ao entrar no jogo
+    const loginQuest = {
+        id: `quest_${Date.now()}_login`,
+        type: 'login',
+        title: 'Bônus de Login Diário',
+        target: 1,
+        progress: 1, // Já nasce concluída
+        reward: 30,
+        claimed: false
+    };
+
+    const randomQuests = selected.map((q, index) => ({
         id: `quest_${Date.now()}_${index}`,
         type: q.type,
         title: q.title,
@@ -25,6 +36,8 @@ const generateRandomQuests = () => {
         reward: q.reward,
         claimed: false
     }));
+
+    return [loginQuest, ...randomQuests];
 };
 
 // Formata uma data para 'YYYY-MM-DD' para fácil comparação
