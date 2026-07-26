@@ -3,7 +3,7 @@ import { useUISystem } from '../../../systems/useUISystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls, Environment, Backdrop, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
@@ -187,7 +187,7 @@ export function CharacterScreen() {
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
             padding: '20px 20px 0 20px', boxSizing: 'border-box', pointerEvents: 'auto',
-            background: '#05050a'
+            background: 'radial-gradient(circle at center, #2e1065, #05050a)'
         }}>
             {/* Canvas 3D Dedicado Exclusivo para Preview */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'auto' }}>
@@ -195,6 +195,24 @@ export function CharacterScreen() {
                     <ambientLight intensity={0.7} />
                     <spotLight position={[2, 4, 3]} angle={0.5} penumbra={1} intensity={1.5} color="#d8b4fe" />
                     <spotLight position={[-2, -1, -2]} angle={0.8} penumbra={1} intensity={0.5} color="#4ade80" />
+                    
+                    {/* Cenário de Estúdio */}
+                    <Backdrop
+                        floor={1.5}
+                        segments={20}
+                        position={[0, -0.3, -2]}
+                        scale={[20, 10, 5]}
+                    >
+                        <meshStandardMaterial color="#6b21a8" roughness={0.8} />
+                    </Backdrop>
+                    <ContactShadows 
+                        position={[0, -0.28, 0]} 
+                        opacity={0.8} 
+                        scale={10} 
+                        blur={2} 
+                        far={4} 
+                    />
+
                     <PreviewAvatar key={activeModel} url={activeModel} />
                     <OrbitControls 
                         enablePan={false} 
