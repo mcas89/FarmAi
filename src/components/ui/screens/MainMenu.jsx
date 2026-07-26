@@ -4,6 +4,7 @@ import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { 
     Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Diamond, Globe, Trophy, Target, CheckCircle
 } from 'lucide-react';
+import splashImg from '../../../assets/splash.png';
 
 const MOCK_TOP_100 = [
     { name: 'DeusFamer_99', aura: 2500000000 },
@@ -39,11 +40,21 @@ export function MainMenu() {
     return (
         <div style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            background: 'linear-gradient(135deg, #0d0a14 0%, #1a1025 50%, #0d0a14 100%)', 
+            backgroundColor: '#050505', 
             pointerEvents: 'auto', zIndex: 50,
             fontFamily: 'sans-serif', color: '#fff',
             display: 'flex', flexDirection: 'column', overflow: 'hidden'
         }}>
+            <img 
+                src={splashImg} 
+                alt="Background" 
+                style={{
+                    position: 'absolute', top: 0, left: 0, 
+                    width: '100%', height: '100%', 
+                    objectFit: 'cover', zIndex: -1,
+                    opacity: 0.35 // Escurecido para não prejudicar a leitura e focar no UI
+                }}
+            />
             <style>{`
                 .home-scroll { flex: 1; overflow-y: auto; padding-bottom: 75px; }
                 .home-scroll::-webkit-scrollbar { display: none; }
@@ -81,7 +92,7 @@ export function MainMenu() {
 
                 .top-header {
                     display: flex; align-items: center; gap: 8px; padding: 4px 15px 2px 15px;
-                    background: linear-gradient(to bottom, rgba(168,85,247,0.15), transparent);
+                    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
                     position: relative;
                 }
 
@@ -97,19 +108,22 @@ export function MainMenu() {
                 }
                 .icon-circle {
                     width: 40px; height: 40px; border-radius: 12px;
-                    background: rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center;
-                    border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;
+                    background: rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center;
+                    border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;
+                    backdrop-filter: blur(8px);
                     animation: floatAnim 3s infinite ease-in-out;
                 }
-                .icon-btn:hover .icon-circle { background: rgba(168,85,247,0.3); border-color: #a855f7; transform: translateY(-3px) scale(1.1); }
+                .icon-btn:hover .icon-circle { background: rgba(168,85,247,0.2); border-color: #a855f7; transform: translateY(-3px) scale(1.1); }
                 .icon-label { font-size: 0.45rem; font-weight: 900; color: #aaa; letter-spacing: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; width: 100%; }
 
                 .play-card {
                     margin: 0 15px 12px 15px; padding: 10px 15px; border-radius: 16px;
-                    background: linear-gradient(135deg, #a855f7, #6b21a8, #ec4899);
+                    background: linear-gradient(135deg, rgba(168,85,247,0.4), rgba(107,33,168,0.4), rgba(236,72,153,0.4));
                     background-size: 200% 200%;
+                    backdrop-filter: blur(12px);
                     animation: gradientMove 5s ease infinite, pulseGlow 2s infinite;
-                    box-shadow: 0 5px 20px rgba(168,85,247,0.4);
+                    border: 1px solid rgba(255,255,255,0.15);
+                    box-shadow: 0 5px 20px rgba(168,85,247,0.2);
                     display: flex; justify-content: space-between; align-items: center;
                     cursor: pointer; transition: transform 0.2s; position: relative; overflow: hidden;
                 }
@@ -124,7 +138,8 @@ export function MainMenu() {
 
                 .info-card {
                     margin: 0 15px 10px 15px; padding: 12px 15px; border-radius: 14px;
-                    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+                    background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.08);
+                    backdrop-filter: blur(12px);
                     transition: transform 0.2s, background 0.3s;
                 }
                 .info-card:hover { transform: translateY(-2px); background: rgba(255,255,255,0.06); }
