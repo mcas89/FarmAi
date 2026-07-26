@@ -57,8 +57,10 @@ function App() {
       const position = usePlayerSystem.getState().position;
       const activeModel = usePlayerSystem.getState().activeModel;
       const comboCount = useAuraSystem.getState().comboCount;
+      const aura = useAuraSystem.getState().aura;
+      const diamonds = useUISystem.getState().playerStats.diamonds;
       
-      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel);
+      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds);
     }, 15000);
 
     return () => clearInterval(saveInterval);

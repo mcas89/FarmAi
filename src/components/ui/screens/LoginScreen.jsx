@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { auth, db } from '../../../config/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useAuraSystem } from '../../../systems/useAuraSystem';
 import splashImg from '../../../assets/splash.png';
 import { Mail, Lock, User, Calendar, Loader2 } from 'lucide-react';
 
@@ -31,30 +32,56 @@ export function LoginScreen() {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
                 
-                // Grava Nome e Nascimento no Firestore
+                // Grava estado inicial no Firestore
                 await setDoc(doc(db, 'users', user.uid), {
                     name: name,
                     email: email,
                     birthDate: birthDate,
+                    aura: 0,
+                    auracash: 0,
                     createdAt: new Date()
                 });
 
-                // Atualiza estado local mockado com o nome real do cara
-                updateStats({ nickname: name.split(' ')[0] });
-                setScreen('SPLASH'); // Avança
+                // Atualiza estado local
+                updateStats({ nickname: name.split(' ')[0], diamonds: 0 });
+                useAuraSystem.getState().registerHit(0, '', 0); // Força atualização de level/title pra 0
+                
+                setScreen('SPLASH'); 
 
             } else {
                 // Login
-                await signInWithEmailAndPassword(auth, email, password);
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
                 
-                // (Opcional) Poderiamos ler o Firestore para pegar o nome
-                // Mas para agilizar vamos usar o email ou mock por enquanto, e deixar pra ler depois.
-                // Mas vamos definir pra Splash
+                // Lê os dados reais do Firestore
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const realName = data.name ? data.name.split(' ')[0] : 'Jogador';
+                    const realAura = data.aura || 0;
+                    const realDiamonds = data.auracash || 0;
+                    
+                    updateStats({ nickname: realName, diamonds: realDiamonds });
+                    useAuraSystem.setState({ aura: realAura, comboCount: data.comboCount || 0 });
+                    
+                    // Restaura posição e personagem se existirem
+                    if (data.position) {
+                        import('../../../systems/usePlayerSystem').then(m => {
+                            m.usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
+                            if (data.activeModel) m.usePlayerSystem.setState({ activeModel: data.activeModel });
+                        });
+                    }
+
+                    // Hack rápido pra forçar o recalculo do título/level
+                    useAuraSystem.getState().registerHit(0, '', 0);
+                }
+                
                 setScreen('SPLASH');
             }
         } catch (err) {
             console.error("🔥 Erro Auth:", err);
-            // Tradução amigável dos erros
             if (err.code === 'auth/invalid-api-key') setError('A chave da API do Firebase é inválida. Atualize o .env');
             else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') setError('E-mail ou senha incorretos.');
             else if (err.code === 'auth/email-already-in-use') setError('Este e-mail já está em uso.');

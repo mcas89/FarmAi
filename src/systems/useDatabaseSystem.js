@@ -1,18 +1,17 @@
 import { create } from 'zustand';
-import { db } from '../config/firebase';
-import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { db, auth } from '../config/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export const useDatabaseSystem = create((set, get) => ({
-  playerId: 'player_1', // Temporário enquanto não temos login
   isSaving: false,
   lastSavedAt: null,
 
   // Carrega os dados do jogador quando o jogo abre
   loadPlayerData: async () => {
-    if (!db) return null; // Evita crash se a API Key for inválida
+    if (!db || !auth.currentUser) return null; 
     
     try {
-      const docRef = doc(db, 'players', get().playerId);
+      const docRef = doc(db, 'users', auth.currentUser.uid);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -20,7 +19,6 @@ export const useDatabaseSystem = create((set, get) => ({
         console.log('📦 Dados carregados do Firebase:', data);
         return data;
       } else {
-        console.log('🆕 Novo jogador, nenhum dado encontrado.');
         return null;
       }
     } catch (error) {
@@ -30,19 +28,22 @@ export const useDatabaseSystem = create((set, get) => ({
   },
 
   // Salva o estado atual do jogo no Firebase
-  saveGameState: async (position, comboCount, activeModel) => {
-    if (!db) return; // Evita crash se a API Key for inválida
-    if (get().isSaving) return; // Evita flood de requisições
+  saveGameState: async (position, comboCount, activeModel, aura, diamonds) => {
+    if (!db || !auth.currentUser) return; 
+    if (get().isSaving) return; 
     
     set({ isSaving: true });
     try {
-      const playerRef = doc(db, 'players', get().playerId);
-      await setDoc(playerRef, {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await setDoc(userRef, {
         position: { x: position[0], y: position[1], z: position[2] },
         comboCount: comboCount,
         activeModel: activeModel,
+        aura: aura,
+        auracash: diamonds,
         lastUpdate: new Date().toISOString()
       }, { merge: true }); // Merge true atualiza apenas o que mudou
+
       
       set({ isSaving: false, lastSavedAt: Date.now() });
       console.log('💾 Jogo salvo na nuvem!');
