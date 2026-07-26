@@ -147,25 +147,15 @@ function ScatteredTrees() {
 
     return (
         <group>
-            {trees.map(tree => {
-                const ref = useRef();
-                useFrame((state) => {
-                    const t = state.clock.getElapsedTime() + tree.id;
-                    if (ref.current) {
-                        ref.current.rotation.z = Math.sin(t) * 0.03; // sutil balançar das folhas
-                    }
-                });
-                return (
-                    <group key={tree.id} ref={ref}>
-                        <GLTFModel 
-                            url={`/itens/${tree.type}.glb`} 
-                            position={tree.position} 
-                            rotation={tree.rotation} 
-                            scale={tree.scale} 
-                        />
-                    </group>
-                );
-            })}
+            {trees.map(tree => (
+                <GLTFModel 
+                    key={tree.id}
+                    url={`/itens/${tree.type}.glb`} 
+                    position={tree.position} 
+                    rotation={tree.rotation} 
+                    scale={tree.scale} 
+                />
+            ))}
         </group>
     );
 }
@@ -205,25 +195,15 @@ function ScatteredBushes() {
     
     return (
         <group>
-            {bushes.map(bush => {
-                const ref = useRef();
-                useFrame((state) => {
-                    const t = state.clock.getElapsedTime() + bush.id;
-                    if (ref.current) {
-                        ref.current.rotation.z = Math.sin(t) * 0.05; // leve movimento de balançar
-                    }
-                });
-                return (
-                    <group key={bush.id} ref={ref}>
-                        <GLTFModel 
-                            url={`/itens/${bush.type}.glb`} 
-                            position={bush.position} 
-                            rotation={bush.rotation} 
-                            scale={bush.scale} 
-                        />
-                    </group>
-                );
-            })}
+            {bushes.map(bush => (
+                <GLTFModel 
+                    key={bush.id}
+                    url={`/itens/${bush.type}.glb`} 
+                    position={bush.position} 
+                    rotation={bush.rotation} 
+                    scale={bush.scale} 
+                />
+            ))}
         </group>
     );
 }
