@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { WaterFountain } from './WaterFountain';
 import { useGLTF } from '@react-three/drei';
 import { useCollisionSystem } from '../../systems/useCollisionSystem';
+import { ProceduralGrass } from './ProceduralGrass';
 
 // Pre-load para carregar mais rápido
 useGLTF.preload('/itens/arvore1.glb');
@@ -497,6 +498,9 @@ export function ParkEnvironment() {
                 <mesh receiveShadow geometry={parkGrassGeo} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
                     <meshStandardMaterial map={grassTexture} roughness={1.0} metalness={0.0} />
                 </mesh>
+                
+                {/* 3.1 Grama Procedural 3D */}
+                <ProceduralGrass />
 
                 {/* 4. Praça Central de Concreto Polido (y = 0.0) */}
                 <mesh receiveShadow geometry={plazaGeo} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0, 0]}>
