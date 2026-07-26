@@ -477,7 +477,7 @@ export function MainMenu() {
                                     <span style={{ color: '#ccc', fontSize: '0.8rem', fontWeight: 'bold' }}>{player.name}</span>
                                 </div>
                                 <span style={{ color: '#fbbf24', fontSize: '0.85rem', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    {player.combo.toLocaleString()} <span style={{ fontSize: '0.5rem', color: '#888' }}>HITS</span>
+                                    {(player.score || 0).toLocaleString()} <span style={{ fontSize: '0.5rem', color: '#888' }}>HITS</span>
                                 </span>
                             </div>
                         ))}
