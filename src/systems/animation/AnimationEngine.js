@@ -17,19 +17,31 @@ import { SixSevenAction } from './SixSevenAction';
  * 5/6. Left/Right Arm Actions
  */
 
-const smoothedPose = {};
-let currentBasePose = 'arms_down_pose'; 
+const engineInstances = {};
+
+const getEngineInstance = (uuid) => {
+    if (!engineInstances[uuid]) {
+        engineInstances[uuid] = {
+            smoothedPose: {},
+            currentBasePose: 'arms_down_pose'
+        };
+    }
+    return engineInstances[uuid];
+};
 
 export const AnimationEngine = {
-    setBasePose: (poseName) => { 
-        currentBasePose = poseName; 
+    setBasePose: (poseName, uuid = 'default') => { 
+        getEngineInstance(uuid).currentBasePose = poseName; 
     },
     
     update: (vrm, delta, isLeftFarming, isRightFarming, isMoving = false, isIdle = false, isRunning = false) => {
         if (!vrm || !vrm.humanoid) return;
 
+        const uuid = vrm.scene.uuid;
+        const inst = getEngineInstance(uuid);
+
         // PRIO 5/6: Consulta estado atual das ações do usuário
-        const actionStates = SixSevenAction.update(delta, isLeftFarming, isRightFarming);
+        const actionStates = SixSevenAction.update(delta, isLeftFarming, isRightFarming, uuid);
         
         // PRIO 2: O Cérebro toma decisões do momento (olhar, respirar fundo, idle animations)
         const brainOffsets = CharacterBrain.update(delta, isIdle);
@@ -44,7 +56,7 @@ export const AnimationEngine = {
             const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
             if (!bone) return;
 
-            if (!smoothedPose[boneName]) smoothedPose[boneName] = { x: 0, y: 0, z: 0 };
+            if (!inst.smoothedPose[boneName]) inst.smoothedPose[boneName] = { x: 0, y: 0, z: 0 };
 
             // Verifica quem dita a "Camada 1" deste osso baseado no Lado.
             let actionTargetPose = null;
@@ -59,15 +71,15 @@ export const AnimationEngine = {
             }
             
             // Se o braço não está em ação, ou é um osso do corpo central, a BasePose assume.
-            const targetPoseName = actionTargetPose || currentBasePose;
+            const targetPoseName = actionTargetPose || inst.currentBasePose;
 
             axes.forEach(axis => {
                 // [PRIO 1] - O valor absoluto intocável da pose
                 const targetValue = getPoseValue(targetPoseName, boneName, axis);
                 
                 // Interpola para suavizar a transição de qualquer estado para outro
-                smoothedPose[boneName][axis] = THREE.MathUtils.lerp(
-                    smoothedPose[boneName][axis], 
+                inst.smoothedPose[boneName][axis] = THREE.MathUtils.lerp(
+                    inst.smoothedPose[boneName][axis], 
                     targetValue, 
                     actionLerp
                 );
@@ -93,7 +105,7 @@ export const AnimationEngine = {
                     : 0;
 
                 // A MATEMÁTICA FINAL ACUMULATIVA (Nenhuma camada apaga a outra)
-                bone.rotation[axis] = smoothedPose[boneName][axis] + brainOffset + walkOffset + lifeOffset;
+                bone.rotation[axis] = inst.smoothedPose[boneName][axis] + brainOffset + walkOffset + lifeOffset;
             });
         };
 

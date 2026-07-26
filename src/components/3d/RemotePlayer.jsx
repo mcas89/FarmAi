@@ -166,7 +166,7 @@ export function RemotePlayer({ playerData }) {
             </Html>
         )}
 
-        <Html position={[0, 2.2, 0]} center style={{ pointerEvents: 'none' }}>
+        <Html position={[0, 2.6, 0]} center style={{ pointerEvents: 'none' }}>
             <div style={{
                 background: 'rgba(10, 10, 15, 0.7)', backdropFilter: 'blur(6px)',
                 padding: '4px 10px', borderRadius: '12px',

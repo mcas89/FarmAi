@@ -17,8 +17,17 @@ const createStateMachine = () => ({
     timeInState: 0
 });
 
-const leftSM = createStateMachine();
-const rightSM = createStateMachine();
+const instances = {};
+
+const getInstance = (uuid) => {
+    if (!instances[uuid]) {
+        instances[uuid] = {
+            leftSM: createStateMachine(),
+            rightSM: createStateMachine()
+        };
+    }
+    return instances[uuid];
+};
 
 const updateMachine = (sm, isActive, delta) => {
     if (!isActive) {
@@ -54,10 +63,11 @@ const updateMachine = (sm, isActive, delta) => {
 };
 
 export const SixSevenAction = {
-    update: (delta, isLeftFarming, isRightFarming) => {
+    update: (delta, isLeftFarming, isRightFarming, uuid = 'default') => {
+        const inst = getInstance(uuid);
         return {
-            left: updateMachine(leftSM, isLeftFarming, delta),
-            right: updateMachine(rightSM, isRightFarming, delta)
+            left: updateMachine(inst.leftSM, isLeftFarming, delta),
+            right: updateMachine(inst.rightSM, isRightFarming, delta)
         };
     }
 };
