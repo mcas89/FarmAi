@@ -97,9 +97,7 @@ export const useRankingSystem = create((set, get) => ({
                 if (reward > 0) {
                     const mUI = await import('./useUISystem');
                     mUI.useUISystem.getState().updateStats({ diamonds: currentDiamonds + reward });
-                    setTimeout(() => {
-                        alert(`🏆 PARABÉNS! Você ficou no Top ${myRank} do Ranking Semanal e ganhou ${reward} AuraCash!`);
-                    }, 2000);
+                    // O prêmio foi entregue silenciosamente. (O alerta do navegador foi removido a pedido)
                 }
 
                 // Reseta a weeklyAura do jogador para a nova semana

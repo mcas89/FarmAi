@@ -214,7 +214,7 @@ export function CharacterScreen() {
                         far={4} 
                     />
 
-                    <PreviewAvatar key={activeModel} url={activeModel} />
+                    <PreviewAvatar url={activeModel} />
                     <OrbitControls 
                         enablePan={false} 
                         enableZoom={true} 
