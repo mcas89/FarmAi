@@ -325,67 +325,63 @@ export function GameHUD() {
             `}</style>
 
             {/* TOP BAR RESTRUTURADA */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: 'var(--top-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', pointerEvents: 'none', zIndex: 10, width: '100%' }}>
+            <div style={{ display: 'flex', padding: 'var(--top-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', pointerEvents: 'none', zIndex: 10, width: '100%' }}>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                {/* Card Único de Ponta a Ponta */}
+                <div className="glass-panel" style={{ 
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                    width: '100%', padding: '8px 15px', gap: '10px'
+                }}>
+                    
                     {/* 1. Avatar (Left) */}
-                    <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 1, padding: '10px 15px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, maxWidth: '30%' }}>
                         <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: '#333', border: '2px solid #a855f7', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 15px rgba(168,85,247,0.4)' }}>
-                                <User color="#fff" size={24} style={{ opacity: 0.5 }} />
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#333', border: '1.5px solid #a855f7', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 10px rgba(168,85,247,0.3)' }}>
+                                <User color="#fff" size={20} style={{ opacity: 0.5 }} />
                             </div>
-                            <div style={{ position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #a855f7, #6b21a8)', border: '1px solid #fff', borderRadius: '10px', padding: '2px 8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: '0.6rem', fontWeight: '900', boxShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>
+                            <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', background: '#000', border: '1px solid #fff', borderRadius: '8px', padding: '1px 6px', color: '#fff', fontSize: '0.55rem', fontWeight: 'bold' }}>
                                 LV {level}
                             </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                            <div className="text-avatar-name" style={{ color: '#fff', fontSize: '1.1rem', fontWeight: '900', lineHeight: '1', whiteSpace: 'nowrap', textShadow: '0 2px 5px rgba(0,0,0,0.8)' }}>{nickname}</div>
-                            <div className="text-avatar-title" style={{ color: '#d8b4fe', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', lineHeight: '1', whiteSpace: 'nowrap' }}>{title}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', width: '100px' }}>
-                                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)' }}>
-                                    <div style={{ width: `${(progressAura / 500) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #d8b4fe)', boxShadow: '0 0 10px #a855f7' }}></div>
-                                </div>
-                            </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                            <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nickname}</div>
+                            <div style={{ color: '#d8b4fe', fontSize: '0.6rem', fontWeight: 'bold', textTransform: 'uppercase', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
                         </div>
                     </div>
 
-                    {/* 3. Icons (Right) */}
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-                        <div className="glass-panel anim-float" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 12px', height: '45px', borderRadius: '12px', border: '1px solid rgba(52,211,153,0.4)', pointerEvents: 'auto', background: 'rgba(52,211,153,0.1)' }}>
-                            <Diamond size={16} color="#34d399" />
-                            <span style={{ color: '#fff', fontSize: '1rem', fontWeight: '900', textShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
-                        </div>
-                        <div className="top-btn" style={{ width: '45px', height: '45px', borderRadius: '12px' }} onClick={() => setScreen('MENU')}><Home size={20} color="#fff" /></div>
-                        <div className="top-btn" style={{ width: '45px', height: '45px', borderRadius: '12px' }} onClick={() => setShowRankingModal(true)}><Settings size={20} color="#fff" style={{ transition: 'transform 1s', ':hover': { transform: 'rotate(180deg)' } }} /></div>
-                    </div>
-                </div>
-
-                {/* 2. Aura Bar (Center Expanded) */}
-                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '5px' }}>
-                    <div className="glass-panel anim-float" style={{ 
+                    {/* 2. Aura Bar (Center Expandido) */}
+                    <div style={{ 
                         display: 'flex', flexDirection: 'column', alignItems: 'center', 
-                        border: '1px solid rgba(168,85,247,0.5)', position: 'relative', 
-                        padding: '10px 30px', borderRadius: '20px',
-                        background: 'linear-gradient(180deg, rgba(20,10,30,0.8) 0%, rgba(10,5,20,0.6) 100%)',
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(168,85,247,0.2)'
+                        flex: 1, minWidth: 0, position: 'relative'
                     }}>
-                        <span style={{ color: '#d8b4fe', fontSize: '0.75rem', fontWeight: '900', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '2px' }}>Aura Total</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Diamond size={24} color="#a855f7" className="anim-pulse" />
+                        <div style={{ color: '#a855f7', fontSize: '0.6rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '2px' }}>AURA</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                            <Diamond size={14} color="#a855f7" className="anim-pulse" style={{ flexShrink: 0 }} />
                             <span style={{ 
-                                color: '#fff', fontSize: '2.5rem', fontWeight: '900', lineHeight: '1', 
-                                textShadow: auraGlow ? '0 0 30px rgba(255,215,0,1)' : '0 4px 15px rgba(168,85,247,0.6)', 
-                                transition: 'text-shadow 0.2s', letterSpacing: '1px'
+                                color: '#fff', fontSize: '1.4rem', fontWeight: '900', lineHeight: '1',
+                                textShadow: auraGlow ? '0 0 15px rgba(255,215,0,1)' : 'none',
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                             }}>
                                 {Math.floor(aura).toLocaleString()}
                             </span>
                         </div>
                         {auraGlow && (
-                            <div style={{ color: '#ffd700', fontSize: '0.9rem', fontWeight: '900', position: 'absolute', bottom: '-20px', textShadow: '0 2px 5px rgba(0,0,0,0.8)' }}>
+                            <div style={{ color: '#ffd700', fontSize: '0.7rem', fontWeight: 'bold', position: 'absolute', bottom: '-12px', whiteSpace: 'nowrap' }}>
                                 +{lastPoints}
                             </div>
                         )}
                     </div>
+
+                    {/* 3. Icons (Right) */}
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', height: '38px', borderRadius: '8px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', pointerEvents: 'auto' }}>
+                            <Diamond size={12} color="#34d399" />
+                            <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
+                        </div>
+                        <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={() => setScreen('MENU')}><Home size={16} color="#fff" /></div>
+                        <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={() => setShowRankingModal(true)}><Settings size={16} color="#fff" style={{ transition: 'transform 1s', ':hover': { transform: 'rotate(180deg)' } }} /></div>
+                    </div>
+
                 </div>
             </div>
 
