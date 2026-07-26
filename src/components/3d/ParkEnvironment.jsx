@@ -1,5 +1,6 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 import { WaterFountain } from './WaterFountain';
 import { useGLTF, useTexture } from '@react-three/drei';
 import { useCollisionSystem } from '../../systems/useCollisionSystem';
@@ -146,15 +147,25 @@ function ScatteredTrees() {
 
     return (
         <group>
-            {trees.map(tree => (
-                <GLTFModel 
-                    key={tree.id} 
-                    url={`/itens/${tree.type}.glb`} 
-                    position={tree.position} 
-                    rotation={tree.rotation} 
-                    scale={tree.scale} 
-                />
-            ))}
+            {trees.map(tree => {
+                const ref = useRef();
+                useFrame((state) => {
+                    const t = state.clock.getElapsedTime() + tree.id;
+                    if (ref.current) {
+                        ref.current.rotation.z = Math.sin(t) * 0.03; // sutil balançar das folhas
+                    }
+                });
+                return (
+                    <group key={tree.id} ref={ref}>
+                        <GLTFModel 
+                            url={`/itens/${tree.type}.glb`} 
+                            position={tree.position} 
+                            rotation={tree.rotation} 
+                            scale={tree.scale} 
+                        />
+                    </group>
+                );
+            })}
         </group>
     );
 }
@@ -165,7 +176,7 @@ function ScatteredBushes() {
         const types = ['arbusto1', 'arbusto2', 'arbusto3'];
         const random = mulberry32(54321); // Seed fixa diferente das árvores
         
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 30; i++) { // aumentamos a quantidade de arbustos
             let x, z;
             let isValid = false;
             
@@ -194,15 +205,25 @@ function ScatteredBushes() {
     
     return (
         <group>
-            {bushes.map(bush => (
-                <GLTFModel 
-                    key={bush.id} 
-                    url={`/itens/${bush.type}.glb`} 
-                    position={bush.position} 
-                    rotation={bush.rotation} 
-                    scale={bush.scale} 
-                />
-            ))}
+            {bushes.map(bush => {
+                const ref = useRef();
+                useFrame((state) => {
+                    const t = state.clock.getElapsedTime() + bush.id;
+                    if (ref.current) {
+                        ref.current.rotation.z = Math.sin(t) * 0.05; // leve movimento de balançar
+                    }
+                });
+                return (
+                    <group key={bush.id} ref={ref}>
+                        <GLTFModel 
+                            url={`/itens/${bush.type}.glb`} 
+                            position={bush.position} 
+                            rotation={bush.rotation} 
+                            scale={bush.scale} 
+                        />
+                    </group>
+                );
+            })}
         </group>
     );
 }
@@ -238,10 +259,11 @@ function ParkFurniture() {
         items.push({
             id: 'foodtruck',
             type: 'foodtruck1',
-            position: [-22, 0, 0],
-            rotation: [0, Math.PI / 2, 0], 
-            scale: 0.8, // Aumentado para 0.8
+            position: [-30, 0, 30], // posição mais estratégica
+            rotation: [0, Math.PI / 2, 0],
+            scale: 0.9, // um pouco maior para facilitar a visualização
             colRadius: 2.0 
+        });
         });
 
         items.push({
@@ -273,9 +295,10 @@ function ParkFurniture() {
 
         // 4. Máquinas de Refrigerante (3 pelo parque)
         const machineSpots = [
-            { x: -15, z: 5, rot: Math.PI / 2 },     // Perto do Foodtruck
-            { x: 18, z: 20, rot: -Math.PI / 4 },    // Perto do parquinho
-            { x: 5, z: -18, rot: 0 }                // Perto da via sul
+            { x: -35, z: 0, rot: Math.PI / 2 },      // esquerda entrada
+            { x: 35, z: 0, rot: -Math.PI / 2 },      // direita entrada
+            { x: 0, z: -35, rot: Math.PI },          // fundo
+            { x: 0, z: 35, rot: 0 }                  // frente
         ];
 
         machineSpots.forEach((spot, i) => {
