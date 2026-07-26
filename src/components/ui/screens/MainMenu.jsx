@@ -18,6 +18,13 @@ const MOCK_TOP_100 = [
     })).sort((a,b) => b.aura - a.aura)
 ].map((p, i) => ({ ...p, rank: i + 1 }));
 
+const MOCK_TOP_COMBOS = [
+    { name: 'OsuMaster_X', combo: 15420 },
+    { name: 'RhythmGod', combo: 12050 },
+    { name: 'FakerDaAura', combo: 9800 },
+    { name: 'ClickerPro', combo: 7540 },
+    { name: 'Farmador_22', combo: 5200 },
+].map((p, i) => ({ ...p, rank: i + 1 }));
 export function MainMenu() {
     const setScreen = useUISystem(state => state.setScreen);
     const { aura, title, level, comboCount } = useAuraSystem();
@@ -442,6 +449,34 @@ export function MainMenu() {
                                         </span>
                                     </div>
                                 )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* 5.5 RANKING MAIORES COMBOS */}
+                <div className="info-card">
+                    <div className="card-header" style={{ color: '#fbbf24' }}>
+                        <Trophy size={16} /> MAIORES COMBOS GLOBAIS
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {MOCK_TOP_COMBOS.map(player => (
+                            <div key={player.rank} style={{ 
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                                background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '10px',
+                                border: player.rank === 1 ? '1px solid rgba(251,191,36,0.3)' : '1px solid transparent'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ 
+                                        color: player.rank === 1 ? '#fbbf24' : player.rank === 2 ? '#9ca3af' : player.rank === 3 ? '#b45309' : '#6b7280', 
+                                        fontWeight: '900', fontSize: '0.9rem', width: '25px' 
+                                    }}>#{player.rank}</span>
+                                    <span style={{ color: '#ccc', fontSize: '0.8rem', fontWeight: 'bold' }}>{player.name}</span>
+                                </div>
+                                <span style={{ color: '#fbbf24', fontSize: '0.85rem', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    {player.combo.toLocaleString()} <span style={{ fontSize: '0.5rem', color: '#888' }}>HITS</span>
+                                </span>
                             </div>
                         ))}
                     </div>
