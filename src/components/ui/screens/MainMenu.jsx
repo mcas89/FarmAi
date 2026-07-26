@@ -662,7 +662,7 @@ export function MainMenu() {
                                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                     <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
                                                     {rankingType === 'weekly' && player.rank <= 3 && (
-                                                        <span style={{ fontSize: '0.5rem', color: '#34d399', fontWeight: 'bold' }}>+{player.rank === 1 ? 1000 : player.rank === 2 ? 500 : 200} AuraCash</span>
+                                                        <span style={{ fontSize: '0.5rem', color: '#34d399', fontWeight: 'bold' }}>+{player.rank === 1 ? 100 : player.rank === 2 ? 50 : 20} AuraCash</span>
                                                     )}
                                                 </div>
                                             </div>
