@@ -111,22 +111,26 @@ export const useDatabaseSystem = create((set, get) => ({
       const currentWeek = getCurrentWeekString();
       
       const payload = {
-        position: { x: position[0], y: position[1], z: position[2] },
-        comboCount: comboCount,
-        maxCombo: maxCombo,
-        activeModel: activeModel,
-        aura: aura,
-        auracash: diamonds,
+        position: { 
+            x: (position && position[0]) || 0, 
+            y: (position && position[1]) || 0, 
+            z: (position && position[2]) || 0 
+        },
+        comboCount: comboCount || 0,
+        maxCombo: maxCombo || 0,
+        activeModel: activeModel || 'san.vrm',
+        aura: aura || 0,
+        auracash: diamonds || 0,
         dailyQuests: dailyQuests || [],
         achievements: achievements || [],
-        unlockedCharacters: unlockedCharacters,
+        unlockedCharacters: unlockedCharacters || ['san.vrm', 'deric.vrm'],
         lastResetDate: lastResetDate || '',
         lastWeeklyReset: currentWeek, // Marca que a aura salva pertence à semana atual
         lastUpdate: new Date().toISOString()
       };
 
       // Salva a Aura semanal no campo com o nome específico da semana (Ex: weeklyAura_2026_W30)
-      payload[`weeklyAura_${currentWeek}`] = weeklyAura;
+      payload[`weeklyAura_${currentWeek}`] = weeklyAura || 0;
 
       await setDoc(userRef, payload, { merge: true }); 
       
