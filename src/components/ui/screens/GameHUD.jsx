@@ -379,7 +379,6 @@ export function GameHUD() {
                             <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
                         </div>
                         <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={() => setScreen('MENU')}><Home size={16} color="#fff" /></div>
-                        <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={() => setShowRankingModal(true)}><Settings size={16} color="#fff" style={{ transition: 'transform 1s', ':hover': { transform: 'rotate(180deg)' } }} /></div>
                     </div>
 
                 </div>
