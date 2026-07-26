@@ -20,7 +20,9 @@ export function AchievementsScreen() {
     const handleClaim = (id) => {
         const reward = useAchievementSystem.getState().claimReward(id);
         if (reward > 0) {
-            updateStats({ diamonds: (stats.diamonds || 0) + reward });
+            const currentDiamonds = useUISystem.getState().playerStats.diamonds || 0;
+            const newDiamonds = currentDiamonds + reward;
+            updateStats({ diamonds: newDiamonds });
             
             // Força o auto-save pra guardar a conquista imediatamente
             Promise.all([
@@ -36,7 +38,7 @@ export function AchievementsScreen() {
                 const achData = useAchievementSystem.getState().getSavableData();
                 
                 dbSys.useDatabaseSystem.getState().saveGameState(
-                    pos, comboCount, model, aura, (stats.diamonds || 0) + reward, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achData
+                    pos, comboCount, model, aura, newDiamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achData
                 );
             });
         }

@@ -66,7 +66,9 @@ export function MainMenu() {
         const m = await import('../../../systems/useQuestSystem');
         const reward = m.useQuestSystem.getState().claimQuest(questId);
         if (reward > 0) {
-            updateStats({ diamonds: (stats.diamonds || 0) + reward });
+            const currentDiamonds = useUISystem.getState().playerStats.diamonds || 0;
+            const newDiamonds = currentDiamonds + reward;
+            updateStats({ diamonds: newDiamonds });
             Promise.all([
                 import('../../../systems/usePlayerSystem'),
                 import('../../../systems/useAuraSystem'),
@@ -79,7 +81,7 @@ export function MainMenu() {
                 const currAura = aSys.useAuraSystem.getState().aura;
                 
                 dbSys.useDatabaseSystem.getState().saveGameState(
-                    pos, combo, model, currAura, (stats.diamonds || 0) + reward, maxC, m.useQuestSystem.getState().dailyQuests, m.useQuestSystem.getState().lastResetDate
+                    pos, combo, model, currAura, newDiamonds, maxC, m.useQuestSystem.getState().dailyQuests, m.useQuestSystem.getState().lastResetDate
                 );
             });
         }
