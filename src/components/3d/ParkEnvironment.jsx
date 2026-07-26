@@ -21,6 +21,8 @@ useGLTF.preload('/itens/pipoqueiro.glb');
 useGLTF.preload('/itens/predio1.glb');
 useGLTF.preload('/itens/predio2.glb');
 useGLTF.preload('/itens/predio3.glb');
+useGLTF.preload('/itens/fonte2.glb');
+useGLTF.preload('/itens/maquinaderefri.glb');
 
 // Componente utilitário para renderizar instâncias de GLTF
 function GLTFModel({ url, position, rotation, scale = 1 }) {
@@ -268,6 +270,24 @@ function ParkFurniture() {
                 colRadius: 0.5 // Poste é fino
             });
         }
+
+        // 4. Máquinas de Refrigerante (3 pelo parque)
+        const machineSpots = [
+            { x: -15, z: 5, rot: Math.PI / 2 },     // Perto do Foodtruck
+            { x: 18, z: 20, rot: -Math.PI / 4 },    // Perto do parquinho
+            { x: 5, z: -18, rot: 0 }                // Perto da via sul
+        ];
+
+        machineSpots.forEach((spot, i) => {
+            items.push({
+                id: `vending_machine_${i}`,
+                type: 'maquinaderefri',
+                position: [spot.x, 0, spot.z],
+                rotation: [0, spot.rot, 0],
+                scale: 1.5,
+                colRadius: 1.0 
+            });
+        });
 
         return items;
     }, []);
@@ -550,8 +570,8 @@ export function ParkEnvironment() {
                 {/* 6.5 Parquinho Infantil (Gramado Nordeste) */}
                 <Playground />
 
-                {/* 7. Fonte de Água Animada (Centro da Praça) */}
-                <WaterFountain position={[0, 2.5, 0]} scale={[5, 5, 5]} />
+                {/* 7. Fonte de Água (Centro da Praça) */}
+                <GLTFModel url="/itens/fonte2.glb" position={[0, -0.05, 0]} rotation={[0, 0, 0]} scale={2.5} />
             </group>
         </>
     );
