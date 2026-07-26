@@ -14,6 +14,7 @@ export function LoginScreen() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showTerms, setShowTerms] = useState(false);
     
     // Form States
     const [email, setEmail] = useState('');
@@ -210,7 +211,55 @@ export function LoginScreen() {
                         {isRegistering ? 'Faça Login' : 'Cadastre-se'}
                     </span>
                 </div>
+                
+                <div style={{ textAlign: 'center', marginTop: '15px' }}>
+                    <span 
+                        onClick={() => setShowTerms(true)}
+                        style={{ color: '#666', fontSize: '0.7rem', textDecoration: 'underline', cursor: 'pointer', transition: 'color 0.2s' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#a855f7'}
+                        onMouseLeave={e => e.currentTarget.style.color = '#666'}
+                    >
+                        Termo de Responsabilidade e Política de Privacidade
+                    </span>
+                </div>
             </div>
+
+            {/* Modal de Termos de Responsabilidade e Privacidade */}
+            {showTerms && (
+                <div className="login-modal" style={{ position: 'absolute', zIndex: 10 }}>
+                    <h2 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        Termos e Privacidade
+                    </h2>
+                    <div style={{ 
+                        color: '#bbb', fontSize: '0.8rem', maxHeight: '50vh', 
+                        overflowY: 'auto', textAlign: 'left', lineHeight: '1.6',
+                        paddingRight: '10px' 
+                    }}>
+                        <style>{`
+                            .terms-content::-webkit-scrollbar { width: 5px; }
+                            .terms-content::-webkit-scrollbar-thumb { background: #a855f7; border-radius: 5px; }
+                        `}</style>
+                        <div className="terms-content">
+                            <p style={{ color: '#fff', fontWeight: 'bold' }}>Termo de Responsabilidade</p>
+                            <p>Ao acessar e utilizar o FarmaAI, você concorda que todas as informações, missões e dados virtuais fornecidos são para uso exclusivo dentro da plataforma, sem garantias de operação contínua.</p>
+                            
+                            <p style={{ color: '#fff', fontWeight: 'bold', marginTop: '15px' }}>Política de Privacidade</p>
+                            <p>Respeitamos a sua privacidade. Os dados informados (Nome, E-mail, Data de Nascimento) e seu progresso no jogo são armazenados de forma segura em nossos servidores Firebase apenas para viabilizar sua experiência no Metaverso. Não comercializamos ou compartilhamos seus dados com terceiros.</p>
+                            
+                            <p style={{ marginTop: '15px', fontStyle: 'italic', fontSize: '0.75rem' }}>
+                                *Ao se cadastrar ou fazer login, você atesta que leu e concorda com estes termos.
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => setShowTerms(false)}
+                        className="submit-btn" 
+                        style={{ marginTop: '20px' }}
+                    >
+                        FECHAR E CONCORDAR
+                    </button>
+                </div>
+            )}
 
             <style>{`
                 .login-modal {
