@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 import { useProgress } from '@react-three/drei';
 import { useUISystem } from '../../../systems/useUISystem';
 
+// Importando a imagem diretamente para forçar o Vite a gerar um hash único e contornar o cache do PWA
+import splashImg from '../../../assets/splash.png';
+
 export function SplashScreen() {
     const { progress } = useProgress();
     const setScreen = useUISystem(state => state.setScreen);
@@ -27,7 +30,7 @@ export function SplashScreen() {
         }}>
             {/* Imagem de Fundo Forçada via Tag Img */}
             <img 
-                src="/splash.png" 
+                src={splashImg} 
                 alt="Splash" 
                 style={{
                     position: 'absolute', top: 0, left: 0, 
