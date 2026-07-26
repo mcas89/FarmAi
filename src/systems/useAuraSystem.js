@@ -17,8 +17,9 @@ const calculateTitle = (aura) => {
     return 'Betinha';
 };
 
-export const useAuraSystem = create((set) => ({
+export const useAuraSystem = create((set, get) => ({
     aura: 0,
+    weeklyAura: 0,
     level: 0,
     title: 'Betinha',
     message: '', 
@@ -30,6 +31,7 @@ export const useAuraSystem = create((set) => ({
     registerHit: (pointsGained, message, comboCount = 0) => set((state) => {
         // A aura não cai abaixo de zero, mas punições (-5) são aplicadas normalmente.
         const newAura = Math.max(0, state.aura + pointsGained);
+        const newWeeklyAura = Math.max(0, state.weeklyAura + pointsGained);
         const newLevel = Math.floor(newAura / 500);
         const newMaxCombo = Math.max(state.maxCombo, comboCount);
         
@@ -43,6 +45,7 @@ export const useAuraSystem = create((set) => ({
         
         return {
             aura: newAura,
+            weeklyAura: newWeeklyAura,
             level: newLevel,
             lastPoints: pointsGained,
             message: message,

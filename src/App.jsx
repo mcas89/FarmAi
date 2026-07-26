@@ -58,8 +58,13 @@ function App() {
             const realName = data.name ? data.name.split(' ')[0] : 'Jogador';
             useUISystem.getState().updateStats({ nickname: realName, diamonds: data.auracash || 0 });
             
-            // Restaura aura e combo
-            useAuraSystem.setState({ aura: data.aura || 0, comboCount: data.comboCount || 0, maxCombo: data.maxCombo || 0 });
+            // Restaura aura, weeklyAura e combo
+            useAuraSystem.setState({ 
+              aura: data.aura || 0, 
+              weeklyAura: data.weeklyAura || 0,
+              comboCount: data.comboCount || 0, 
+              maxCombo: data.maxCombo || 0 
+            });
             
             // Restaura posição e personagem 3D
             if (data.position) usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
@@ -68,6 +73,11 @@ function App() {
             // Inicializa Missões Diárias
             import('./systems/useQuestSystem').then(m => {
                 m.useQuestSystem.getState().initializeQuests(data.dailyQuests, data.lastResetDate);
+            });
+
+            // Lógica de Premiação do Ranking Semanal
+            import('./systems/useRankingSystem').then(m => {
+                m.useRankingSystem.getState().checkAndClaimWeeklyRewards(user.uid, data.lastWeeklyReset, data.auracash || 0);
             });
             
             // Pula o login e vai direto pro menu via Splash
@@ -89,13 +99,14 @@ function App() {
       const comboCount = useAuraSystem.getState().comboCount;
       const maxCombo = useAuraSystem.getState().maxCombo;
       const aura = useAuraSystem.getState().aura;
+      const weeklyAura = useAuraSystem.getState().weeklyAura;
       const diamonds = useUISystem.getState().playerStats.diamonds;
       
       // Missões diárias
       const dailyQuests = useQuestSystem.getState().dailyQuests;
       const lastResetDate = useQuestSystem.getState().lastResetDate;
       
-      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate);
+      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura);
     }, 15000);
 
     return () => {

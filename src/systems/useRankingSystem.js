@@ -1,0 +1,122 @@
+import { create } from 'zustand';
+import { db, auth } from '../config/firebase';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+
+export const useRankingSystem = create((set, get) => ({
+    globalRanking: [],
+    comboRanking: [],
+    weeklyRanking: [],
+    isLoading: false,
+    
+    // Calcula o rank exato de um usuário e garante que o nome seja extraído corretamente
+    formatRankings: (docsArray, field) => {
+        return docsArray.map((doc, index) => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name ? data.name.split(' ')[0] : 'Jogador',
+                score: data[field] || 0,
+                rank: index + 1
+            };
+        });
+    },
+
+    fetchRankings: async () => {
+        set({ isLoading: true });
+        try {
+            const usersRef = collection(db, 'users');
+
+            // 1. GLOBAL RANKING (Top 50 por Aura Total)
+            const qGlobal = query(usersRef, orderBy('aura', 'desc'), limit(50));
+            const snapGlobal = await getDocs(qGlobal);
+            const globalData = get().formatRankings(snapGlobal.docs, 'aura');
+
+            // 2. COMBO RANKING (Top 50 por Max Combo)
+            const qCombo = query(usersRef, orderBy('maxCombo', 'desc'), limit(50));
+            const snapCombo = await getDocs(qCombo);
+            const comboData = get().formatRankings(snapCombo.docs, 'maxCombo');
+
+            // 3. WEEKLY RANKING (Top 50 por Aura Semanal)
+            const qWeekly = query(usersRef, orderBy('weeklyAura', 'desc'), limit(50));
+            const snapWeekly = await getDocs(qWeekly);
+            const weeklyData = get().formatRankings(snapWeekly.docs, 'weeklyAura');
+
+            set({
+                globalRanking: globalData,
+                comboRanking: comboData,
+                weeklyRanking: weeklyData,
+                isLoading: false
+            });
+        } catch (error) {
+            console.error("Erro ao buscar rankings:", error);
+            set({ isLoading: false });
+        }
+    },
+
+    // Retorna a posição do jogador atual num ranking específico
+    getMyPosition: (rankingList) => {
+        if (!auth.currentUser) return null;
+        const myIndex = rankingList.findIndex(p => p.id === auth.currentUser.uid);
+        return myIndex !== -1 ? myIndex + 1 : '> 50';
+    },
+
+    checkAndClaimWeeklyRewards: async (uid, lastWeeklyReset, currentDiamonds) => {
+        const getWeekString = () => {
+            const d = new Date();
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+            return `${d.getUTCFullYear()}-W${weekNo}`;
+        };
+
+        const currentWeek = getWeekString();
+        
+        if (lastWeeklyReset !== currentWeek) {
+            try {
+                const usersRef = collection(db, 'users');
+                const qWeekly = query(usersRef, orderBy('weeklyAura', 'desc'), limit(3));
+                const snap = await getDocs(qWeekly);
+                
+                let reward = 0;
+                let myRank = -1;
+                snap.docs.forEach((doc, index) => {
+                    if (doc.id === uid) {
+                        myRank = index + 1;
+                        if (index === 0) reward = 1000;
+                        else if (index === 1) reward = 500;
+                        else if (index === 2) reward = 200;
+                    }
+                });
+
+                if (reward > 0) {
+                    const mUI = await import('./useUISystem');
+                    mUI.useUISystem.getState().updateStats({ diamonds: currentDiamonds + reward });
+                    setTimeout(() => {
+                        alert(`🏆 PARABÉNS! Você ficou no Top ${myRank} do Ranking Semanal e ganhou ${reward} AuraCash!`);
+                    }, 2000);
+                }
+
+                // Reseta a weeklyAura do jogador para a nova semana
+                const mAura = await import('./useAuraSystem');
+                mAura.useAuraSystem.setState({ weeklyAura: 0 });
+                
+                // Força o salvamento
+                const mPlayer = await import('./usePlayerSystem');
+                const mQuest = await import('./useQuestSystem');
+                const mDb = await import('./useDatabaseSystem');
+                
+                const position = mPlayer.usePlayerSystem.getState().position;
+                const activeModel = mPlayer.usePlayerSystem.getState().activeModel;
+                const { comboCount, maxCombo, aura } = mAura.useAuraSystem.getState();
+                const { dailyQuests, lastResetDate } = mQuest.useQuestSystem.getState();
+                
+                mDb.useDatabaseSystem.getState().saveGameState(
+                    position, comboCount, activeModel, aura, currentDiamonds + reward, maxCombo, dailyQuests, lastResetDate, 0, currentWeek
+                );
+
+            } catch (error) {
+                console.error("Erro ao checar prêmios semanais:", error);
+            }
+        }
+    }
+}));

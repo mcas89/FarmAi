@@ -8,23 +8,7 @@ import splashImg from '../../../assets/splash.png';
 import { auth } from '../../../config/firebase';
 import { signOut } from 'firebase/auth';
 
-const MOCK_TOP_100 = [
-    { name: 'DeusFamer_99', aura: 2500000000 },
-    { name: 'SigmaGrindset', aura: 1800000000 },
-    { name: 'AuraKing', aura: 1200000000 },
-    ...Array.from({length: 97}, (_, i) => ({
-        name: `Farmador_${Math.floor(Math.random() * 9000)+1000}`,
-        aura: Math.floor(1000000000 - (i * 10000000) - (Math.random() * 5000000))
-    })).sort((a,b) => b.aura - a.aura)
-].map((p, i) => ({ ...p, rank: i + 1 }));
 
-const MOCK_TOP_COMBOS = [
-    { name: 'OsuMaster_X', combo: 15420 },
-    { name: 'RhythmGod', combo: 12050 },
-    { name: 'FakerDaAura', combo: 9800 },
-    { name: 'ClickerPro', combo: 7540 },
-    { name: 'Farmador_22', combo: 5200 },
-].map((p, i) => ({ ...p, rank: i + 1 }));
 export function MainMenu() {
     const setScreen = useUISystem(state => state.setScreen);
     const { aura, title, level, comboCount } = useAuraSystem();
@@ -34,17 +18,32 @@ export function MainMenu() {
 
     // Importando state de Missões
     const [dailyQuests, setDailyQuests] = useState([]);
+    const [rankings, setRankings] = useState({ global: [], combo: [], weekly: [], isLoading: true });
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showRankingModal, setShowRankingModal] = useState(false);
+    const [rankingType, setRankingType] = useState('global'); // 'global' ou 'weekly'
 
-    // Carregar sistema de quests dinamicamente para evitar erro de circular dependência se houver
+    // Carrega dados na inicialização
     useEffect(() => {
         import('../../../systems/useQuestSystem').then(m => {
             const unsub = m.useQuestSystem.subscribe((state) => {
                 setDailyQuests(state.dailyQuests);
             });
             setDailyQuests(m.useQuestSystem.getState().dailyQuests);
+            return unsub;
+        });
+
+        import('../../../systems/useRankingSystem').then(m => {
+            m.useRankingSystem.getState().fetchRankings();
+            const unsub = m.useRankingSystem.subscribe((state) => {
+                setRankings({ 
+                    global: state.globalRanking, 
+                    combo: state.comboRanking, 
+                    weekly: state.weeklyRanking, 
+                    isLoading: state.isLoading 
+                });
+            });
             return unsub;
         });
     }, []);
@@ -461,7 +460,9 @@ export function MainMenu() {
                     </div>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {MOCK_TOP_COMBOS.map(player => (
+                        {rankings.isLoading && <div style={{ textAlign: 'center', color: '#888', fontSize: '0.8rem' }}>Carregando dados...</div>}
+                        {!rankings.isLoading && rankings.combo.length === 0 && <div style={{ textAlign: 'center', color: '#888', fontSize: '0.8rem' }}>Nenhum recorde ainda.</div>}
+                        {!rankings.isLoading && rankings.combo.slice(0, 5).map(player => (
                             <div key={player.rank} style={{ 
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
                                 background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '10px',
@@ -498,20 +499,30 @@ export function MainMenu() {
 
             {/* 7. RODAPÉ FIXO DE RANKING */}
             <div className="fixed-footer">
-                <div className="footer-btn btn-global" onClick={() => setShowRankingModal(true)}>
+                <div className="footer-btn btn-global" onClick={() => { setRankingType('global'); setShowRankingModal(true); }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Globe size={14} /> RANKING GLOBAL
                         </div>
-                        <div style={{ fontSize: '0.55rem', color: '#fff', opacity: 0.8, marginTop: '2px' }}>VOCÊ É O TOP #4521</div>
+                        <div style={{ fontSize: '0.55rem', color: '#fff', opacity: 0.8, marginTop: '2px' }}>
+                            {rankings.isLoading ? 'CARREGANDO...' : (() => {
+                                const m = require('../../../systems/useRankingSystem');
+                                return `VOCÊ É O TOP #${m.useRankingSystem.getState().getMyPosition(rankings.global) || '?'}`;
+                            })()}
+                        </div>
                     </div>
                 </div>
-                <div className="footer-btn btn-weekly" onClick={() => setShowRankingModal(true)}>
+                <div className="footer-btn btn-weekly" onClick={() => { setRankingType('weekly'); setShowRankingModal(true); }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Trophy size={14} /> RANKING SEMANAL
                         </div>
-                        <div style={{ fontSize: '0.55rem', color: '#fff', opacity: 0.8, marginTop: '2px' }}>ENCERRA EM 2 DIAS</div>
+                        <div style={{ fontSize: '0.55rem', color: '#fff', opacity: 0.8, marginTop: '2px' }}>
+                            {rankings.isLoading ? 'CARREGANDO...' : (() => {
+                                const m = require('../../../systems/useRankingSystem');
+                                return `VOCÊ É O TOP #${m.useRankingSystem.getState().getMyPosition(rankings.weekly) || '?'}`;
+                            })()}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -528,27 +539,33 @@ export function MainMenu() {
                         <div className="ranking-modal-content">
                             <div className="ranking-modal-title">
                                 <Trophy size={24} style={{marginRight: '10px', verticalAlign: 'middle', paddingBottom: '4px'}} color="#fcd34d"/> 
-                                MEU RANKING
+                                {rankingType === 'global' ? 'MEU RANKING GLOBAL' : 'MEU RANKING SEMANAL'}
                             </div>
                             
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px' }}>
                                 <div className="ranking-modal-row">
                                     <span className="ranking-modal-lbl">MINHA POSIÇÃO</span>
-                                    <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>#4521</span>
+                                    <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>
+                                        {rankings.isLoading ? '...' : `#${require('../../../systems/useRankingSystem').useRankingSystem.getState().getMyPosition(rankingType === 'global' ? rankings.global : rankings.weekly)}`}
+                                    </span>
                                 </div>
                                 <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
-                                    <span className="ranking-modal-lbl">TOTAL AURA</span>
+                                    <span className="ranking-modal-lbl">TOTAL AURA {rankingType === 'weekly' ? 'SEMANAL' : ''}</span>
                                     <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
-                                        <Diamond size={16} color="#fcd34d" /> {Math.floor(aura).toLocaleString()}
+                                        <Diamond size={16} color="#fcd34d" /> 
+                                        {rankingType === 'global' ? Math.floor(aura).toLocaleString() : Math.floor(require('../../../systems/useAuraSystem').useAuraSystem.getState().weeklyAura || 0).toLocaleString()}
                                     </span>
                                 </div>
                             </div>
 
                             <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>TOP 100 GLOBAL</div>
+                                <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>
+                                    {rankingType === 'global' ? 'TOP 50 GLOBAL' : 'TOP 50 SEMANAL'}
+                                </div>
                                 
                                 <div className="ranking-modal-scroll">
-                                    {MOCK_TOP_100.map(player => (
+                                    {rankings.isLoading && <div style={{ textAlign: 'center', color: '#888' }}>Carregando...</div>}
+                                    {!rankings.isLoading && (rankingType === 'global' ? rankings.global : rankings.weekly).map(player => (
                                         <div key={player.rank} style={{
                                             display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
                                             background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
@@ -560,10 +577,15 @@ export function MainMenu() {
                                                     fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
                                                     textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
                                                 }}>#{player.rank}</span>
-                                                <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
+                                                    {rankingType === 'weekly' && player.rank <= 3 && (
+                                                        <span style={{ fontSize: '0.5rem', color: '#34d399', fontWeight: 'bold' }}>+{player.rank === 1 ? 1000 : player.rank === 2 ? 500 : 200} AuraCash</span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.aura.toLocaleString()}</span>
+                                                <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.score.toLocaleString()}</span>
                                                 <Diamond size={10} color="#a855f7" />
                                             </div>
                                         </div>

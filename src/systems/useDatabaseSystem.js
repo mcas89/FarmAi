@@ -28,31 +28,35 @@ export const useDatabaseSystem = create((set, get) => ({
   },
 
   // Salva o estado atual do jogo no Firebase
-  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate) => {
+  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura = 0, lastWeeklyReset = '') => {
     if (!db || !auth.currentUser) return; 
-    if (get().isSaving) return; 
     
-    set({ isSaving: true });
     try {
       const userRef = doc(db, 'users', auth.currentUser.uid);
-      await setDoc(userRef, {
+      
+      const payload = {
         position: { x: position[0], y: position[1], z: position[2] },
         comboCount: comboCount,
         maxCombo: maxCombo,
         activeModel: activeModel,
         aura: aura,
+        weeklyAura: weeklyAura,
         auracash: diamonds,
         dailyQuests: dailyQuests || [],
         lastResetDate: lastResetDate || '',
         lastUpdate: new Date().toISOString()
-      }, { merge: true }); // Merge true atualiza apenas o que mudou
+      };
 
+      if (lastWeeklyReset) {
+        payload.lastWeeklyReset = lastWeeklyReset;
+      }
+
+      await setDoc(userRef, payload, { merge: true }); // Merge true atualiza apenas o que mudou
       
-      set({ isSaving: false, lastSavedAt: Date.now() });
+      set({ lastSavedAt: Date.now() });
       console.log('💾 Jogo salvo na nuvem!');
     } catch (error) {
       console.error('❌ Erro ao salvar no Firebase:', error);
-      set({ isSaving: false });
     }
   }
 }));
