@@ -3,6 +3,7 @@ import { useUISystem } from '../../systems/useUISystem';
 
 // Import Screens
 import { SplashScreen } from './screens/SplashScreen';
+import { LoginScreen } from './screens/LoginScreen';
 import { MainMenu } from './screens/MainMenu';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { CharacterScreen } from './screens/CharacterScreen';
@@ -16,6 +17,8 @@ export function GameInterface() {
     // Renderiza a tela baseada no estado do Zustand
     const renderScreen = () => {
         switch (currentScreen) {
+            case 'LOGIN':
+                return <LoginScreen />;
             case 'SPLASH':
                 return <SplashScreen />;
             case 'MENU':

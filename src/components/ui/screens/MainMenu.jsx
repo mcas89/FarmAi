@@ -77,16 +77,14 @@ export function MainMenu() {
                     color: #ccc; font-weight: bold; border-radius: 10px; cursor: pointer;
                     transition: all 0.2s; margin-bottom: 5px; font-size: 0.8rem;
                 }
-                .drawer-btn:hover { background: rgba(168,85,247,0.2); color: #fff; transform: translateX(5px); }
-
-                .top-header {
-                    display: flex; align-items: center; gap: 10px; padding: 8px 15px 5px 15px;
+                .drawer-btn:hover { background: rgba(168,85,247,0.2); color: #fff; transform: translateX(5px);                .top-header {
+                    display: flex; align-items: center; gap: 8px; padding: 4px 15px 2px 15px;
                     background: linear-gradient(to bottom, rgba(168,85,247,0.15), transparent);
                     position: relative;
                 }
 
                 .icon-row {
-                    display: flex; justify-content: space-between; padding: 0 10px; margin: 10px 0;
+                    display: flex; justify-content: space-between; padding: 0 10px; margin: 8px 0;
                     overflow-x: auto; gap: 5px;
                 }
                 .icon-row::-webkit-scrollbar { display: none; }
@@ -96,7 +94,7 @@ export function MainMenu() {
                     cursor: pointer; flex: 1; min-width: 0; text-align: center;
                 }
                 .icon-circle {
-                    width: 42px; height: 42px; border-radius: 12px;
+                    width: 40px; height: 40px; border-radius: 12px;
                     background: rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center;
                     border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;
                     animation: floatAnim 3s infinite ease-in-out;
@@ -105,7 +103,7 @@ export function MainMenu() {
                 .icon-label { font-size: 0.45rem; font-weight: 900; color: #aaa; letter-spacing: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; width: 100%; }
 
                 .play-card {
-                    margin: 0 15px 12px 15px; padding: 12px 15px; border-radius: 16px;
+                    margin: 0 15px 12px 15px; padding: 10px 15px; border-radius: 16px;
                     background: linear-gradient(135deg, #a855f7, #6b21a8, #ec4899);
                     background-size: 200% 200%;
                     animation: gradientMove 5s ease infinite, pulseGlow 2s infinite;
@@ -233,30 +231,26 @@ export function MainMenu() {
                 
                 {/* 1. CABEÇALHO */}
                 <div className="top-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingRight: '15px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexShrink: 1 }}>
-                        <div onClick={() => setScreen('PROFILE')} style={{ flexShrink: 0, cursor: 'pointer', width: '38px', height: '38px', borderRadius: '50%', background: '#222', border: '2px solid #a855f7', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', boxShadow: '0 0 10px rgba(168,85,247,0.5)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
-                            <User size={18} color="#a855f7" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexShrink: 1 }}>
+                        <div onClick={() => setScreen('PROFILE')} style={{ flexShrink: 0, cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', background: '#222', border: '2px solid #a855f7', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', boxShadow: '0 0 10px rgba(168,85,247,0.5)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
+                            <User size={16} color="#a855f7" />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 }}>
-                            <div style={{ color: '#ccc', fontSize: '0.65rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>OLÁ, <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900' }}>{nickname.toUpperCase()}</span></div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                <div style={{ background: 'linear-gradient(to right, #a855f7, #6b21a8)', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontSize: '0.5rem', fontWeight: 'bold', flexShrink: 0 }}>LV {level}</div>
-                                <div style={{ color: '#d8b4fe', fontSize: '0.6rem', fontWeight: '900', fontStyle: 'italic', letterSpacing: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-                            </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', minWidth: 0 }}>
+                            <div style={{ color: '#ccc', fontSize: '0.6rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>OLÁ, <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900' }}>{nickname.toUpperCase()}</span></div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                                <Diamond size={9} color="#a855f7" style={{ flexShrink: 0 }} />
-                                <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{Math.floor(aura).toLocaleString()}</span>
+                                <div style={{ background: 'linear-gradient(to right, #a855f7, #6b21a8)', color: '#fff', padding: '1px 4px', borderRadius: '4px', fontSize: '0.45rem', fontWeight: 'bold', flexShrink: 0 }}>LV {level}</div>
+                                <div style={{ color: '#d8b4fe', fontSize: '0.55rem', fontWeight: '900', fontStyle: 'italic', letterSpacing: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, zIndex: 10 }}>
-                        <div className="anim-float" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(52,211,153,0.1)', padding: '3px 8px', borderRadius: '8px', border: '1px solid rgba(52,211,153,0.3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, zIndex: 10 }}>
+                        <div className="anim-float" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(52,211,153,0.1)', padding: '2px 6px', borderRadius: '8px', border: '1px solid rgba(52,211,153,0.3)' }}>
                             <Diamond size={10} color="#34d399" />
-                            <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 'bold' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
+                            <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 'bold' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
                         </div>
                         <div onClick={() => setIsMenuOpen(true)} style={{ cursor: 'pointer' }}>
-                            <Menu size={22} color="#fff" />
+                            <Menu size={20} color="#fff" />
                         </div>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export const useUISystem = create((set) => ({
-    currentScreen: 'SPLASH', // SPLASH, MENU, PROFILE, CHARACTERS, RANKING, ACHIEVEMENTS, GAME
+    currentScreen: 'LOGIN', // LOGIN, SPLASH, MENU, PROFILE, CHARACTERS, RANKING, ACHIEVEMENTS, GAME
     
     // Player Stats persistentes (Mockados para o MVP Visual)
     playerStats: {
