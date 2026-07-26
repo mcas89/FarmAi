@@ -8,18 +8,10 @@ import {
     Settings, Trophy, Crown, 
     BarChart2, Shield, ScrollText, Gift, Briefcase, ShoppingCart, 
     Flame, Zap, Sparkles, Diamond,
-    Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft
+    Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2
 } from 'lucide-react';
-
-const MOCK_TOP_100 = [
-    { name: 'DeusFamer_99', aura: 2500000000 },
-    { name: 'SigmaGrindset', aura: 1800000000 },
-    { name: 'AuraKing', aura: 1200000000 },
-    ...Array.from({length: 97}, (_, i) => ({
-        name: `Farmador_${Math.floor(Math.random() * 9000)+1000}`,
-        aura: Math.floor(1000000000 - (i * 10000000) - (Math.random() * 5000000))
-    })).sort((a,b) => b.aura - a.aura)
-].map((p, i) => ({ ...p, rank: i + 1 }));
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '../../../config/firebase';
 
 export function GameHUD() {
     const { aura, message, lastPoints, comboCount, maxCombo, hitId } = useAuraSystem();
@@ -41,7 +33,52 @@ export function GameHUD() {
     const [autoHide, setAutoHide] = useState(false);
     
     const [showLeftMenu, setShowLeftMenu] = useState(false);
+    
+    // Estados do Ranking
     const [showRankingModal, setShowRankingModal] = useState(false);
+    const [realRanking, setRealRanking] = useState([]);
+    const [myRank, setMyRank] = useState(null);
+    const [isLoadingRank, setIsLoadingRank] = useState(false);
+
+    useEffect(() => {
+        if (showRankingModal) {
+            setIsLoadingRank(true);
+            const fetchRanking = async () => {
+                try {
+                    const q = query(collection(db, 'users'), orderBy('aura', 'desc'), limit(100));
+                    const snapshot = await getDocs(q);
+                    const rankData = [];
+                    let index = 1;
+                    let foundMyRank = false;
+                    
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const pName = data.name ? data.name.split(' ')[0] : 'Jogador';
+                        const player = {
+                            id: doc.id,
+                            rank: index,
+                            name: pName,
+                            aura: data.aura || 0
+                        };
+                        rankData.push(player);
+                        if (pName === nickname) {
+                            setMyRank(index);
+                            foundMyRank = true;
+                        }
+                        index++;
+                    });
+                    
+                    setRealRanking(rankData);
+                    if (!foundMyRank) setMyRank('+100');
+                } catch (error) {
+                    console.error("Erro ao buscar ranking:", error);
+                } finally {
+                    setIsLoadingRank(false);
+                }
+            };
+            fetchRanking();
+        }
+    }, [showRankingModal, nickname]);
 
     useEffect(() => {
         if (aura > 0) {
@@ -287,52 +324,68 @@ export function GameHUD() {
                 }
             `}</style>
 
-            {/* TOP BAR */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: 'var(--top-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', pointerEvents: 'none', gap: '5px', zIndex: 10, width: '100%' }}>
+            {/* TOP BAR RESTRUTURADA */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: 'var(--top-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', pointerEvents: 'none', zIndex: 10, width: '100%' }}>
                 
-                {/* 1. Avatar (Left) */}
-                <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 1, minWidth: 0, maxWidth: '30%' }}>
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <div style={{ width: 'var(--avatar-size)', height: 'var(--avatar-size)', borderRadius: '50%', background: '#333', border: '1.5px solid #a855f7', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <User color="#fff" size={16} style={{ opacity: 0.5 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                    {/* 1. Avatar (Left) */}
+                    <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 1, padding: '10px 15px' }}>
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                            <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: '#333', border: '2px solid #a855f7', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 15px rgba(168,85,247,0.4)' }}>
+                                <User color="#fff" size={24} style={{ opacity: 0.5 }} />
+                            </div>
+                            <div style={{ position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #a855f7, #6b21a8)', border: '1px solid #fff', borderRadius: '10px', padding: '2px 8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: '0.6rem', fontWeight: '900', boxShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>
+                                LV {level}
+                            </div>
                         </div>
-                        <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', background: '#000', border: '1px solid #fff', borderRadius: '50%', width: '14px', height: '14px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: '0.45rem', fontWeight: 'bold' }}>
-                            {level}
-                        </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                        <div className="text-avatar-name" style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 'bold', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nickname}</div>
-                        <div className="text-avatar-title" style={{ color: '#a855f7', fontSize: '0.55rem', fontWeight: '900', letterSpacing: '1px', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', minWidth: 0 }}>
-                            <div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.2)', borderRadius: '1.5px', overflow: 'hidden' }}>
-                                <div style={{ width: `${(progressAura / 500) * 100}%`, height: '100%', background: '#a855f7' }}></div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                            <div className="text-avatar-name" style={{ color: '#fff', fontSize: '1.1rem', fontWeight: '900', lineHeight: '1', whiteSpace: 'nowrap', textShadow: '0 2px 5px rgba(0,0,0,0.8)' }}>{nickname}</div>
+                            <div className="text-avatar-title" style={{ color: '#d8b4fe', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase', lineHeight: '1', whiteSpace: 'nowrap' }}>{title}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', width: '100px' }}>
+                                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)' }}>
+                                    <div style={{ width: `${(progressAura / 500) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #d8b4fe)', boxShadow: '0 0 10px #a855f7' }}></div>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* 3. Icons (Right) */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                        <div className="glass-panel anim-float" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 12px', height: '45px', borderRadius: '12px', border: '1px solid rgba(52,211,153,0.4)', pointerEvents: 'auto', background: 'rgba(52,211,153,0.1)' }}>
+                            <Diamond size={16} color="#34d399" />
+                            <span style={{ color: '#fff', fontSize: '1rem', fontWeight: '900', textShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
+                        </div>
+                        <div className="top-btn" style={{ width: '45px', height: '45px', borderRadius: '12px' }} onClick={() => setScreen('MENU')}><Home size={20} color="#fff" /></div>
+                        <div className="top-btn" style={{ width: '45px', height: '45px', borderRadius: '12px' }} onClick={() => setShowRankingModal(true)}><Settings size={20} color="#fff" style={{ transition: 'transform 1s', ':hover': { transform: 'rotate(180deg)' } }} /></div>
+                    </div>
                 </div>
 
-                {/* 2. Aura Bar (Center) */}
-                <div className="glass-panel anim-float" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid rgba(168,85,247,0.3)', position: 'relative', flexShrink: 1, minWidth: 0, maxWidth: '35%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, width: '100%', justifyContent: 'center' }}>
-                        <Diamond size={12} color="#a855f7" className="anim-pulse" style={{ flexShrink: 0 }} />
-                        <span className="text-aura-val" style={{ color: '#fff', fontSize: '1rem', fontWeight: 'bold', lineHeight: '1', textShadow: auraGlow ? '0 0 15px rgba(255,215,0,1)' : 'none', transition: 'text-shadow 0.2s', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {Math.floor(aura).toLocaleString()}
-                        </span>
-                        <span className="text-aura-lbl" style={{ color: '#a855f7', fontSize: '0.6rem', fontWeight: 'bold', paddingTop: '2px', flexShrink: 0 }}>AURA</span>
+                {/* 2. Aura Bar (Center Expanded) */}
+                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '5px' }}>
+                    <div className="glass-panel anim-float" style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', 
+                        border: '1px solid rgba(168,85,247,0.5)', position: 'relative', 
+                        padding: '10px 30px', borderRadius: '20px',
+                        background: 'linear-gradient(180deg, rgba(20,10,30,0.8) 0%, rgba(10,5,20,0.6) 100%)',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(168,85,247,0.2)'
+                    }}>
+                        <span style={{ color: '#d8b4fe', fontSize: '0.75rem', fontWeight: '900', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '2px' }}>Aura Total</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Diamond size={24} color="#a855f7" className="anim-pulse" />
+                            <span style={{ 
+                                color: '#fff', fontSize: '2.5rem', fontWeight: '900', lineHeight: '1', 
+                                textShadow: auraGlow ? '0 0 30px rgba(255,215,0,1)' : '0 4px 15px rgba(168,85,247,0.6)', 
+                                transition: 'text-shadow 0.2s', letterSpacing: '1px'
+                            }}>
+                                {Math.floor(aura).toLocaleString()}
+                            </span>
+                        </div>
+                        {auraGlow && (
+                            <div style={{ color: '#ffd700', fontSize: '0.9rem', fontWeight: '900', position: 'absolute', bottom: '-20px', textShadow: '0 2px 5px rgba(0,0,0,0.8)' }}>
+                                +{lastPoints}
+                            </div>
+                        )}
                     </div>
-                    {auraGlow && (
-                        <div style={{ color: '#ffd700', fontSize: '0.55rem', fontWeight: 'bold', position: 'absolute', bottom: '-10px', whiteSpace: 'nowrap' }}>+{lastPoints}</div>
-                    )}
-                </div>
-
-                {/* 3. Icons (Right) */}
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 1, minWidth: 0, maxWidth: '35%', justifyContent: 'flex-end' }}>
-                    <div className="glass-panel anim-float" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', height: 'var(--btn-size)', borderRadius: '8px', border: '1px solid rgba(52,211,153,0.3)', pointerEvents: 'auto', minWidth: 0 }}>
-                        <Diamond size={12} color="#34d399" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
-                    </div>
-                    <div className="top-btn" style={{ flexShrink: 0 }} onClick={() => setScreen('MENU')}><Home size={14} color="#fff" /></div>
-                    <div className="top-btn" style={{ flexShrink: 0 }} onClick={() => setShowRankingModal(true)}><Settings size={14} color="#fff" style={{ transition: 'transform 1s', ':hover': { transform: 'rotate(180deg)' } }} /></div>
                 </div>
             </div>
 
@@ -482,7 +535,7 @@ export function GameHUD() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px' }}>
                                 <div className="ranking-modal-row">
                                     <span className="ranking-modal-lbl">MINHA POSIÇÃO</span>
-                                    <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>#42</span>
+                                    <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>{myRank ? `#${myRank}` : '...'}</span>
                                 </div>
                                 <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
                                     <span className="ranking-modal-lbl">TOTAL AURA</span>
@@ -496,26 +549,35 @@ export function GameHUD() {
                                 <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>TOP 100 GLOBAL</div>
                                 
                                 <div className="ranking-modal-scroll">
-                                    {MOCK_TOP_100.map(player => (
-                                        <div key={player.rank} style={{
-                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
-                                            background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-                                            borderRadius: '8px'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                                <span style={{ 
-                                                    color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
-                                                    fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
-                                                    textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
-                                                }}>#{player.rank}</span>
-                                                <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.aura.toLocaleString()}</span>
-                                                <Diamond size={10} color="#a855f7" />
-                                            </div>
+                                    {isLoadingRank ? (
+                                        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+                                            <Loader2 size={24} color="#a855f7" className="anim-spin" style={{ animation: 'spin 1s linear infinite' }} />
                                         </div>
-                                    ))}
+                                    ) : (
+                                        realRanking.map(player => (
+                                            <div key={player.id} style={{
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
+                                                background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                                                borderRadius: '8px',
+                                                border: player.name === nickname ? '1px solid rgba(168,85,247,0.5)' : 'none'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                    <span style={{ 
+                                                        color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
+                                                        fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
+                                                        textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
+                                                    }}>#{player.rank}</span>
+                                                    <span style={{ color: player.rank <= 3 ? '#fff' : (player.name === nickname ? '#a855f7' : '#ccc'), fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                                        {player.name} {player.name === nickname && '(Você)'}
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{Math.floor(player.aura).toLocaleString()}</span>
+                                                    <Diamond size={10} color="#a855f7" />
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
 
