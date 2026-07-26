@@ -35,11 +35,11 @@ export function SplashScreen() {
 
     return (
         <div style={{
-            position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh',
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
             display: 'flex', flexDirection: 'column',
             justifyContent: 'flex-end', alignItems: 'center', 
             zIndex: 9999, pointerEvents: 'auto',
-            paddingBottom: '50px',
+            paddingBottom: '10%', // Usando porcentagem para ficar mais flexível no mobile
             backgroundColor: '#050505'
         }}>
             {/* Imagem de Fundo Forçada via Tag Img */}
