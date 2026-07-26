@@ -89,6 +89,26 @@ export function MainMenu() {
 
     const handleLogout = async () => {
         try {
+            // Salva o estado atual ANTES de deslogar
+            const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
+                import('../../../systems/usePlayerSystem'),
+                import('../../../systems/useAuraSystem'),
+                import('../../../systems/useDatabaseSystem'),
+                import('../../../systems/useQuestSystem'),
+                import('../../../systems/useAchievementSystem')
+            ]);
+            
+            const pos = pSys.usePlayerSystem.getState().position;
+            const model = pSys.usePlayerSystem.getState().activeModel;
+            const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
+            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+            const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+            const achievements = achSys.useAchievementSystem.getState().getSavableData();
+
+            await dbSys.useDatabaseSystem.getState().saveGameState(
+                pos, comboCount, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
+            );
+
             await signOut(auth);
             setScreen('LOGIN');
         } catch (error) {
