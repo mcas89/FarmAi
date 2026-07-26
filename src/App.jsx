@@ -36,21 +36,45 @@ class ErrorBoundary extends Component {
   }
 }
 
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './config/firebase';
+
 function App() {
   const currentScreen = useUISystem(state => state.currentScreen);
 
   useEffect(() => {
-    // 1. Carrega os dados quando o app abre
-    const loadGame = async () => {
-      const data = await useDatabaseSystem.getState().loadPlayerData();
-      if (data) {
-        // Restaura a posição, combo e personagem da nuvem!
-        if (data.position) usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
-        if (data.comboCount) useAuraSystem.setState({ comboCount: data.comboCount });
-        if (data.activeModel) usePlayerSystem.setState({ activeModel: data.activeModel });
+    // 1. Escuta o estado de autenticação do Firebase para Persistência (Auto-Login)
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Usuário já estava logado (F5 na página)
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            
+            // Restaura nome e auracash
+            const realName = data.name ? data.name.split(' ')[0] : 'Jogador';
+            useUISystem.getState().updateStats({ nickname: realName, diamonds: data.auracash || 0 });
+            
+            // Restaura aura e combo
+            useAuraSystem.setState({ aura: data.aura || 0, comboCount: data.comboCount || 0, maxCombo: data.maxCombo || 0 });
+            
+            // Restaura posição e personagem 3D
+            if (data.position) usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
+            if (data.activeModel) usePlayerSystem.setState({ activeModel: data.activeModel });
+            
+            // Pula o login e vai direto pro menu via Splash
+            useUISystem.getState().setScreen('SPLASH');
+          }
+        } catch (error) {
+          console.error("Erro ao puxar dados persistentes:", error);
+        }
+      } else {
+        // Se não tiver logado, garante que a tela fique no LOGIN
+        useUISystem.getState().setScreen('LOGIN');
       }
-    };
-    loadGame();
+    });
 
     // 2. Auto-Save a cada 15 segundos
     const saveInterval = setInterval(() => {
@@ -64,7 +88,10 @@ function App() {
       useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo);
     }, 15000);
 
-    return () => clearInterval(saveInterval);
+    return () => {
+      clearInterval(saveInterval);
+      unsubscribe();
+    };
   }, []);
 
   return (
