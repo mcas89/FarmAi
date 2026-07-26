@@ -1,6 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Environment } from '@react-three/drei';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 
 const CHAR_NAMES = {
     'san.vrm': 'Samy',
@@ -8,6 +13,57 @@ const CHAR_NAMES = {
     'carol.vrm': 'Carol',
     'rafa.vrm': 'Rafa'
 };
+
+// Avatar simplificado para o menu, sem lógica de combate ou movimento
+function PreviewAvatar({ url }) {
+    const [vrm, setVrm] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        const loader = new GLTFLoader();
+        loader.register((parser) => new VRMLoaderPlugin(parser));
+        loader.load(`/models/${url}`, (gltf) => {
+            if (!isMounted) return;
+            const vrmData = gltf.userData.vrm;
+            vrmData.scene.rotation.y = Math.PI; 
+            // Levanta os braços um pouco para pose mais natural (Pose A)
+            if (vrmData.humanoid) {
+                const leftArm = vrmData.humanoid.getNormalizedBoneNode('leftUpperArm');
+                const rightArm = vrmData.humanoid.getNormalizedBoneNode('rightUpperArm');
+                if (leftArm) leftArm.rotation.z = 1.1;
+                if (rightArm) rightArm.rotation.z = -1.1;
+            }
+            setVrm(vrmData);
+        });
+        return () => { 
+            isMounted = false;
+            if (vrm) {
+                vrm.scene.traverse(c => {
+                    if (c.isMesh) { c.geometry?.dispose(); c.material?.dispose?.(); }
+                });
+            }
+        };
+    }, [url]);
+
+    useFrame((state, delta) => {
+        if (vrm) {
+            vrm.update(delta);
+            // Efeito de respiração suave
+            vrm.scene.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.015;
+            
+            // Piscar os olhos aleatoriamente
+            if (vrm.expressionManager) {
+                const blinkValue = vrm.expressionManager.getValue('blink') || 0;
+                if (Math.random() < 0.01 && blinkValue === 0) {
+                    vrm.expressionManager.setValue('blink', 1);
+                    setTimeout(() => { if (vrm.expressionManager) vrm.expressionManager.setValue('blink', 0) }, 150);
+                }
+            }
+        }
+    });
+
+    return vrm ? <primitive object={vrm.scene} /> : null;
+}
 
 export function CharacterScreen() {
     const setScreen = useUISystem(state => state.setScreen);
@@ -19,7 +75,7 @@ export function CharacterScreen() {
     // Controlamos qual modelo está salvo vs. qual está sendo "visualizado" agora
     const [savedModel, setSavedModel] = useState(activeModel);
 
-    // Quando clica no card, apenas mudamos o modelo 3D para visualizar (preview)
+    // Quando clica no card, apenas mudamos o modelo de visualização
     const handlePreview = (char) => {
         setActiveModel(char);
     };
@@ -51,7 +107,7 @@ export function CharacterScreen() {
     };
 
     const handleBack = () => {
-        // Se visualizou algo mas não salvou, reverte pro original
+        // Se visualizou algo mas não salvou, reverte pro original no sistema
         if (activeModel !== savedModel) {
             setActiveModel(originalModel.current);
         }
@@ -62,9 +118,29 @@ export function CharacterScreen() {
         <div style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-            padding: '40px', boxSizing: 'border-box', pointerEvents: 'none'
+            padding: '40px', boxSizing: 'border-box', pointerEvents: 'auto',
+            background: '#05050a' // Fundo sólido escuro cobrindo o mapa original!
         }}>
-            {/* Gradiente sutil no rodapé para melhorar a leitura dos cards, já que não tem background */}
+            {/* Canvas 3D Dedicado Exclusivo para Preview */}
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'auto' }}>
+                <Canvas camera={{ position: [0, 1.2, 2.5], fov: 40 }}>
+                    <ambientLight intensity={0.7} />
+                    <spotLight position={[2, 4, 3]} angle={0.5} penumbra={1} intensity={1.5} color="#d8b4fe" />
+                    <spotLight position={[-2, -1, -2]} angle={0.8} penumbra={1} intensity={0.5} color="#4ade80" />
+                    <PreviewAvatar key={activeModel} url={activeModel} />
+                    <OrbitControls 
+                        enablePan={false} 
+                        enableZoom={true} 
+                        minDistance={1.0}
+                        maxDistance={4.0}
+                        target={[0, 1.0, 0]}
+                        maxPolarAngle={Math.PI / 2 + 0.2}
+                        minPolarAngle={0.5}
+                        autoRotate={true}
+                        autoRotateSpeed={0.5}
+                    />
+                </Canvas>
+            </div>
             <div style={{
                 position: 'absolute', bottom: 0, left: 0, width: '100%', height: '50%',
                 background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
