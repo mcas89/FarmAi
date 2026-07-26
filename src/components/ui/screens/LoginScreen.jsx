@@ -33,6 +33,9 @@ export function LoginScreen() {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
                 
+                const { getCurrentWeekString } = await import('../../../utils/dateUtils');
+                const currentWeek = getCurrentWeekString();
+
                 // Grava estado inicial no Firestore
                 await setDoc(doc(db, 'users', user.uid), {
                     name: name,
@@ -43,7 +46,8 @@ export function LoginScreen() {
                     comboCount: 0,
                     maxCombo: 0,
                     weeklyAura: 0,
-                    lastWeeklyReset: '',
+                    lastWeeklyReset: currentWeek,
+                    [`weeklyAura_${currentWeek}`]: 0,
                     dailyQuests: [],
                     lastResetDate: '',
                     activeModel: 'san.vrm', // modelo padrão inicial

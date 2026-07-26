@@ -378,8 +378,29 @@ export function GameHUD() {
                             <Diamond size={12} color="#34d399" />
                             <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
                         </div>
-                        <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={() => {
+                        <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={async () => {
                             import('../../../systems/useMultiplayerSystem').then(m => m.useMultiplayerSystem.getState().leaveRoom());
+                            
+                            // SALVA O ESTADO NO FIREBASE ANTES DE VOLTAR AO MENU PARA ATUALIZAR O RANKING
+                            const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
+                                import('../../../systems/usePlayerSystem'),
+                                import('../../../systems/useAuraSystem'),
+                                import('../../../systems/useDatabaseSystem'),
+                                import('../../../systems/useQuestSystem'),
+                                import('../../../systems/useAchievementSystem')
+                            ]);
+                            
+                            const pos = pSys.usePlayerSystem.getState().position;
+                            const model = pSys.usePlayerSystem.getState().activeModel;
+                            const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
+                            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+                            const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+                            const achievements = achSys.useAchievementSystem.getState().getSavableData();
+
+                            await dbSys.useDatabaseSystem.getState().saveGameState(
+                                pos, comboCount, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
+                            );
+                            
                             setScreen('MENU');
                         }}><Home size={16} color="#fff" /></div>
                     </div>
@@ -409,7 +430,27 @@ export function GameHUD() {
                     pointerEvents: 'auto'
                 }}>
                     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', padding: '10px 5px', borderLeft: 'none', borderRadius: '0 12px 12px 0' }}>
-                        <div className="left-menu-btn" onClick={() => setShowRankingModal(true)}><BarChart2 className="anim-float" size={16} /><span>Ranking</span></div>
+                        <div className="left-menu-btn" onClick={async () => {
+                            const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
+                                import('../../../systems/usePlayerSystem'),
+                                import('../../../systems/useAuraSystem'),
+                                import('../../../systems/useDatabaseSystem'),
+                                import('../../../systems/useQuestSystem'),
+                                import('../../../systems/useAchievementSystem')
+                            ]);
+                            const pos = pSys.usePlayerSystem.getState().position;
+                            const model = pSys.usePlayerSystem.getState().activeModel;
+                            const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
+                            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+                            const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+                            const achievements = achSys.useAchievementSystem.getState().getSavableData();
+
+                            await dbSys.useDatabaseSystem.getState().saveGameState(
+                                pos, comboCount, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
+                            );
+                            
+                            setShowRankingModal(true);
+                        }}><BarChart2 className="anim-float" size={16} /><span>Ranking</span></div>
                         <div className="left-menu-btn" onClick={() => setScreen('ACHIEVEMENTS')}><Shield className="anim-wobble" size={16} /><span>Conquistas</span></div>
                         <div className="left-menu-btn" style={{ position: 'relative' }} onClick={() => setScreen('QUESTS')}>
                             <ScrollText size={16} color="#fff" />

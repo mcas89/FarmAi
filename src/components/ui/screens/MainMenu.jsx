@@ -13,7 +13,7 @@ import { signOut } from 'firebase/auth';
 
 export function MainMenu() {
     const setScreen = useUISystem(state => state.setScreen);
-    const { aura, comboCount } = useAuraSystem();
+    const { aura, comboCount, weeklyAura } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const updateStats = useUISystem(state => state.updateStats);
     const nickname = stats.nickname || 'Marcos';
@@ -635,7 +635,7 @@ export function MainMenu() {
                                     <span className="ranking-modal-lbl">TOTAL AURA {rankingType === 'weekly' ? 'SEMANAL' : ''}</span>
                                     <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
                                         <Diamond size={16} color="#fcd34d" /> 
-                                        {rankingType === 'global' ? Math.floor(aura).toLocaleString() : Math.floor(useAuraSystem.getState().weeklyAura || 0).toLocaleString()}
+                                        {rankingType === 'global' ? Math.floor(aura).toLocaleString() : Math.floor(weeklyAura || 0).toLocaleString()}
                                     </span>
                                 </div>
                             </div>
