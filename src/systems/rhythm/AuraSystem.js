@@ -37,6 +37,7 @@ let botCooldownUntil = 0;
 const breakCombo = () => {
     comboCount = 0;
     lastValidSide = null;
+    lastHitTime = 0;
     useAuraSystem.getState().registerHit(0, '', 0); 
 };
 
@@ -48,22 +49,44 @@ const resetDecayTimer = () => {
 };
 
 // Checa se o usuário tem precisão irreal (bot)
-const checkRoboticPattern = (interval) => {
+const checkRoboticPattern = (interval, currentCombo) => {
     recentIntervals.push(interval);
-    if (recentIntervals.length > 20) {
-        recentIntervals.shift(); // Mantém apenas os últimos 20
+    if (recentIntervals.length > 30) {
+        recentIntervals.shift(); // Mantém os últimos 30
     }
 
-    if (recentIntervals.length === 20) {
-        const max = Math.max(...recentIntervals);
-        const min = Math.min(...recentIntervals);
-        const difference = max - min;
+    if (recentIntervals.length === 30) {
+        // Ordena os intervalos para remover outliers (lag do navegador)
+        const sorted = [...recentIntervals].sort((a, b) => a - b);
         
-        // Se a diferença entre a batida mais lenta e a mais rápida for menor que 15ms
-        // Em 20 cliques seguidos, é humanamente impossível. É um bot de Auto-Click.
-        if (difference < 15) {
+        // Remove os 4 menores e os 4 maiores (descarta outliers e foca no miolo)
+        const coreIntervals = sorted.slice(4, 26);
+        
+        const max = Math.max(...coreIntervals);
+        const min = Math.min(...coreIntervals);
+        const difference = max - min;
+        const avg = coreIntervals.reduce((a, b) => a + b, 0) / coreIntervals.length;
+        
+        // Regra 1: Precisão Mecânica (Macros com Randomizer)
+        // Auto-clickers com "Randomize Delay" geralmente ficam presos num range.
+        // Se a variação no núcleo (excluindo lag) for < 40ms, é macro.
+        if (difference < 40) {
             recentIntervals = [];
             return true; 
+        }
+
+        // Regra 2: Velocidade Irreal
+        // Manter média abaixo de 85ms (quase 12 cliques/seg) por 30 hits seguidos
+        if (avg < 85) {
+            recentIntervals = [];
+            return true;
+        }
+        
+        // Regra 3: Resistência Infinita (Anti-Bot longo)
+        // Se chegou num combo muito alto farmando rápido demais e sem muita variação
+        if (currentCombo > 300 && avg < 110 && difference < 60) {
+            recentIntervals = [];
+            return true;
         }
     }
     return false;
@@ -92,13 +115,13 @@ export const AuraSystem = {
             if (lastHitTime > 0) {
                 const interval = now - lastHitTime;
                 
-                // Se clicar rápido demais (< 60ms), barra também
-                if (interval < 60) {
+                // Se clicar rápido demais (< 65ms), barra também
+                if (interval < 65) {
                     breakCombo();
                     return;
                 }
 
-                if (checkRoboticPattern(interval)) {
+                if (checkRoboticPattern(interval, comboCount)) {
                     // Punição: Zera combo, mostra msg e dá cooldown de 10 segundos
                     breakCombo();
                     botCooldownUntil = now + 10000;
