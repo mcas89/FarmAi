@@ -392,6 +392,11 @@ export function MainMenu() {
                     <div className="card-header"><CheckCircle size={16} /> MISSÕES DIÁRIAS</div>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {dailyQuests.length === 0 && (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#888', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                Carregando missões ou sem missões ativas...
+                            </div>
+                        )}
                         {dailyQuests.map((quest) => (
                             <div key={quest.id} style={{ 
                                 background: quest.claimed ? 'rgba(52,211,153,0.1)' : 'rgba(0,0,0,0.4)', 
