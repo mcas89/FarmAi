@@ -15,8 +15,10 @@ export const usePlayerSystem = create((set) => ({
     rotation: [0, 0, 0],
     currentState: 'idle', // idle, walk, farm, duel, etc.
     activeModel: 'san.vrm', // modelo atual
+    unlockedCharacters: ['san.vrm', 'deric.vrm'], // personagens desbloqueados
     setPosition: (pos) => set({ position: pos }),
     setRotation: (rot) => set({ rotation: rot }),
     setState: (state) => set({ currentState: state }),
-    setActiveModel: (model) => set({ activeModel: model })
+    setActiveModel: (model) => set({ activeModel: model }),
+    setUnlockedCharacters: (chars) => set({ unlockedCharacters: chars })
 }));

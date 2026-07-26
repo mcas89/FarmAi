@@ -70,6 +70,7 @@ function App() {
             // Restaura posição e personagem 3D
             if (data.position) usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
             if (data.activeModel) usePlayerSystem.setState({ activeModel: data.activeModel });
+            if (data.unlockedCharacters) usePlayerSystem.setState({ unlockedCharacters: data.unlockedCharacters });
             
             // Inicializa Missões Diárias e Conquistas
             import('./systems/useQuestSystem').then(m => {
@@ -104,12 +105,13 @@ function App() {
       const weeklyAura = useAuraSystem.getState().weeklyAura;
       const diamonds = useUISystem.getState().playerStats.diamonds;
       
-      // Missões e Conquistas
+      // Missões, Conquistas e Personagens
       const dailyQuests = useQuestSystem.getState().dailyQuests;
       const lastResetDate = useQuestSystem.getState().lastResetDate;
       const achievements = useAchievementSystem.getState().getSavableData();
+      const unlockedCharacters = usePlayerSystem.getState().unlockedCharacters;
       
-      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements);
+      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements, unlockedCharacters);
     }, 15000);
 
     return () => {

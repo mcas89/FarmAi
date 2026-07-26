@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
+import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
@@ -12,6 +13,13 @@ const CHAR_NAMES = {
     'deric.vrm': 'Marc',
     'carol.vrm': 'Carol',
     'rafa.vrm': 'Rafa'
+};
+
+const CHAR_REQUIREMENTS = {
+    'san.vrm': { price: 0, level: 1 },
+    'deric.vrm': { price: 0, level: 1 },
+    'carol.vrm': { price: 1000, level: 5 },
+    'rafa.vrm': { price: 1000, level: 5 }
 };
 
 // Avatar simplificado para o menu, sem lógica de combate ou movimento
@@ -67,7 +75,7 @@ function PreviewAvatar({ url }) {
 
 export function CharacterScreen() {
     const setScreen = useUISystem(state => state.setScreen);
-    const { activeModel, setActiveModel } = usePlayerSystem();
+    const { activeModel, setActiveModel, unlockedCharacters } = usePlayerSystem();
     const characters = ['san.vrm', 'deric.vrm', 'carol.vrm', 'rafa.vrm'];
 
     // Guardamos o modelo original para reverter caso o usuário saia sem salvar
@@ -83,6 +91,34 @@ export function CharacterScreen() {
     // Quando clica no botão EQUIPAR, salva no banco de dados
     const handleEquip = (char, e) => {
         e.stopPropagation(); // Evita acionar o click do card
+        
+        const isUnlocked = unlockedCharacters.includes(char);
+        const req = CHAR_REQUIREMENTS[char];
+
+        if (!isUnlocked) {
+            const aura = useAuraSystem.getState().aura;
+            const level = 1 + Math.floor(aura / 500);
+            
+            if (level < req.level) {
+                alert(`Personagem bloqueado!\n\nVocê precisa alcançar o Nível ${req.level} para usar este personagem.\n(Seu nível atual: ${level})`);
+                return;
+            }
+            
+            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+            if (diamonds < req.price) {
+                alert(`AuraCash insuficiente!\n\nVocê precisa de ${req.price} AuraCash para comprar este personagem.\n(Seu saldo atual: ${diamonds})`);
+                return;
+            }
+            
+            // Compra o personagem
+            const confirmBuy = window.confirm(`Deseja comprar ${CHAR_NAMES[char]} por ${req.price} AuraCash?`);
+            if (!confirmBuy) return;
+            
+            useUISystem.getState().updateStats({ diamonds: diamonds - req.price });
+            const newUnlocked = [...unlockedCharacters, char];
+            usePlayerSystem.setState({ unlockedCharacters: newUnlocked });
+        }
+
         setActiveModel(char);
         setSavedModel(char);
         originalModel.current = char;
@@ -99,9 +135,10 @@ export function CharacterScreen() {
             const diamonds = useUISystem.getState().playerStats.diamonds || 0;
             const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
             const achievements = achSys.useAchievementSystem.getState().getSavableData();
+            const currentUnlocked = pSys.usePlayerSystem.getState().unlockedCharacters;
             
             dbSys.useDatabaseSystem.getState().saveGameState(
-                pos, comboCount, char, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
+                pos, comboCount, char, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements, currentUnlocked
             );
         });
     };
@@ -191,6 +228,22 @@ export function CharacterScreen() {
                 {characters.map((char) => {
                     const isPreviewing = activeModel === char;
                     const isEquipped = savedModel === char;
+                    const isUnlocked = unlockedCharacters.includes(char);
+                    const req = CHAR_REQUIREMENTS[char];
+
+                    let btnText = 'EQUIPAR';
+                    let btnStyle = { 
+                        background: isPreviewing ? 'linear-gradient(90deg, #a855f7, #6b21a8)' : 'rgba(255,255,255,0.05)',
+                        color: '#fff', border: isPreviewing ? 'none' : '1px solid rgba(255,255,255,0.2)' 
+                    };
+
+                    if (isEquipped) {
+                        btnText = 'EQUIPADO ✓';
+                        btnStyle = { background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.4)' };
+                    } else if (!isUnlocked) {
+                        btnText = req.price > 0 ? `COMPRAR (💎 ${req.price})` : 'DESBLOQUEAR';
+                        btnStyle = { background: 'rgba(239,68,68,0.15)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.5)' };
+                    }
 
                     return (
                         <div
@@ -236,6 +289,11 @@ export function CharacterScreen() {
                                 }}>
                                     {CHAR_NAMES[char]}
                                 </h3>
+                                {!isUnlocked && (
+                                    <div style={{ color: '#fca5a5', fontSize: '0.8rem', marginTop: '10px', fontWeight: 'bold' }}>
+                                        REQUER NÍVEL {req.level}
+                                    </div>
+                                )}
                             </div>
 
                             <button 
@@ -244,13 +302,11 @@ export function CharacterScreen() {
                                     zIndex: 1, width: '100%', padding: '15px', borderRadius: '14px',
                                     fontWeight: '900', letterSpacing: '1px', fontSize: '0.9rem',
                                     cursor: isEquipped ? 'default' : 'pointer', transition: 'all 0.2s',
-                                    background: isEquipped ? 'rgba(52,211,153,0.1)' : (isPreviewing ? 'linear-gradient(90deg, #a855f7, #6b21a8)' : 'rgba(255,255,255,0.05)'),
-                                    color: isEquipped ? '#34d399' : '#fff',
-                                    border: isEquipped ? '1px solid rgba(52,211,153,0.4)' : (isPreviewing ? 'none' : '1px solid rgba(255,255,255,0.2)'),
-                                    boxShadow: isPreviewing && !isEquipped ? '0 5px 20px rgba(168,85,247,0.4)' : 'none'
+                                    boxShadow: isPreviewing && !isEquipped && isUnlocked ? '0 5px 20px rgba(168,85,247,0.4)' : 'none',
+                                    ...btnStyle
                                 }}
                             >
-                                {isEquipped ? 'EQUIPADO ✓' : 'EQUIPAR'}
+                                {btnText}
                             </button>
                         </div>
                     );
