@@ -282,7 +282,7 @@ function ParkFurniture() {
             items.push({
                 id: `vending_machine_${i}`,
                 type: 'maquinaderefri',
-                position: [spot.x, 0, spot.z],
+                position: [spot.x, 1.5, spot.z], // Subido em Y para não ficar enterrada
                 rotation: [0, spot.rot, 0],
                 scale: 1.5,
                 colRadius: 1.0 
