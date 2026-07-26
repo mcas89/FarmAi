@@ -117,7 +117,7 @@ export function Scene() {
             
             <Avatar key={activeModel} url={`/models/${activeModel}`} />
             <AuraEffects />
-            <MemoizedPostProcessing />
+            {/* <MemoizedPostProcessing /> */}
             
             <CameraController />
         </Canvas>
