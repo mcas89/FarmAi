@@ -65,15 +65,7 @@ function App() {
     <ErrorBoundary>
       <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#15151e' }}>
         <GameInterface />
-        <Suspense fallback={
-          <div style={{ 
-            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', 
-            color: 'white', fontSize: '24px', fontFamily: 'sans-serif', zIndex: 999 
-          }}>
-            Carregando Metaverso...
-          </div>
-        }>
+        <Suspense fallback={null}>
           <Scene />
         </Suspense>
       </div>
