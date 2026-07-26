@@ -39,6 +39,9 @@ export function LoginScreen() {
                     birthDate: birthDate,
                     aura: 0,
                     auracash: 0,
+                    comboCount: 0,
+                    activeModel: 'san.vrm', // modelo padrão inicial
+                    position: { x: 0, y: 0.1, z: 0 },
                     createdAt: new Date()
                 });
 
