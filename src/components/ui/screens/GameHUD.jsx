@@ -8,7 +8,7 @@ import {
     Settings, Trophy, Crown, 
     BarChart2, Shield, ScrollText, Gift, Briefcase, ShoppingCart, 
     Flame, Zap, Sparkles, Diamond,
-    Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2
+    Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
@@ -332,11 +332,11 @@ export function GameHUD() {
                 {/* Card Único de Ponta a Ponta */}
                 <div className="glass-panel" style={{ 
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                    width: '100%', padding: '8px 15px', gap: '10px'
+                    width: '100%', padding: '8px 15px', gap: '5px'
                 }}>
                     
                     {/* 1. Avatar (Left) */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, maxWidth: '30%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                         <div style={{ position: 'relative', flexShrink: 0 }}>
                             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#333', border: '1.5px solid #a855f7', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 10px rgba(168,85,247,0.3)' }}>
                                 <User color="#fff" size={20} style={{ opacity: 0.5 }} />
@@ -353,8 +353,8 @@ export function GameHUD() {
 
                     {/* 2. Aura Bar (Center Expandido) */}
                     <div style={{ 
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', 
-                        flex: 1, minWidth: 0, position: 'relative'
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        flex: 1.5, minWidth: 0, position: 'relative'
                     }}>
                         <div style={{ color: '#a855f7', fontSize: '0.6rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '2px' }}>AURA</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
@@ -375,12 +375,12 @@ export function GameHUD() {
                     </div>
 
                     {/* 3. Icons (Right) */}
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', height: '38px', borderRadius: '8px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', pointerEvents: 'auto' }}>
-                            <Diamond size={12} color="#34d399" />
-                            <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'flex-end', flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', height: '38px', borderRadius: '8px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', pointerEvents: 'auto', minWidth: 0 }}>
+                            <Diamond size={12} color="#34d399" style={{ flexShrink: 0 }} />
+                            <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
                         </div>
-                        <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={async () => {
+                        <div className="top-btn" style={{ flexShrink: 0, width: '38px', height: '38px', borderRadius: '8px' }} onClick={async () => {
                             import('../../../systems/useMultiplayerSystem').then(m => m.useMultiplayerSystem.getState().leaveRoom());
                             
                             // SALVA O ESTADO NO FIREBASE ANTES DE VOLTAR AO MENU PARA ATUALIZAR O RANKING
@@ -487,12 +487,20 @@ export function GameHUD() {
                             <div className="toggle-knob" />
                         </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'space-between', width: '100%' }}>
-                        <span style={{ color: '#aaa', fontSize: '0.45rem', fontWeight: 'bold' }}>MAPA LIZZY</span>
-                        <div className={`toggle-switch ${isMapMode ? 'active' : ''}`} onClick={() => toggleMapMode()}>
-                            <div className="toggle-knob" />
-                        </div>
-                    </div>
+                </div>
+            </div>
+
+            {/* BOTÃO MAPA (Lado Direito) */}
+            <div style={{
+                position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, pointerEvents: 'auto'
+            }}>
+                <div className="top-btn anim-float" style={{ 
+                    width: '45px', height: '45px', borderRadius: '50%', 
+                    background: isMapMode ? 'rgba(168, 85, 247, 0.4)' : 'var(--bg-glass)',
+                    border: isMapMode ? '1px solid #a855f7' : '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: isMapMode ? '0 0 15px rgba(168, 85, 247, 0.5)' : 'none'
+                }} onClick={toggleMapMode}>
+                    <Map size={22} color={isMapMode ? "#fff" : "#a855f7"} />
                 </div>
             </div>
 
