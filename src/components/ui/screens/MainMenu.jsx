@@ -23,6 +23,7 @@ export function MainMenu() {
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showRankingModal, setShowRankingModal] = useState(false);
+    const [showAboutModal, setShowAboutModal] = useState(false);
     const [rankingType, setRankingType] = useState('global');
 
     const [progression, setProgression] = useState(null);
@@ -333,9 +334,7 @@ export function MainMenu() {
                 </div>
                 
                 <div className="drawer-btn"><Settings size={18} /> CONFIGURAÇÃO</div>
-                <div className="drawer-btn"><Info size={18} /> SOBRE O GAME</div>
-                <div className="drawer-btn"><ShieldAlert size={18} /> TERMO DE RESPONSABILIDADE</div>
-                <div className="drawer-btn"><FileText size={18} /> POLÍTICA DE PRIVACIDADE</div>
+                <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowAboutModal(true); }}><Info size={18} /> SOBRE O GAME</div>
                 
                 <div className="drawer-btn" style={{ marginTop: '20px', color: '#f87171' }} onClick={handleLogout}>
                     <LogOut size={18} /> SAIR DA CONTA
@@ -649,6 +648,64 @@ export function MainMenu() {
                                 FECHAR
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL SOBRE O GAME */}
+            {showAboutModal && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 400, pointerEvents: 'auto'
+                }} onClick={() => setShowAboutModal(false)}>
+                    
+                    <div style={{
+                        background: 'rgba(20, 18, 28, 0.9)', border: '1px solid rgba(168, 85, 247, 0.4)',
+                        borderRadius: '24px', padding: '30px', width: '90%', maxWidth: '400px',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(168, 85, 247, 0.1)',
+                        animation: 'modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        textAlign: 'center'
+                    }} onClick={e => e.stopPropagation()}>
+                        
+                        <div style={{ 
+                            width: '60px', height: '60px', margin: '0 auto 15px auto', 
+                            background: 'linear-gradient(135deg, #a855f7, #ec4899)', borderRadius: '15px', 
+                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            boxShadow: '0 5px 15px rgba(168,85,247,0.5)'
+                        }}>
+                            <Info size={32} color="#fff" />
+                        </div>
+                        
+                        <h2 style={{ margin: '0 0 5px 0', color: '#fff', fontSize: '1.8rem', letterSpacing: '2px', textShadow: '0 0 10px #a855f7' }}>FARMA <span style={{ color: '#a855f7' }}>AI</span></h2>
+                        <div style={{ color: '#fbbf24', fontSize: '0.8rem', fontWeight: '900', letterSpacing: '2px', marginBottom: '20px' }}>VERSÃO 1.0.0 (BETA)</div>
+                        
+                        <div style={{ color: '#ccc', fontSize: '0.85rem', lineHeight: '1.6', textAlign: 'left', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px' }}>
+                            <p style={{ marginTop: 0 }}>
+                                O <strong>Farma AI</strong> é uma plataforma imersiva no Metaverso, onde a coleta de Aura se transforma em evolução. Através de mecânicas rítmicas e foco, os jogadores acumulam energia vital (Aura) que permite avançar de nível, desbloquear conquistas exclusivas e descobrir novos personagens 3D.
+                            </p>
+                            <p style={{ marginBottom: 0 }}>
+                                Esta é a <strong>Versão 1.0.0</strong> focada na fundação da economia de AuraCash, Ranking Global em tempo real e sistema de farm dinâmico. Novas expansões, lojas de itens e eventos épicos estão em desenvolvimento contínuo para transformar sua experiência.
+                            </p>
+                        </div>
+                        
+                        <div style={{ marginTop: '20px', color: '#666', fontSize: '0.65rem' }}>
+                            Desenvolvido para revolucionar o engajamento através da gamificação.
+                        </div>
+
+                        <button 
+                            onClick={() => setShowAboutModal(false)}
+                            style={{
+                                marginTop: '25px', width: '100%', background: 'linear-gradient(90deg, #a855f7, #ec4899)',
+                                border: 'none', color: '#fff', padding: '14px', borderRadius: '12px', 
+                                fontWeight: '900', cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '2px',
+                                boxShadow: '0 5px 15px rgba(168,85,247,0.4)'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            INCRÍVEL!
+                        </button>
                     </div>
                 </div>
             )}
