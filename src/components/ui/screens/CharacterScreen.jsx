@@ -7,6 +7,7 @@ import { OrbitControls, Environment, Backdrop, ContactShadows } from '@react-thr
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
+import { Diamond } from 'lucide-react';
 
 const CHAR_NAMES = {
     'san.vrm': 'Samy',
@@ -279,17 +280,21 @@ export function CharacterScreen() {
                     const isUnlocked = unlockedCharacters.includes(char);
                     const req = CHAR_REQUIREMENTS[char];
 
-                    let btnText = 'EQUIPAR';
+                    let btnContent = 'EQUIPAR';
                     let btnStyle = { 
                         background: isPreviewing ? 'linear-gradient(90deg, #a855f7, #6b21a8)' : 'rgba(255,255,255,0.05)',
                         color: '#fff', border: isPreviewing ? 'none' : '1px solid rgba(255,255,255,0.2)' 
                     };
 
                     if (isEquipped) {
-                        btnText = 'EQUIPADO ✓';
+                        btnContent = 'EQUIPADO ✓';
                         btnStyle = { background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.4)' };
                     } else if (!isUnlocked) {
-                        btnText = req.price > 0 ? `💎 ${req.price}` : 'DESBLOQUEAR';
+                        btnContent = req.price > 0 ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
+                                <Diamond size={10} color="#34d399" /> {req.price}
+                            </div>
+                        ) : 'DESBLOQUEAR';
                         btnStyle = { background: 'rgba(239,68,68,0.15)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.5)' };
                     }
 
@@ -351,7 +356,7 @@ export function CharacterScreen() {
                                     ...btnStyle
                                 }}
                             >
-                                {btnText}
+                                {btnContent}
                             </button>
                         </div>
                     );
