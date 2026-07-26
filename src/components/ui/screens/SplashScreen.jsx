@@ -1,23 +1,37 @@
-import React, { useEffect } from 'react';
-import { useProgress } from '@react-three/drei';
+import React, { useEffect, useState } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
-
-// Importando a imagem diretamente para forçar o Vite a gerar um hash único e contornar o cache do PWA
 import splashImg from '../../../assets/splash.png';
 
 export function SplashScreen() {
-    const { progress } = useProgress();
     const setScreen = useUISystem(state => state.setScreen);
+    const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-        // Quando os modelos 3D terminarem de baixar
-        if (progress >= 100) {
-            const timer = setTimeout(() => {
-                setScreen('MENU');
-            }, 500); // 0.5s de delay
-            return () => clearTimeout(timer);
-        }
-    }, [progress, setScreen]);
+        // Barra de progresso artificial e confiável (2.5 segundos)
+        const duration = 2500;
+        const intervalTime = 50;
+        const step = (100 / (duration / intervalTime));
+        
+        const timer = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 100) {
+                    clearInterval(timer);
+                    return 100;
+                }
+                return prev + step;
+            });
+        }, intervalTime);
+
+        // Transição garantida após a barra encher
+        const finishTimer = setTimeout(() => {
+            setScreen('MENU');
+        }, duration + 300); // Mais 300ms pra dar tempo de ver o 100%
+
+        return () => {
+            clearInterval(timer);
+            clearTimeout(finishTimer);
+        };
+    }, [setScreen]);
 
     return (
         <div style={{
@@ -39,7 +53,7 @@ export function SplashScreen() {
                 }}
             />
 
-            {/* Barra de Progresso Real */}
+            {/* Barra de Progresso Segura */}
             <div style={{ 
                 width: '80%', height: '12px', background: 'rgba(0,0,0,0.6)', 
                 borderRadius: '6px', overflow: 'hidden', 
@@ -48,9 +62,9 @@ export function SplashScreen() {
                 zIndex: 1
             }}>
                 <div style={{ 
-                    width: `${progress}%`, height: '100%', 
+                    width: `${Math.min(progress, 100)}%`, height: '100%', 
                     background: 'linear-gradient(90deg, #a855f7, #ec4899)', 
-                    transition: 'width 0.3s ease-out',
+                    transition: 'width 0.1s linear',
                     position: 'relative'
                 }}>
                     <div style={{
