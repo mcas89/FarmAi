@@ -25,17 +25,20 @@ const renewAnimationCycle = (side) => {
 
 
 // ==========================================
-// GAMIFICAÇÃO
+// GAMIFICAÇÃO E LIMITES
 // ==========================================
 let comboCount = 0;
 let decayTimer = null;
 let lastValidSide = null;
 let lastHitTime = 0;
+let comboStartTime = 0;
+let timeCooldownUntil = 0;
 
 const breakCombo = () => {
     comboCount = 0;
     lastValidSide = null;
     lastHitTime = 0;
+    comboStartTime = 0;
     useAuraSystem.getState().registerHit(0, '', 0); 
 };
 
@@ -50,15 +53,31 @@ export const AuraSystem = {
     setRawInput: (side, isPressed) => {
         const now = Date.now();
 
+        // Se estiver em cooldown de tempo, ignora input
+        if (now < timeCooldownUntil) return;
+
         state[side].isPressed = isPressed;
 
         if (isPressed) {
             resetDecayTimer();
             renewAnimationCycle(side); 
 
+            // Inicia o cronômetro no primeiro hit
+            if (comboCount === 0) {
+                comboStartTime = now;
+            }
+
             // CASOS INVÁLIDOS (Errou alternância)
             if (lastValidSide === side) {
                 breakCombo(); 
+                return;
+            }
+
+            // LIMITE DE TEMPO: 20 minutos (1.200.000 ms)
+            if (comboStartTime > 0 && (now - comboStartTime) > 1200000) {
+                breakCombo();
+                timeCooldownUntil = now + 5000; // Bloqueia por 5 segundos para quebrar o ritmo
+                useAuraSystem.getState().registerHit(0, 'Fadigado! Você farmou por 20 minutos direto, descanse!', 0);
                 return;
             }
 
