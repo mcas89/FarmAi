@@ -7,8 +7,8 @@ export function SplashScreen() {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-        // Barra de progresso artificial e confiável (2.5 segundos)
-        const duration = 2500;
+        // Barra de progresso artificial e confiável (4 segundos)
+        const duration = 4000;
         const intervalTime = 50;
         const step = (100 / (duration / intervalTime));
         
