@@ -25,11 +25,14 @@ const renewAnimationCycle = (side) => {
 
 
 // ==========================================
-// GAMIFICAÇÃO - FASE 01 (RECONHECIMENTO 1,2,1,2)
+// GAMIFICAÇÃO E ANTI-CHEAT (AUTO-CLICK DETECTOR)
 // ==========================================
 let comboCount = 0;
 let decayTimer = null;
 let lastValidSide = null;
+let lastHitTime = 0;
+let recentIntervals = [];
+let botCooldownUntil = 0;
 
 const breakCombo = () => {
     comboCount = 0;
@@ -44,23 +47,68 @@ const resetDecayTimer = () => {
     }, 500); 
 };
 
+// Checa se o usuário tem precisão irreal (bot)
+const checkRoboticPattern = (interval) => {
+    recentIntervals.push(interval);
+    if (recentIntervals.length > 20) {
+        recentIntervals.shift(); // Mantém apenas os últimos 20
+    }
+
+    if (recentIntervals.length === 20) {
+        const max = Math.max(...recentIntervals);
+        const min = Math.min(...recentIntervals);
+        const difference = max - min;
+        
+        // Se a diferença entre a batida mais lenta e a mais rápida for menor que 15ms
+        // Em 20 cliques seguidos, é humanamente impossível. É um bot de Auto-Click.
+        if (difference < 15) {
+            recentIntervals = [];
+            return true; 
+        }
+    }
+    return false;
+};
+
 export const AuraSystem = {
     setRawInput: (side, isPressed) => {
+        const now = Date.now();
+        
+        // Bloqueio de penalidade ativo
+        if (now < botCooldownUntil) return;
+
         state[side].isPressed = isPressed;
 
         if (isPressed) {
             resetDecayTimer();
             renewAnimationCycle(side); 
 
-            const otherSide = side === 'left' ? 'right' : 'left';
-
-            // CASOS INVÁLIDOS
+            // CASOS INVÁLIDOS (Errou alternância)
             if (lastValidSide === side) {
-                breakCombo(); // Errou a alternância (ex: 1,1)
+                breakCombo(); 
                 return;
             }
 
-            // SUCESSO (1,2,1,2 mantido)
+            // ANTI-CHEAT: Checagem de intervalo
+            if (lastHitTime > 0) {
+                const interval = now - lastHitTime;
+                
+                // Se clicar rápido demais (< 60ms), barra também
+                if (interval < 60) {
+                    breakCombo();
+                    return;
+                }
+
+                if (checkRoboticPattern(interval)) {
+                    // Punição: Zera combo, mostra msg e dá cooldown de 10 segundos
+                    breakCombo();
+                    botCooldownUntil = now + 10000;
+                    useAuraSystem.getState().registerHit(0, 'Que feio! Parece que está usando auto click... Descanse e use seus polegares! 🤖', 0);
+                    return;
+                }
+            }
+
+            // SUCESSO (1,2,1,2 mantido de forma orgânica)
+            lastHitTime = now;
             lastValidSide = side;
             comboCount++;
 

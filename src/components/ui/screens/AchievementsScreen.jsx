@@ -6,6 +6,7 @@ import { CheckCircle, Diamond, Lock } from 'lucide-react';
 export function AchievementsScreen() {
     const setScreen = useUISystem(state => state.setScreen);
     const [achievements, setAchievements] = useState([]);
+    const [activeTab, setActiveTab] = useState('PENDING'); // 'PENDING' ou 'CLAIMED'
     const updateStats = useUISystem(state => state.updateStats);
     const stats = useUISystem(state => state.playerStats);
 
@@ -110,22 +111,50 @@ export function AchievementsScreen() {
                 .ach-list::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.4); border-radius: 4px; }
             `}</style>
 
-            {/* Header */}
+            {/* Header com Abas */}
             <div style={{ padding: '20px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(168, 85, 247, 0.3)', backdropFilter: 'blur(10px)' }}>
-                <div>
-                    <h2 style={{ color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', fontSize: '1.8rem', textShadow: '0 0 10px rgba(168,85,247,0.5)' }}>
-                        Conquistas
-                    </h2>
-                    <div style={{ color: '#a855f7', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}>
-                        DESBLOQUEIE MARCOS E GANHE AURACASH
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div>
+                        <h2 style={{ color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', fontSize: '1.8rem', textShadow: '0 0 10px rgba(168,85,247,0.5)' }}>
+                            Conquistas
+                        </h2>
+                        <div style={{ color: '#a855f7', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}>
+                            DESBLOQUEIE MARCOS E GANHE AURACASH
+                        </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button 
+                            onClick={() => setActiveTab('PENDING')}
+                            style={{
+                                padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
+                                background: activeTab === 'PENDING' ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.05)',
+                                color: activeTab === 'PENDING' ? '#fff' : '#888',
+                                border: activeTab === 'PENDING' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            PENDENTES
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('CLAIMED')}
+                            style={{
+                                padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
+                                background: activeTab === 'CLAIMED' ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.05)',
+                                color: activeTab === 'CLAIMED' ? '#fff' : '#888',
+                                border: activeTab === 'CLAIMED' ? '1px solid #34d399' : '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            COLETADAS
+                        </button>
                     </div>
                 </div>
+                
                 <button 
                     onClick={() => setScreen('MENU')}
                     style={{
                         padding: '10px 25px', background: 'rgba(255,255,255,0.05)', color: '#fff',
                         border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', cursor: 'pointer',
-                        fontWeight: 'bold', transition: 'all 0.2s'
+                        fontWeight: 'bold', transition: 'all 0.2s', alignSelf: 'flex-start'
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
@@ -140,7 +169,7 @@ export function AchievementsScreen() {
                     maxWidth: '1200px', margin: '0 auto', display: 'grid', 
                     gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' 
                 }}>
-                    {achievements.map((ach) => {
+                    {achievements.filter(ach => activeTab === 'PENDING' ? !ach.claimed : ach.claimed).map((ach) => {
                         const isLocked = !ach.completed;
                         const isReady = ach.completed && !ach.claimed;
                         const isClaimed = ach.claimed;
