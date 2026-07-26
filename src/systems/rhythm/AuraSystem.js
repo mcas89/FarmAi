@@ -78,6 +78,31 @@ export const AuraSystem = {
                 breakCombo();
                 timeCooldownUntil = now + 5000; // Bloqueia por 5 segundos para quebrar o ritmo
                 useAuraSystem.getState().registerHit(0, 'Fadigado! Você farmou por 20 minutos direto, descanse!', 0);
+                
+                // Salva o estado e força a saída para o menu principal
+                Promise.all([
+                    import('../usePlayerSystem'),
+                    import('../useDatabaseSystem'),
+                    import('../useQuestSystem'),
+                    import('../useAchievementSystem'),
+                    import('../useUISystem'),
+                    import('../useMultiplayerSystem')
+                ]).then(([pSys, dbSys, qSys, achSys, uiSys, mpSys]) => {
+                    const pos = pSys.usePlayerSystem.getState().position;
+                    const model = pSys.usePlayerSystem.getState().activeModel;
+                    const { comboCount, maxCombo, aura, weeklyAura } = useAuraSystem.getState();
+                    const diamonds = uiSys.useUISystem.getState().playerStats.diamonds || 0;
+                    const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+                    const achievements = achSys.useAchievementSystem.getState().getSavableData();
+
+                    dbSys.useDatabaseSystem.getState().saveGameState(
+                        pos, comboCount, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
+                    ).then(() => {
+                        mpSys.useMultiplayerSystem.getState().leaveRoom();
+                        uiSys.useUISystem.getState().setScreen('MENU');
+                    });
+                });
+
                 return;
             }
 
