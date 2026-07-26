@@ -13,6 +13,7 @@ export function RemotePlayer({ playerData }) {
   
   const targetPos = useRef(new THREE.Vector3(playerData.x || 0, playerData.y || 0, playerData.z || 0));
   const currentPos = useRef(new THREE.Vector3(playerData.x || 0, playerData.y || 0, playerData.z || 0));
+  const groupRef = useRef();
   
   // Sistemas de simulação visual do farming online
   const lastAuraRef = useRef(playerData.aura || 0);
@@ -67,7 +68,7 @@ export function RemotePlayer({ playerData }) {
       });
       
       vrmData.scene.rotation.y = Math.PI; 
-      vrmData.scene.position.copy(targetPos.current);
+      vrmData.scene.position.set(0, 0, 0); // Vrm fica no 0,0,0 local do grupo
       
       AnimationEngine.setBasePose('arms_down_pose');
       setVrm(vrmData);
@@ -102,7 +103,11 @@ export function RemotePlayer({ playerData }) {
     
     currentPos.current.lerp(targetPos.current, 10 * delta);
     
-    const dir = new THREE.Vector3().subVectors(targetPos.current, vrm.scene.position);
+    if (groupRef.current) {
+        groupRef.current.position.copy(currentPos.current);
+    }
+    
+    const dir = new THREE.Vector3().subVectors(targetPos.current, currentPos.current);
     dir.y = 0;
     if (dir.lengthSq() > 0.001) {
         dir.normalize();
@@ -110,8 +115,6 @@ export function RemotePlayer({ playerData }) {
         const targetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
         vrm.scene.quaternion.slerp(targetQuat, 10 * delta); 
     }
-    
-    vrm.scene.position.copy(currentPos.current);
 
     // Sistema de Animação e Simulação de Farming
     if (farmTimerRef.current > 0) {
@@ -135,7 +138,7 @@ export function RemotePlayer({ playerData }) {
   const title = getPlayerTitle(level);
 
   return vrm ? (
-    <group>
+    <group ref={groupRef}>
         <primitive object={vrm.scene} />
         
         {/* CSS para Animação Flutuante */}
