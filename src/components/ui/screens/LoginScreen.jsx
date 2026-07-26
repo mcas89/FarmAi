@@ -40,6 +40,7 @@ export function LoginScreen() {
                     aura: 0,
                     auracash: 0,
                     comboCount: 0,
+                    maxCombo: 0,
                     activeModel: 'san.vrm', // modelo padrão inicial
                     position: { x: 0, y: 0.1, z: 0 },
                     createdAt: new Date()
@@ -67,7 +68,7 @@ export function LoginScreen() {
                     const realDiamonds = data.auracash || 0;
                     
                     updateStats({ nickname: realName, diamonds: realDiamonds });
-                    useAuraSystem.setState({ aura: realAura, comboCount: data.comboCount || 0 });
+                    useAuraSystem.setState({ aura: realAura, comboCount: data.comboCount || 0, maxCombo: data.maxCombo || 0 });
                     
                     // Restaura posição e personagem se existirem
                     if (data.position) {

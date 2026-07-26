@@ -23,12 +23,14 @@ export const useAuraSystem = create((set) => ({
     message: '', 
     lastPoints: 0,
     comboCount: 0,
+    maxCombo: 0,
     hitId: 0,
     
     registerHit: (pointsGained, message, comboCount = 0) => set((state) => {
         // A aura não cai abaixo de zero, mas punições (-5) são aplicadas normalmente.
         const newAura = Math.max(0, state.aura + pointsGained);
         const newLevel = Math.floor(newAura / 500);
+        const newMaxCombo = Math.max(state.maxCombo, comboCount);
         
         return {
             aura: newAura,
@@ -36,6 +38,7 @@ export const useAuraSystem = create((set) => ({
             lastPoints: pointsGained,
             message: message,
             comboCount: comboCount,
+            maxCombo: newMaxCombo,
             hitId: Date.now() + Math.random(),
             title: calculateTitle(newAura)
         };

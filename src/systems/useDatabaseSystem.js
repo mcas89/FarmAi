@@ -28,7 +28,7 @@ export const useDatabaseSystem = create((set, get) => ({
   },
 
   // Salva o estado atual do jogo no Firebase
-  saveGameState: async (position, comboCount, activeModel, aura, diamonds) => {
+  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo) => {
     if (!db || !auth.currentUser) return; 
     if (get().isSaving) return; 
     
@@ -38,6 +38,7 @@ export const useDatabaseSystem = create((set, get) => ({
       await setDoc(userRef, {
         position: { x: position[0], y: position[1], z: position[2] },
         comboCount: comboCount,
+        maxCombo: maxCombo,
         activeModel: activeModel,
         aura: aura,
         auracash: diamonds,
