@@ -271,7 +271,9 @@ export function Avatar({ url }) {
             vrm.scene.position.z, 
             newState, 
             usePlayerSystem.getState().activeModel,
-            useAuraSystem.getState().aura
+            useAuraSystem.getState().aura,
+            leftFarmActive,
+            rightFarmActive
         );
     }
   });

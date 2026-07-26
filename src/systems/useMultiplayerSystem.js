@@ -87,12 +87,10 @@ export const useMultiplayerSystem = create((setStore, getStore) => ({
         }
     },
 
-    updatePosition: (x, y, z, anim, model, aura) => {
+    updatePosition: (x, y, z, anim, model, aura, leftFarm = false, rightFarm = false) => {
         const { currentRoomId } = getStore();
         if (!rtdb || !auth.currentUser || !currentRoomId) return;
         
-        // Throttle manual (limitar envios para não estourar o RTDB)
-        // Só permite enviar a cada 300ms
         if (updateTimeout) return;
 
         updateTimeout = setTimeout(() => {
@@ -100,8 +98,7 @@ export const useMultiplayerSystem = create((setStore, getStore) => ({
             const uid = auth.currentUser.uid;
             const playerRef = ref(rtdb, `rooms/${currentRoomId}/players/${uid}`);
             
-            // Só atualiza os campos que mudaram rápido para economizar banda
-            const updates = { x, y, z, anim, timestamp: Date.now() };
+            const updates = { x, y, z, anim, timestamp: Date.now(), leftFarm, rightFarm };
             if (model) updates.model = model;
             if (aura !== undefined) updates.aura = aura;
             

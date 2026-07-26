@@ -15,10 +15,8 @@ export function RemotePlayer({ playerData }) {
   const currentPos = useRef(new THREE.Vector3(playerData.x || 0, playerData.y || 0, playerData.z || 0));
   const groupRef = useRef();
   
-  // Sistemas de simulação visual do farming online
+  // Efeito Visual de ganho de aura (Float UP)
   const lastAuraRef = useRef(playerData.aura || 0);
-  const [isFarmingState, setIsFarmingState] = useState(false);
-  const farmTimerRef = useRef(0);
   const [showAuraVfx, setShowAuraVfx] = useState(false);
   const [auraGain, setAuraGain] = useState(0);
 
@@ -28,8 +26,6 @@ export function RemotePlayer({ playerData }) {
         const diff = Math.floor(playerData.aura - lastAuraRef.current);
         setAuraGain(diff);
         setShowAuraVfx(true);
-        setIsFarmingState(true);
-        farmTimerRef.current = 0.5; // Meio segundo de braços balançando
         
         timeout = setTimeout(() => setShowAuraVfx(false), 1000);
     }
@@ -116,17 +112,11 @@ export function RemotePlayer({ playerData }) {
         vrm.scene.quaternion.slerp(targetQuat, 10 * delta); 
     }
 
-    // Sistema de Animação e Simulação de Farming
-    if (farmTimerRef.current > 0) {
-        farmTimerRef.current -= delta;
-        if (farmTimerRef.current <= 0) setIsFarmingState(false);
-    }
-
     const isMoving = playerData.anim === 'run' || playerData.anim === 'walk';
     const isRunning = playerData.anim === 'run';
     
-    const leftFarmActive = isFarmingState && Math.sin(state.clock.elapsedTime * 15) > 0;
-    const rightFarmActive = isFarmingState && Math.sin(state.clock.elapsedTime * 15) <= 0;
+    const leftFarmActive = playerData.leftFarm || false;
+    const rightFarmActive = playerData.rightFarm || false;
     
     const isIdle = (playerData.anim === 'idle' || !isMoving) && !leftFarmActive && !rightFarmActive;
     
