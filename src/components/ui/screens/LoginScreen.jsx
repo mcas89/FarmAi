@@ -41,6 +41,8 @@ export function LoginScreen() {
                     auracash: 0,
                     comboCount: 0,
                     maxCombo: 0,
+                    dailyQuests: [],
+                    lastResetDate: '',
                     activeModel: 'san.vrm', // modelo padrão inicial
                     position: { x: 0, y: 0.1, z: 0 },
                     createdAt: new Date()
@@ -69,6 +71,11 @@ export function LoginScreen() {
                     
                     updateStats({ nickname: realName, diamonds: realDiamonds });
                     useAuraSystem.setState({ aura: realAura, comboCount: data.comboCount || 0, maxCombo: data.maxCombo || 0 });
+                    
+                    // Inicializa o sistema de Missões Diárias com os dados salvos
+                    import('../../../systems/useQuestSystem').then(m => {
+                        m.useQuestSystem.getState().initializeQuests(data.dailyQuests, data.lastResetDate);
+                    });
                     
                     // Restaura posição e personagem se existirem
                     if (data.position) {

@@ -28,7 +28,7 @@ export const useDatabaseSystem = create((set, get) => ({
   },
 
   // Salva o estado atual do jogo no Firebase
-  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo) => {
+  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate) => {
     if (!db || !auth.currentUser) return; 
     if (get().isSaving) return; 
     
@@ -42,6 +42,8 @@ export const useDatabaseSystem = create((set, get) => ({
         activeModel: activeModel,
         aura: aura,
         auracash: diamonds,
+        dailyQuests: dailyQuests || [],
+        lastResetDate: lastResetDate || '',
         lastUpdate: new Date().toISOString()
       }, { merge: true }); // Merge true atualiza apenas o que mudou
 

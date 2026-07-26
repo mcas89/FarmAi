@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useQuestSystem } from './useQuestSystem';
 
 const calculateTitle = (aura) => {
     if (aura >= 1000000000) return 'Deus da Aura';
@@ -31,6 +32,14 @@ export const useAuraSystem = create((set) => ({
         const newAura = Math.max(0, state.aura + pointsGained);
         const newLevel = Math.floor(newAura / 500);
         const newMaxCombo = Math.max(state.maxCombo, comboCount);
+        
+        // Atualiza o progresso das missões em background
+        if (pointsGained > 0) {
+            useQuestSystem.getState().updateQuestProgress('gain_aura', pointsGained);
+        }
+        if (comboCount > 0) {
+            useQuestSystem.getState().updateQuestProgress('reach_combo', comboCount);
+        }
         
         return {
             aura: newAura,

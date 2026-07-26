@@ -22,10 +22,49 @@ export function MainMenu() {
     const setScreen = useUISystem(state => state.setScreen);
     const { aura, title, level, comboCount } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
+    const updateStats = useUISystem(state => state.updateStats);
     const nickname = stats.nickname || 'Marcos';
+
+    // Importando state de Missões
+    const [dailyQuests, setDailyQuests] = useState([]);
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showRankingModal, setShowRankingModal] = useState(false);
+
+    // Carregar sistema de quests dinamicamente para evitar erro de circular dependência se houver
+    useEffect(() => {
+        import('../../../systems/useQuestSystem').then(m => {
+            const unsub = m.useQuestSystem.subscribe((state) => {
+                setDailyQuests(state.dailyQuests);
+            });
+            setDailyQuests(m.useQuestSystem.getState().dailyQuests);
+            return unsub;
+        });
+    }, []);
+
+    const handleClaimReward = async (questId) => {
+        const m = await import('../../../systems/useQuestSystem');
+        const reward = m.useQuestSystem.getState().claimQuest(questId);
+        if (reward > 0) {
+            updateStats({ diamonds: (stats.diamonds || 0) + reward });
+            // Força salvar no banco imediatamente com os valores reais
+            Promise.all([
+                import('../../../systems/usePlayerSystem'),
+                import('../../../systems/useAuraSystem'),
+                import('../../../systems/useDatabaseSystem')
+            ]).then(([pSys, aSys, dbSys]) => {
+                const pos = pSys.usePlayerSystem.getState().position;
+                const model = pSys.usePlayerSystem.getState().activeModel;
+                const combo = aSys.useAuraSystem.getState().comboCount;
+                const maxC = aSys.useAuraSystem.getState().maxCombo;
+                const currAura = aSys.useAuraSystem.getState().aura;
+                
+                dbSys.useDatabaseSystem.getState().saveGameState(
+                    pos, combo, model, currAura, (stats.diamonds || 0) + reward, maxC, m.useQuestSystem.getState().dailyQuests, m.useQuestSystem.getState().lastResetDate
+                );
+            });
+        }
+    };
 
     const handleLogout = async () => {
         try {
@@ -348,26 +387,58 @@ export function MainMenu() {
                     </div>
                 </div>
 
-                {/* 5. MISSÕES DIÁRIAS */}
+                {/* 5. MISSÕES DIÁRIAS (REAIS) */}
                 <div className="info-card">
                     <div className="card-header"><CheckCircle size={16} /> MISSÕES DIÁRIAS</div>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{ background: 'rgba(0,0,0,0.4)', padding: '12px', borderRadius: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#ccc' }}>500 Movimentos Perfeitos</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#a855f7' }}>+500 <Diamond size={10} style={{ display: 'inline', verticalAlign: 'baseline' }} /></span>
+                        {dailyQuests.map((quest) => (
+                            <div key={quest.id} style={{ 
+                                background: quest.claimed ? 'rgba(52,211,153,0.1)' : 'rgba(0,0,0,0.4)', 
+                                border: quest.claimed ? '1px solid rgba(52,211,153,0.3)' : '1px solid transparent',
+                                padding: '12px', borderRadius: '12px', transition: 'all 0.3s'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ 
+                                        fontSize: '0.8rem', fontWeight: 'bold', 
+                                        color: quest.claimed ? '#34d399' : '#ccc',
+                                        textDecoration: quest.claimed ? 'line-through' : 'none'
+                                    }}>
+                                        {quest.title}
+                                    </span>
+                                    {!quest.claimed && quest.progress < quest.target && (
+                                        <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#a855f7' }}>+{quest.reward} <Diamond size={10} style={{ display: 'inline', verticalAlign: 'baseline' }} /></span>
+                                    )}
+                                    {quest.progress >= quest.target && !quest.claimed && (
+                                        <button 
+                                            onClick={() => handleClaimReward(quest.id)}
+                                            style={{
+                                                background: 'linear-gradient(45deg, #f59e0b, #fbbf24)',
+                                                border: 'none', padding: '4px 8px', borderRadius: '6px',
+                                                color: '#000', fontWeight: '900', fontSize: '0.65rem',
+                                                cursor: 'pointer', animation: 'pulseGlow 1.5s infinite',
+                                                boxShadow: '0 0 10px rgba(245, 158, 11, 0.5)'
+                                            }}
+                                        >
+                                            COLETAR
+                                        </button>
+                                    )}
+                                    {quest.claimed && (
+                                        <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#34d399' }}>COLETADO</span>
+                                    )}
+                                </div>
+                                {!quest.claimed && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                                        <div className="prog-bar" style={{ height: '4px', flex: 1, margin: 0 }}>
+                                            <div className="prog-fill" style={{ width: `${(quest.progress / quest.target) * 100}%` }}></div>
+                                        </div>
+                                        <span style={{ fontSize: '0.6rem', color: '#888', fontWeight: 'bold' }}>
+                                            {Math.floor(quest.progress)} / {quest.target}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
-                            <div className="prog-bar" style={{ height: '4px' }}><div className="prog-fill" style={{ width: '50%' }}></div></div>
-                        </div>
-
-                        <div style={{ background: 'rgba(0,0,0,0.4)', padding: '12px', borderRadius: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#ccc' }}>Alcançar Combo +500</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#a855f7' }}>+1000 <Diamond size={10} style={{ display: 'inline', verticalAlign: 'baseline' }} /></span>
-                            </div>
-                            <div className="prog-bar" style={{ height: '4px' }}><div className="prog-fill" style={{ width: `${(Math.min(comboCount, 500) / 500) * 100}%` }}></div></div>
-                        </div>
+                        ))}
                     </div>
                 </div>
 

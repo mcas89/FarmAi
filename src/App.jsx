@@ -5,6 +5,7 @@ import { useDatabaseSystem } from './systems/useDatabaseSystem';
 import { usePlayerSystem } from './systems/usePlayerSystem';
 import { useAuraSystem } from './systems/useAuraSystem';
 import { useUISystem } from './systems/useUISystem';
+import { useQuestSystem } from './systems/useQuestSystem';
 import './index.css';
 
 // Error Boundary para capturar erros fatais (ex: 404 em modelos) e mostrar na tela
@@ -64,6 +65,11 @@ function App() {
             if (data.position) usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
             if (data.activeModel) usePlayerSystem.setState({ activeModel: data.activeModel });
             
+            // Inicializa Missões Diárias
+            import('./systems/useQuestSystem').then(m => {
+                m.useQuestSystem.getState().initializeQuests(data.dailyQuests, data.lastResetDate);
+            });
+            
             // Pula o login e vai direto pro menu via Splash
             useUISystem.getState().setScreen('SPLASH');
           }
@@ -85,7 +91,11 @@ function App() {
       const aura = useAuraSystem.getState().aura;
       const diamonds = useUISystem.getState().playerStats.diamonds;
       
-      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo);
+      // Missões diárias
+      const dailyQuests = useQuestSystem.getState().dailyQuests;
+      const lastResetDate = useQuestSystem.getState().lastResetDate;
+      
+      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate);
     }, 15000);
 
     return () => {
