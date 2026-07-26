@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import { WaterFountain } from './WaterFountain';
-import { useGLTF } from '@react-three/drei';
+import { useGLTF, useTexture } from '@react-three/drei';
 import { useCollisionSystem } from '../../systems/useCollisionSystem';
 
 // Pre-load para carregar mais rápido
@@ -451,10 +451,20 @@ export function ParkEnvironment() {
     const streetGeo = useMemo(() => new THREE.PlaneGeometry(10, 35), []);
 
     // Texturas Dinâmicas (Estilo Anime)
-    // 1. Grama: Verde pastel claro manchado com verde médio
-    const grassTexture = useMemo(() => createSplotchTexture('#86efac', '#4ade80', 60, 512, 12, 12), []);
-    // 2. Concreto: Branco encardido suave manchado com cinza claro (pedra polida)
-    const concreteTexture = useMemo(() => createSplotchTexture('#f9fafb', '#e5e7eb', 80, 512, 8, 8), []);
+    // 1. Grama: Anime/Ghibli gerado por IA
+    const grassTexture = useTexture('/textures/anime_grass.jpg');
+    grassTexture.wrapS = THREE.RepeatWrapping;
+    grassTexture.wrapT = THREE.RepeatWrapping;
+    grassTexture.repeat.set(16, 16); 
+    grassTexture.colorSpace = THREE.SRGBColorSpace;
+    
+    // 2. Concreto: Anime gerado por IA
+    const concreteTexture = useTexture('/textures/anime_concrete.jpg');
+    concreteTexture.wrapS = THREE.RepeatWrapping;
+    concreteTexture.wrapT = THREE.RepeatWrapping;
+    concreteTexture.repeat.set(8, 8); 
+    concreteTexture.colorSpace = THREE.SRGBColorSpace;
+
     // 3. Asfalto: Cinza bem escuro com manchas quase pretas (Limpo)
     const asphaltTexture = useMemo(() => createSplotchTexture('#374151', '#1f2937', 100, 512, 15, 15), []);
     // 4. Chão dos Prédios: Cinza básico
