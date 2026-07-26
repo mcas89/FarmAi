@@ -1,76 +1,202 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
+import { useAchievementSystem } from '../../../systems/useAchievementSystem';
+import { CheckCircle, Diamond, Lock } from 'lucide-react';
 
 export function AchievementsScreen() {
     const setScreen = useUISystem(state => state.setScreen);
+    const [achievements, setAchievements] = useState([]);
+    const updateStats = useUISystem(state => state.updateStats);
+    const stats = useUISystem(state => state.playerStats);
 
-    const achievements = [
-        { id: 1, title: 'Primeiro Combo +50', desc: 'Realizou uma sequência de 50 acertos perfeitos.', done: true },
-        { id: 2, title: 'Primeiro Combo +100', desc: 'Realizou uma sequência de 100 acertos perfeitos.', done: true },
-        { id: 3, title: 'Primeiro Sigma', desc: 'Alcançou o cobiçado título de Sigma.', done: true },
-        { id: 4, title: 'Primeiro Omega', desc: 'Transcendeu para o título Omega.', done: true },
-        { id: 5, title: '1.000 Movimentos', desc: 'Executou 1.000 movimentos Six Seven.', done: true },
-        { id: 6, title: '10.000 Movimentos', desc: 'Executou 10.000 movimentos Six Seven.', done: true },
-        { id: 7, title: '100 Horas', desc: 'Passou 100 horas farmando.', done: false },
-        { id: 8, title: 'Combo +500', desc: 'Mantendo o foco absoluto por 500 acertos.', done: true },
-        { id: 9, title: 'Combo +1000', desc: 'Ascensão divina de 1000 acertos consecutivos.', done: false },
-        { id: 10, title: 'Aura 1 Milhão', desc: 'Acumulou 1.000.000 de Aura.', done: false },
-        { id: 11, title: 'Aura 100 Milhões', desc: 'Acumulou 100.000.000 de Aura.', done: false },
-        { id: 12, title: 'Aura 1 Bilhão', desc: 'Alcançou o topo da existência.', done: false },
-    ];
+    useEffect(() => {
+        const unsub = useAchievementSystem.subscribe((state) => {
+            setAchievements(state.achievements);
+        });
+        setAchievements(useAchievementSystem.getState().achievements);
+        return unsub;
+    }, []);
+
+    const handleClaim = (id) => {
+        const reward = useAchievementSystem.getState().claimReward(id);
+        if (reward > 0) {
+            updateStats({ diamonds: (stats.diamonds || 0) + reward });
+            
+            // Força o auto-save pra guardar a conquista imediatamente
+            Promise.all([
+                import('../../../systems/usePlayerSystem'),
+                import('../../../systems/useAuraSystem'),
+                import('../../../systems/useDatabaseSystem'),
+                import('../../../systems/useQuestSystem')
+            ]).then(([pSys, aSys, dbSys, qSys]) => {
+                const pos = pSys.usePlayerSystem.getState().position;
+                const model = pSys.usePlayerSystem.getState().activeModel;
+                const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
+                const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+                const achData = useAchievementSystem.getState().getSavableData();
+                
+                dbSys.useDatabaseSystem.getState().saveGameState(
+                    pos, comboCount, model, aura, (stats.diamonds || 0) + reward, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achData
+                );
+            });
+        }
+    };
 
     return (
         <div style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
             backgroundColor: 'rgba(10, 10, 15, 0.95)', pointerEvents: 'auto',
             display: 'flex', flexDirection: 'column',
-            animation: 'fadeIn 0.3s ease'
+            animation: 'fadeIn 0.3s ease',
+            fontFamily: 'sans-serif'
         }}>
+            <style>{`
+                @keyframes pulseGlow {
+                    0%, 100% { box-shadow: 0 0 15px rgba(168,85,247,0.4); }
+                    50% { box-shadow: 0 0 30px rgba(168,85,247,0.8); }
+                }
+                .ach-card {
+                    padding: 20px;
+                    border-radius: 12px;
+                    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                    position: relative;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                }
+                
+                /* Estado: BLOQUEADO (Escuro) */
+                .ach-locked {
+                    background: rgba(255,255,255,0.02);
+                    border: 1px solid rgba(255,255,255,0.05);
+                    opacity: 0.6;
+                }
+                
+                /* Estado: PRONTO PARA COLETAR (Brilhante) */
+                .ach-ready {
+                    background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(107,33,168,0.15));
+                    border: 1px solid rgba(168,85,247,0.6);
+                    animation: pulseGlow 2s infinite;
+                    opacity: 1;
+                }
+
+                /* Estado: COLETADO (Verde translúcido) */
+                .ach-claimed {
+                    background: rgba(52,211,153,0.05);
+                    border: 1px solid rgba(52,211,153,0.2);
+                    opacity: 0.9;
+                }
+
+                .claim-btn {
+                    margin-top: 15px; width: 100%;
+                    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+                    border: none; padding: 10px; border-radius: 8px;
+                    color: #000; font-weight: 900; font-size: 0.8rem;
+                    cursor: pointer; letter-spacing: 1px;
+                    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+                    transition: transform 0.2s;
+                }
+                .claim-btn:active { transform: scale(0.95); }
+
+                .prog-bar { width: 100%; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; margin-top: 15px; overflow: hidden; }
+                .prog-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); transition: width 0.3s; }
+                
+                /* Scrollbar personalizada para a lista */
+                .ach-list::-webkit-scrollbar { width: 8px; }
+                .ach-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+                .ach-list::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.4); border-radius: 4px; }
+            `}</style>
+
             {/* Header */}
-            <div style={{ padding: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>
-                <h2 style={{ color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', fontSize: '2rem' }}>
-                    Conquistas
-                </h2>
+            <div style={{ padding: '20px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(168, 85, 247, 0.3)', backdropFilter: 'blur(10px)' }}>
+                <div>
+                    <h2 style={{ color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', fontSize: '1.8rem', textShadow: '0 0 10px rgba(168,85,247,0.5)' }}>
+                        Conquistas
+                    </h2>
+                    <div style={{ color: '#a855f7', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}>
+                        DESBLOQUEIE MARCOS E GANHE AURACASH
+                    </div>
+                </div>
                 <button 
                     onClick={() => setScreen('MENU')}
                     style={{
-                        padding: '10px 30px', background: 'transparent', color: '#fff',
-                        border: '1px solid #666', borderRadius: '10px', cursor: 'pointer'
+                        padding: '10px 25px', background: 'rgba(255,255,255,0.05)', color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', cursor: 'pointer',
+                        fontWeight: 'bold', transition: 'all 0.2s'
                     }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                 >
                     VOLTAR
                 </button>
             </div>
 
             {/* List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '30px', boxSizing: 'border-box' }}>
+            <div className="ach-list" style={{ flex: 1, overflowY: 'auto', padding: '30px', boxSizing: 'border-box' }}>
                 <div style={{ 
-                    maxWidth: '1000px', margin: '0 auto', display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' 
+                    maxWidth: '1200px', margin: '0 auto', display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' 
                 }}>
-                    {achievements.map((ach) => (
-                        <div key={ach.id} style={{
-                            padding: '20px',
-                            background: ach.done ? 'rgba(168, 85, 247, 0.1)' : 'rgba(255,255,255,0.02)',
-                            border: ach.done ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '12px',
-                            opacity: ach.done ? 1 : 0.5,
-                            transition: 'all 0.3s',
-                            boxShadow: ach.done ? '0 4px 15px rgba(168,85,247,0.1)' : 'none'
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                <div style={{ color: ach.done ? '#d8b4fe' : '#fff', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                                    {ach.title}
+                    {achievements.map((ach) => {
+                        const isLocked = !ach.completed;
+                        const isReady = ach.completed && !ach.claimed;
+                        const isClaimed = ach.claimed;
+
+                        let cardClass = 'ach-locked';
+                        if (isReady) cardClass = 'ach-ready';
+                        if (isClaimed) cardClass = 'ach-claimed';
+
+                        return (
+                            <div key={ach.id} className={`ach-card ${cardClass}`}>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                        <div style={{ color: isReady ? '#d8b4fe' : isClaimed ? '#34d399' : '#fff', fontWeight: '900', fontSize: '1.1rem', paddingRight: '10px' }}>
+                                            {ach.title}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                            <span style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.9rem' }}>{ach.reward}</span>
+                                            <Diamond size={12} color="#fbbf24" />
+                                        </div>
+                                    </div>
+                                    <div style={{ color: '#aaa', fontSize: '0.85rem', lineHeight: '1.4', minHeight: '40px' }}>
+                                        {ach.desc}
+                                    </div>
                                 </div>
-                                <div style={{ color: ach.done ? '#a855f7' : '#666', fontSize: '1.2rem' }}>
-                                    {ach.done ? '★' : '🔒'}
+
+                                <div>
+                                    {!isClaimed && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div className="prog-bar">
+                                                <div className="prog-fill" style={{ width: `${(ach.progress / ach.target) * 100}%` }}></div>
+                                            </div>
+                                            <span style={{ fontSize: '0.7rem', color: '#888', fontWeight: 'bold', whiteSpace: 'nowrap', marginTop: '15px' }}>
+                                                {ach.type === 'aura' ? Math.floor(ach.progress).toLocaleString() : ach.progress} / {ach.type === 'aura' ? ach.target.toLocaleString() : ach.target}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {isLocked && !isClaimed && (
+                                        <div style={{ marginTop: '15px', color: '#666', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}>
+                                            <Lock size={14} /> BLOQUEADA
+                                        </div>
+                                    )}
+
+                                    {isReady && (
+                                        <button className="claim-btn" onClick={() => handleClaim(ach.id)}>
+                                            COLETAR RECOMPENSA
+                                        </button>
+                                    )}
+
+                                    {isClaimed && (
+                                        <div style={{ marginTop: '15px', color: '#34d399', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '900' }}>
+                                            <CheckCircle size={16} /> COLETADO
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <div style={{ color: '#aaa', fontSize: '0.9rem', lineHeight: '1.4' }}>
-                                {ach.desc}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </div>

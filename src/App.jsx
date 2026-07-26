@@ -6,6 +6,7 @@ import { usePlayerSystem } from './systems/usePlayerSystem';
 import { useAuraSystem } from './systems/useAuraSystem';
 import { useUISystem } from './systems/useUISystem';
 import { useQuestSystem } from './systems/useQuestSystem';
+import { useAchievementSystem } from './systems/useAchievementSystem';
 import './index.css';
 
 // Error Boundary para capturar erros fatais (ex: 404 em modelos) e mostrar na tela
@@ -70,10 +71,11 @@ function App() {
             if (data.position) usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
             if (data.activeModel) usePlayerSystem.setState({ activeModel: data.activeModel });
             
-            // Inicializa Missões Diárias
+            // Inicializa Missões Diárias e Conquistas
             import('./systems/useQuestSystem').then(m => {
                 m.useQuestSystem.getState().initializeQuests(data.dailyQuests, data.lastResetDate);
             });
+            useAchievementSystem.getState().initializeAchievements(data.achievements);
 
             // Lógica de Premiação do Ranking Semanal
             import('./systems/useRankingSystem').then(m => {
@@ -102,11 +104,12 @@ function App() {
       const weeklyAura = useAuraSystem.getState().weeklyAura;
       const diamonds = useUISystem.getState().playerStats.diamonds;
       
-      // Missões diárias
+      // Missões e Conquistas
       const dailyQuests = useQuestSystem.getState().dailyQuests;
       const lastResetDate = useQuestSystem.getState().lastResetDate;
+      const achievements = useAchievementSystem.getState().getSavableData();
       
-      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura);
+      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements);
     }, 15000);
 
     return () => {

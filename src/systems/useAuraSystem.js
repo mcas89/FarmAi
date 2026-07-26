@@ -42,6 +42,13 @@ export const useAuraSystem = create((set, get) => ({
         if (comboCount > 0) {
             useQuestSystem.getState().updateQuestProgress('reach_combo', comboCount);
         }
+
+        // Atualiza o progresso das conquistas
+        import('./useAchievementSystem').then(m => {
+            if (comboCount > 0) m.useAchievementSystem.getState().updateProgress('combo', comboCount);
+            if (newAura > 0) m.useAchievementSystem.getState().updateProgress('aura', newAura);
+            if (newLevel > 0) m.useAchievementSystem.getState().updateProgress('level', newLevel);
+        });
         
         return {
             aura: newAura,
