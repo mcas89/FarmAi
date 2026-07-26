@@ -63,11 +63,15 @@ export const useAchievementSystem = create((set, get) => ({
         const mergedList = MASTER_ACHIEVEMENTS.map(master => {
             // Verifica se o usuário já tem essa conquista salva no banco (procurando pelo ID)
             const savedItem = savedData.find(d => d.id === master.id);
+            const progress = savedItem ? (savedItem.progress || 0) : 0;
+            const claimed  = savedItem ? (savedItem.claimed  || false) : false;
+            // BUG #2 FIX: marca como completed retroativamente se o progresso já atingiu o alvo
+            const completed = (savedItem ? savedItem.completed : false) || (progress >= master.target);
             return {
                 ...master,
-                progress: savedItem ? savedItem.progress : 0,
-                completed: savedItem ? savedItem.completed : false,
-                claimed: savedItem ? savedItem.claimed : false
+                progress: Math.min(progress, master.target),
+                completed,
+                claimed
             };
         });
 
@@ -158,12 +162,15 @@ export const useAchievementSystem = create((set, get) => ({
     },
     
     // Retorna um array compactado apenas com os dados essenciais para salvar no banco
+    // BUG #3 FIX: filtra weekly_prize pois eles ficam na coleção 'claimable_prizes' separada
     getSavableData: () => {
-        return get().achievements.map(ach => ({
-            id: ach.id,
-            progress: ach.progress,
-            completed: ach.completed,
-            claimed: ach.claimed
-        }));
+        return get().achievements
+            .filter(ach => ach.type !== 'weekly_prize')
+            .map(ach => ({
+                id: ach.id,
+                progress: ach.progress,
+                completed: ach.completed,
+                claimed: ach.claimed
+            }));
     }
 }));

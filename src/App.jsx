@@ -78,6 +78,14 @@ function App() {
             });
             useAchievementSystem.getState().initializeAchievements(data.achievements);
 
+            // BUG #4 FIX: força sync retroativo das conquistas com os valores já salvos
+            // (garante que conquistas merecidas antes desta sessão sejam reconhecidas)
+            const loadedAura    = data.aura     || 0;
+            const loadedCombo   = data.maxCombo || 0;
+            if (loadedAura  > 0) useAchievementSystem.getState().updateProgress('aura',  loadedAura);
+            if (loadedCombo > 0) useAchievementSystem.getState().updateProgress('combo', loadedCombo);
+
+
             // Lógica de Premiação do Ranking Semanal
             import('./systems/useRankingSystem').then(m => {
                 m.useRankingSystem.getState().checkAndClaimWeeklyRewards(user.uid, data.lastWeeklyReset, data.auracash || 0);

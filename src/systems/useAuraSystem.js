@@ -25,12 +25,11 @@ export const useAuraSystem = create((set, get) => ({
             useQuestSystem.getState().updateQuestProgress('reach_combo', comboCount);
         }
 
-        // Atualiza o progresso das conquistas (Nível deve ser calculado dinamicamente na hora)
+        // Atualiza o progresso das conquistas
         import('./useAchievementSystem').then(m => {
-            const newLevel = getPlayerLevel(newAura);
+            // BUG #1 FIX: removido updateProgress('level') — conquistas de título usam type:'aura'
             if (comboCount > 0) m.useAchievementSystem.getState().updateProgress('combo', comboCount);
-            if (newAura > 0) m.useAchievementSystem.getState().updateProgress('aura', newAura);
-            if (newLevel > 0) m.useAchievementSystem.getState().updateProgress('level', newLevel);
+            if (newAura    > 0) m.useAchievementSystem.getState().updateProgress('aura',  newAura);
         });
         
         return {
