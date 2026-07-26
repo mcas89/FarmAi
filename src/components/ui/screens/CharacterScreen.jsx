@@ -155,12 +155,12 @@ export function CharacterScreen() {
         <div style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-            padding: '40px', boxSizing: 'border-box', pointerEvents: 'auto',
-            background: '#05050a' // Fundo sólido escuro cobrindo o mapa original!
+            padding: '20px 20px 0 20px', boxSizing: 'border-box', pointerEvents: 'auto',
+            background: '#05050a'
         }}>
             {/* Canvas 3D Dedicado Exclusivo para Preview */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'auto' }}>
-                <Canvas camera={{ position: [0, 1.2, 2.5], fov: 40 }}>
+                <Canvas camera={{ position: [0, 1.0, 3.5], fov: 40 }}>
                     <ambientLight intensity={0.7} />
                     <spotLight position={[2, 4, 3]} angle={0.5} penumbra={1} intensity={1.5} color="#d8b4fe" />
                     <spotLight position={[-2, -1, -2]} angle={0.8} penumbra={1} intensity={0.5} color="#4ade80" />
@@ -168,9 +168,9 @@ export function CharacterScreen() {
                     <OrbitControls 
                         enablePan={false} 
                         enableZoom={true} 
-                        minDistance={1.0}
-                        maxDistance={4.0}
-                        target={[0, 1.0, 0]}
+                        minDistance={1.5}
+                        maxDistance={6.0}
+                        target={[0, 0.9, 0]}
                         maxPolarAngle={Math.PI / 2 + 0.2}
                         minPolarAngle={0.5}
                         autoRotate={true}
@@ -179,30 +179,30 @@ export function CharacterScreen() {
                 </Canvas>
             </div>
             <div style={{
-                position: 'absolute', bottom: 0, left: 0, width: '100%', height: '50%',
-                background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                position: 'absolute', bottom: 0, left: 0, width: '100%', height: '40%',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)',
                 pointerEvents: 'none', zIndex: -1
             }} />
 
             {/* Header */}
-            <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 1 }}>
                 <div>
                     <h2 style={{
-                        color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '4px',
-                        textShadow: '0 0 20px rgba(168, 85, 247, 0.8)', fontSize: '2.5rem', fontWeight: '900'
+                        color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '3px',
+                        textShadow: '0 0 10px rgba(168, 85, 247, 0.8)', fontSize: '1.2rem', fontWeight: '900'
                     }}>
-                        Equipe
+                        Personagens
                     </h2>
-                    <div style={{ color: '#d8b4fe', fontSize: '0.9rem', letterSpacing: '2px', fontWeight: 'bold' }}>
-                        ESCOLHA SEU AVATAR PARA O METAVERSO
+                    <div style={{ color: '#d8b4fe', fontSize: '0.7rem', letterSpacing: '1px', fontWeight: 'bold' }}>
+                        ESCOLHA SEU AVATAR
                     </div>
                 </div>
                 <button 
                     onClick={handleBack}
                     style={{
-                        padding: '12px 30px', background: 'rgba(255,255,255,0.05)', color: '#fff',
-                        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', cursor: 'pointer',
-                        fontWeight: 'bold', backdropFilter: 'blur(10px)', transition: 'all 0.2s', letterSpacing: '1px'
+                        padding: '8px 20px', background: 'rgba(255,255,255,0.05)', color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer',
+                        fontWeight: 'bold', backdropFilter: 'blur(10px)', transition: 'all 0.2s', letterSpacing: '1px', fontSize: '0.8rem'
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
@@ -213,16 +213,16 @@ export function CharacterScreen() {
 
             {/* Bottom Carousel / Selection */}
             <div style={{ 
-                pointerEvents: 'auto', display: 'flex', gap: '25px', overflowX: 'auto', 
-                padding: '20px 10px', width: '100%', boxSizing: 'border-box'
+                pointerEvents: 'auto', display: 'flex', gap: '15px', overflowX: 'auto', 
+                padding: '20px 0', width: '100%', boxSizing: 'border-box', zIndex: 1
             }}>
                 <style>{`
                     .char-card::-webkit-scrollbar { display: none; }
-                    .char-card:hover { transform: translateY(-10px); background: rgba(168,85,247,0.1) !important; border-color: rgba(168,85,247,0.5) !important; }
+                    .char-card:hover { transform: translateY(-5px); background: rgba(168,85,247,0.1) !important; border-color: rgba(168,85,247,0.5) !important; }
                     
                     @keyframes borderPulse {
-                        0%, 100% { box-shadow: 0 0 15px rgba(168,85,247,0.4), inset 0 0 20px rgba(168,85,247,0.2); }
-                        50% { box-shadow: 0 0 30px rgba(168,85,247,0.8), inset 0 0 40px rgba(168,85,247,0.4); }
+                        0%, 100% { box-shadow: 0 0 10px rgba(168,85,247,0.4), inset 0 0 10px rgba(168,85,247,0.2); }
+                        50% { box-shadow: 0 0 20px rgba(168,85,247,0.8), inset 0 0 20px rgba(168,85,247,0.4); }
                     }
                 `}</style>
                 {characters.map((char) => {
@@ -241,7 +241,7 @@ export function CharacterScreen() {
                         btnText = 'EQUIPADO ✓';
                         btnStyle = { background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.4)' };
                     } else if (!isUnlocked) {
-                        btnText = req.price > 0 ? `COMPRAR (💎 ${req.price})` : 'DESBLOQUEAR';
+                        btnText = req.price > 0 ? `💎 ${req.price}` : 'DESBLOQUEAR';
                         btnStyle = { background: 'rgba(239,68,68,0.15)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.5)' };
                     }
 
@@ -252,22 +252,22 @@ export function CharacterScreen() {
                             onClick={() => handlePreview(char)}
                             style={{
                                 position: 'relative',
-                                padding: '25px',
-                                minWidth: '220px',
-                                height: '300px',
+                                padding: '15px',
+                                minWidth: '140px',
+                                height: '180px',
                                 background: isPreviewing ? 'rgba(20, 15, 30, 0.6)' : 'rgba(10, 5, 20, 0.4)',
                                 border: `1px solid ${isPreviewing ? '#a855f7' : 'rgba(255,255,255,0.1)'}`,
-                                borderRadius: '24px',
+                                borderRadius: '16px',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                transform: isPreviewing ? 'translateY(-15px)' : 'translateY(0)',
-                                boxShadow: isPreviewing ? 'none' : '0 10px 30px rgba(0,0,0,0.5)',
+                                transform: isPreviewing ? 'translateY(-10px)' : 'translateY(0)',
+                                boxShadow: isPreviewing ? 'none' : '0 5px 15px rgba(0,0,0,0.5)',
                                 animation: isPreviewing ? 'borderPulse 2s infinite' : 'none',
-                                backdropFilter: 'blur(15px)',
+                                backdropFilter: 'blur(10px)',
                                 overflow: 'hidden'
                             }}
                         >
@@ -279,19 +279,16 @@ export function CharacterScreen() {
                                 }}></div>
                             )}
                             
-                            <div style={{ textAlign: 'center', zIndex: 1, marginTop: '20px' }}>
-                                <div style={{ color: isPreviewing ? '#a855f7' : '#888', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '3px', marginBottom: '8px' }}>
-                                    {isPreviewing ? 'VISUALIZANDO' : 'CLIQUE PARA VER'}
-                                </div>
+                            <div style={{ textAlign: 'center', zIndex: 1, marginTop: '10px' }}>
                                 <h3 style={{ 
-                                    color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '4px', 
-                                    fontSize: '2rem', fontWeight: '900', textShadow: '0 4px 20px rgba(0,0,0,0.8)'
+                                    color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', 
+                                    fontSize: '1.2rem', fontWeight: '900', textShadow: '0 2px 10px rgba(0,0,0,0.8)'
                                 }}>
                                     {CHAR_NAMES[char]}
                                 </h3>
                                 {!isUnlocked && (
-                                    <div style={{ color: '#fca5a5', fontSize: '0.8rem', marginTop: '10px', fontWeight: 'bold' }}>
-                                        REQUER NÍVEL {req.level}
+                                    <div style={{ color: '#fca5a5', fontSize: '0.65rem', marginTop: '5px', fontWeight: 'bold' }}>
+                                        NÍVEL {req.level}
                                     </div>
                                 )}
                             </div>
@@ -299,10 +296,10 @@ export function CharacterScreen() {
                             <button 
                                 onClick={(e) => handleEquip(char, e)}
                                 style={{ 
-                                    zIndex: 1, width: '100%', padding: '15px', borderRadius: '14px',
-                                    fontWeight: '900', letterSpacing: '1px', fontSize: '0.9rem',
+                                    zIndex: 1, width: '100%', padding: '10px', borderRadius: '10px',
+                                    fontWeight: '900', letterSpacing: '1px', fontSize: '0.75rem',
                                     cursor: isEquipped ? 'default' : 'pointer', transition: 'all 0.2s',
-                                    boxShadow: isPreviewing && !isEquipped && isUnlocked ? '0 5px 20px rgba(168,85,247,0.4)' : 'none',
+                                    boxShadow: isPreviewing && !isEquipped && isUnlocked ? '0 5px 15px rgba(168,85,247,0.4)' : 'none',
                                     ...btnStyle
                                 }}
                             >
