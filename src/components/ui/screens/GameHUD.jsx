@@ -326,85 +326,175 @@ export function GameHUD() {
                 }
             `}</style>
 
-            {/* TOP BAR RESTRUTURADA */}
-            <div style={{ display: 'flex', padding: 'var(--top-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', pointerEvents: 'none', zIndex: 10, width: '100%' }}>
-                
-                {/* Card Único de Ponta a Ponta */}
-                <div className="glass-panel" style={{ 
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                    width: '100%', padding: '8px 15px', gap: '5px'
+            {/* ══════════ TOP BAR — GRID 3 COLUNAS FIXAS ══════════ */}
+            <div style={{
+                padding: '10px 14px 0 14px',
+                opacity: menuOpacity, transition: 'opacity 0.5s',
+                pointerEvents: 'none', zIndex: 10, width: '100%',
+                boxSizing: 'border-box', position: 'relative'
+            }}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto 1fr',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(8,6,18,0.6)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(168,85,247,0.18)',
+                    borderRadius: '16px',
+                    padding: '8px 12px',
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
                 }}>
-                    
-                    {/* 1. Avatar (Left) */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+
+                    {/* ── COLUNA ESQUERDA: Avatar + Nome ── */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+                        {/* Avatar circular */}
                         <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#333', border: '1.5px solid #a855f7', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 0 10px rgba(168,85,247,0.3)' }}>
-                                <User color="#fff" size={20} style={{ opacity: 0.5 }} />
+                            <div style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                background: 'linear-gradient(135deg,#2e1065,#1e0a45)',
+                                border: '2px solid #a855f7',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 0 12px rgba(168,85,247,0.45)'
+                            }}>
+                                <User color="#d8b4fe" size={16} />
                             </div>
-                            <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', background: '#000', border: '1px solid #fff', borderRadius: '8px', padding: '1px 6px', color: '#fff', fontSize: '0.55rem', fontWeight: 'bold' }}>
+                            {/* Badge de nível */}
+                            <div style={{
+                                position: 'absolute', bottom: '-5px', left: '50%',
+                                transform: 'translateX(-50%)',
+                                background: 'linear-gradient(90deg,#7c3aed,#a855f7)',
+                                borderRadius: '6px', padding: '1px 5px',
+                                color: '#fff', fontSize: '0.48rem', fontWeight: '900',
+                                whiteSpace: 'nowrap', letterSpacing: '0.5px',
+                                boxShadow: '0 2px 6px rgba(124,58,237,0.6)'
+                            }}>
                                 LV {level}
                             </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                            <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nickname}</div>
-                            <div style={{ color: '#d8b4fe', fontSize: '0.6rem', fontWeight: 'bold', textTransform: 'uppercase', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+                        {/* Nome e título */}
+                        <div style={{ minWidth: 0 }}>
+                            <div style={{
+                                color: '#fff', fontSize: '0.82rem', fontWeight: '900',
+                                lineHeight: '1.1', whiteSpace: 'nowrap',
+                                overflow: 'hidden', textOverflow: 'ellipsis',
+                                maxWidth: '90px'
+                            }}>{nickname}</div>
+                            <div style={{
+                                color: '#c084fc', fontSize: '0.5rem', fontWeight: '700',
+                                textTransform: 'uppercase', letterSpacing: '0.8px',
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                maxWidth: '90px'
+                            }}>{title}</div>
                         </div>
                     </div>
 
-                    {/* 2. Aura Bar (Center Expandido) */}
-                    <div style={{ 
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        flex: 1.5, minWidth: 0, position: 'relative'
+                    {/* ── COLUNA CENTRAL: AURA (destaque) ── */}
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        position: 'relative', padding: '2px 16px'
                     }}>
-                        <div style={{ color: '#a855f7', fontSize: '0.6rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '2px' }}>AURA</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                            <Diamond size={14} color="#a855f7" className="anim-pulse" style={{ flexShrink: 0 }} />
-                            <span style={{ 
-                                color: '#fff', fontSize: '1.4rem', fontWeight: '900', lineHeight: '1',
-                                textShadow: auraGlow ? '0 0 15px rgba(255,215,0,1)' : 'none',
-                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                        {/* Label AURA */}
+                        <div style={{
+                            fontSize: '0.48rem', fontWeight: '900', letterSpacing: '3px',
+                            color: '#c084fc', textTransform: 'uppercase', marginBottom: '1px'
+                        }}>✦ AURA ✦</div>
+
+                        {/* Valor principal */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '5px'
+                        }}>
+                            <Sparkles size={13} color="#a855f7" className="anim-pulse" style={{ flexShrink: 0 }} />
+                            <span style={{
+                                fontSize: '1.35rem', fontWeight: '900', lineHeight: '1',
+                                color: auraGlow ? '#ffd700' : '#fff',
+                                textShadow: auraGlow
+                                    ? '0 0 20px rgba(255,215,0,0.9), 0 0 40px rgba(255,215,0,0.5)'
+                                    : '0 0 18px rgba(168,85,247,0.7)',
+                                transition: 'color 0.15s, text-shadow 0.15s',
+                                letterSpacing: '-0.5px',
+                                fontVariantNumeric: 'tabular-nums'
                             }}>
                                 {Math.floor(aura).toLocaleString()}
                             </span>
                         </div>
+
+                        {/* +pontos flutuando — fora do card, não corta */}
                         {auraGlow && (
-                            <div style={{ color: '#ffd700', fontSize: '0.7rem', fontWeight: 'bold', position: 'absolute', bottom: '-12px', whiteSpace: 'nowrap' }}>
+                            <div style={{
+                                position: 'absolute', top: '-18px', left: '50%',
+                                transform: 'translateX(-50%)',
+                                color: '#ffd700', fontSize: '0.72rem', fontWeight: '900',
+                                whiteSpace: 'nowrap', pointerEvents: 'none',
+                                textShadow: '0 0 10px rgba(255,215,0,0.8)',
+                                animation: 'epicPopup 0.8s ease forwards'
+                            }}>
                                 +{lastPoints}
                             </div>
                         )}
                     </div>
 
-                    {/* 3. Icons (Right) */}
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'flex-end', flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 8px', height: '38px', borderRadius: '8px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', pointerEvents: 'auto', minWidth: 0 }}>
-                            <Diamond size={12} color="#34d399" style={{ flexShrink: 0 }} />
-                            <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
+                    {/* ── COLUNA DIREITA: Diamantes + Home ── */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'flex-end', gap: '7px'
+                    }}>
+                        {/* Contador de AuraCash */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: 'rgba(52,211,153,0.1)',
+                            border: '1px solid rgba(52,211,153,0.25)',
+                            borderRadius: '10px', padding: '5px 9px',
+                            pointerEvents: 'auto'
+                        }}>
+                            <Diamond size={11} color="#34d399" style={{ flexShrink: 0 }} />
+                            <span style={{
+                                color: '#34d399', fontSize: '0.78rem', fontWeight: '900',
+                                whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
+                                maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis'
+                            }}>
+                                {(stats.diamonds || 0).toLocaleString()}
+                            </span>
                         </div>
-                        <div className="top-btn" style={{ flexShrink: 0, width: '38px', height: '38px', borderRadius: '8px' }} onClick={async () => {
-                            import('../../../systems/useMultiplayerSystem').then(m => m.useMultiplayerSystem.getState().leaveRoom());
-                            
-                            // SALVA O ESTADO NO FIREBASE ANTES DE VOLTAR AO MENU PARA ATUALIZAR O RANKING
-                            const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
-                                import('../../../systems/usePlayerSystem'),
-                                import('../../../systems/useAuraSystem'),
-                                import('../../../systems/useDatabaseSystem'),
-                                import('../../../systems/useQuestSystem'),
-                                import('../../../systems/useAchievementSystem')
-                            ]);
-                            
-                            const pos = pSys.usePlayerSystem.getState().position;
-                            const model = pSys.usePlayerSystem.getState().activeModel;
-                            const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
-                            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
-                            const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
-                            const achievements = achSys.useAchievementSystem.getState().getSavableData();
 
-                            await dbSys.useDatabaseSystem.getState().saveGameState(
-                                pos, comboCount, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
-                            );
-                            
-                            setScreen('MENU');
-                        }}><Home size={16} color="#fff" /></div>
+                        {/* Botão Home */}
+                        <div
+                            style={{
+                                flexShrink: 0, width: '34px', height: '34px',
+                                borderRadius: '10px', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255,255,255,0.06)',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                backdropFilter: 'blur(10px)',
+                                pointerEvents: 'auto',
+                                transition: 'background 0.2s, transform 0.15s'
+                            }}
+                            onPointerDown={e => e.currentTarget.style.transform = 'scale(0.88)'}
+                            onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                            onClick={async () => {
+                                import('../../../systems/useMultiplayerSystem').then(m => m.useMultiplayerSystem.getState().leaveRoom());
+                                const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
+                                    import('../../../systems/usePlayerSystem'),
+                                    import('../../../systems/useAuraSystem'),
+                                    import('../../../systems/useDatabaseSystem'),
+                                    import('../../../systems/useQuestSystem'),
+                                    import('../../../systems/useAchievementSystem')
+                                ]);
+                                const pos = pSys.usePlayerSystem.getState().position;
+                                const model = pSys.usePlayerSystem.getState().activeModel;
+                                const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
+                                const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+                                const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+                                const achievements = achSys.useAchievementSystem.getState().getSavableData();
+                                await dbSys.useDatabaseSystem.getState().saveGameState(
+                                    pos, comboCount, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
+                                );
+                                setScreen('MENU');
+                            }}
+                        >
+                            <Home size={15} color="#fff" />
+                        </div>
                     </div>
 
                 </div>
