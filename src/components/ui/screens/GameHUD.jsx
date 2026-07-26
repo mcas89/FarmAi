@@ -22,10 +22,20 @@ const MOCK_TOP_100 = [
 ].map((p, i) => ({ ...p, rank: i + 1 }));
 
 export function GameHUD() {
-    const { aura, title, message, lastPoints, comboCount, maxCombo, level, hitId } = useAuraSystem();
+    const { aura, message, lastPoints, comboCount, maxCombo, hitId } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const setScreen = useUISystem(state => state.setScreen);
     const nickname = stats.nickname || 'Marcos';
+
+    const [progression, setProgression] = useState(null);
+    useEffect(() => {
+        import('../../../systems/progressionRules').then(rules => {
+            setProgression(rules);
+        });
+    }, []);
+
+    const level = progression ? progression.getPlayerLevel(aura) : 1;
+    const title = progression ? progression.getPlayerTitle(level) : 'Carregando...';
 
     const [auraGlow, setAuraGlow] = useState(false);
     const [autoHide, setAutoHide] = useState(false);

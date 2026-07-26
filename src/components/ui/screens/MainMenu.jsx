@@ -12,28 +12,32 @@ import { signOut } from 'firebase/auth';
 
 export function MainMenu() {
     const setScreen = useUISystem(state => state.setScreen);
-    const { aura, title, level, comboCount } = useAuraSystem();
+    const { aura, comboCount } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const updateStats = useUISystem(state => state.updateStats);
     const nickname = stats.nickname || 'Marcos';
 
-    // Importando state de Missões
     const [dailyQuests, setDailyQuests] = useState([]);
     const [rankings, setRankings] = useState({ global: [], combo: [], weekly: [], isLoading: true });
     const [hasUnclaimedAchievements, setHasUnclaimedAchievements] = useState(false);
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showRankingModal, setShowRankingModal] = useState(false);
-    const [rankingType, setRankingType] = useState('global'); // 'global' ou 'weekly'
+    const [rankingType, setRankingType] = useState('global');
+
+    const [progression, setProgression] = useState(null);
 
     // Carrega dados na inicialização
     useEffect(() => {
+        import('../../../systems/progressionRules').then(rules => {
+            setProgression(rules);
+        });
+
         import('../../../systems/useQuestSystem').then(m => {
             const unsub = m.useQuestSystem.subscribe((state) => {
                 setDailyQuests(state.dailyQuests);
             });
             setDailyQuests(m.useQuestSystem.getState().dailyQuests);
-            // return unsub; // Não podemos dar return aqui para evitar vazamentos se tivermos multiplos
         });
 
         import('../../../systems/useAchievementSystem').then(m => {
@@ -63,7 +67,6 @@ export function MainMenu() {
         const reward = m.useQuestSystem.getState().claimQuest(questId);
         if (reward > 0) {
             updateStats({ diamonds: (stats.diamonds || 0) + reward });
-            // Força salvar no banco imediatamente com os valores reais
             Promise.all([
                 import('../../../systems/usePlayerSystem'),
                 import('../../../systems/useAuraSystem'),
@@ -92,17 +95,14 @@ export function MainMenu() {
         }
     };
 
-    // Cálculos de progressão
-    const auraToNextLevel = 500 - (Math.floor(aura) % 500);
+    // Cálculos de progressão dinâmicos
+    const level = progression ? progression.getPlayerLevel(aura) : 1;
+    const title = progression ? progression.getPlayerTitle(level) : 'Carregando...';
+    const auraToNextLevel = progression ? progression.getAuraToNextLevel(aura) : 500;
     const nextLevel = level + 1;
-
-    const getNextTitleThreshold = (currentAura) => {
-        const thresholds = [5500, 10000, 15000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000, 100000000, 1000000000];
-        const next = thresholds.find(t => t > currentAura) || "MÁXIMO ALCANÇADO";
-        return next;
-    };
-    const nextTitleAura = getNextTitleThreshold(aura);
-    const auraToNextTitle = nextTitleAura - Math.floor(aura);
+    
+    const nextTitleData = progression ? progression.getNextTitle(level) : null;
+    const auraToNextTitle = progression ? progression.getAuraToNextTitle(level, aura) : 0;
 
     return (
         <div style={{
@@ -406,10 +406,16 @@ export function MainMenu() {
 
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 'bold', color: '#aaa' }}>
-                            <span>{typeof nextTitleAura === 'number' ? `FALTAM ${auraToNextTitle.toLocaleString()}` : "DEUS SUPREMO"}</span>
-                            <span style={{ color: '#d8b4fe' }}>PRÓXIMO TÍTULO</span>
+                            <span>{nextTitleData ? `FALTAM ${auraToNextTitle.toLocaleString()}` : "DEUS SUPREMO"}</span>
+                            <span style={{ color: '#d8b4fe' }}>{nextTitleData ? `PRÓX. TÍTULO: ${nextTitleData.name.toUpperCase()}` : 'MÁXIMO ALCANÇADO'}</span>
                         </div>
-                        <div className="prog-bar"><div className="prog-fill" style={{ width: `${typeof nextTitleAura === 'number' ? (Math.floor(aura) / nextTitleAura) * 100 : 100}%` }}></div></div>
+                        <div className="prog-bar">
+                            <div className="prog-fill" style={{ 
+                                width: nextTitleData 
+                                    ? `${Math.min(100, Math.max(0, (Math.floor(aura) / ((nextTitleData.minLevel - 1) * 500)) * 100))}%` 
+                                    : '100%' 
+                            }}></div>
+                        </div>
                     </div>
                 </div>
 

@@ -12,15 +12,22 @@ export function ProfileScreen() {
     const stats = useUISystem(state => state.playerStats);
     
     // Dados reais
-    const { aura, title, level, comboCount } = useAuraSystem();
+    const { aura, comboCount } = useAuraSystem();
     const activeModel = usePlayerSystem(state => state.activeModel);
+
+    const [progression, setProgression] = React.useState(null);
+    React.useEffect(() => {
+        import('../../../systems/progressionRules').then(rules => {
+            setProgression(rules);
+        });
+    }, []);
 
     const displayAura = Math.floor(aura);
     // Formatação MÁXIMA RESPONSIVA para trilhões (ex: 1.5B, 2T) para nunca quebrar layout
     const compactAura = new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(displayAura);
     
-    const displayLevel = level;
-    const displayTitle = title;
+    const displayLevel = progression ? progression.getPlayerLevel(aura) : 1;
+    const displayTitle = progression ? progression.getPlayerTitle(displayLevel) : 'Carregando...';
     const displayCombo = Math.max(comboCount, stats.maxCombo || 0);
 
     return (

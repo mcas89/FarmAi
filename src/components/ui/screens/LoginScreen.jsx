@@ -52,7 +52,6 @@ export function LoginScreen() {
 
                 // Atualiza estado local
                 updateStats({ nickname: name.split(' ')[0], diamonds: 0 });
-                useAuraSystem.getState().registerHit(0, '', 0); // Força atualização de level/title pra 0
                 
                 setScreen('SPLASH'); 
 
@@ -91,9 +90,6 @@ export function LoginScreen() {
                             if (data.activeModel) m.usePlayerSystem.setState({ activeModel: data.activeModel });
                         });
                     }
-
-                    // Hack rápido pra forçar o recalculo do título/level
-                    useAuraSystem.getState().registerHit(0, '', 0);
                 }
                 
                 setScreen('SPLASH');

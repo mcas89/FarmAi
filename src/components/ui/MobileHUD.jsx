@@ -6,10 +6,20 @@ import { AuraSystem } from '../../systems/rhythm/AuraSystem';
 import { Joystick } from './Joystick';
 
 export function MobileHUD() {
-    const { aura, title, message, lastPoints } = useAuraSystem();
+    const { aura, message, lastPoints } = useAuraSystem();
     const { activeModel, setActiveModel } = usePlayerSystem();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const characters = ['san.vrm', 'deric.vrm', 'carol.vrm', 'rafa.vrm'];
+
+    const [progression, setProgression] = useState(null);
+    useEffect(() => {
+        import('../../systems/progressionRules').then(rules => {
+            setProgression(rules);
+        });
+    }, []);
+
+    const level = progression ? progression.getPlayerLevel(aura) : 1;
+    const title = progression ? progression.getPlayerTitle(level) : 'Carregando...';
 
     // Integração de Inputs: Envia apenas o estado puro para o AuraSystem
     useEffect(() => {
