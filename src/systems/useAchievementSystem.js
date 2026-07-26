@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../config/firebase';
 
 // Lista Mestre de Conquistas (id numérico, tipo, alvo, recompensa, título e descrição)
 const MASTER_ACHIEVEMENTS = [
@@ -73,6 +75,44 @@ export const useAchievementSystem = create((set, get) => ({
         
         // Verifica se a conquista de login já foi concluída
         get().updateProgress('login', 1);
+        
+        // Busca prêmios semanais disponíveis
+        get().fetchWeeklyPrizes();
+    },
+
+    fetchWeeklyPrizes: async () => {
+        if (!db || !auth.currentUser) return;
+        try {
+            const q = query(
+                collection(db, 'claimable_prizes'),
+                where('uid', '==', auth.currentUser.uid),
+                where('claimed', '==', false)
+            );
+            const snapshot = await getDocs(q);
+            const prizes = [];
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                prizes.push({
+                    id: docSnap.id, 
+                    type: 'weekly_prize',
+                    target: 1,
+                    progress: 1,
+                    completed: true,
+                    claimed: false,
+                    reward: data.reward,
+                    title: data.title,
+                    desc: data.desc
+                });
+            });
+
+            if (prizes.length > 0) {
+                set(state => ({
+                    achievements: [...prizes, ...state.achievements]
+                }));
+            }
+        } catch (e) {
+            console.error("Erro ao buscar prêmios da semana", e);
+        }
     },
 
     // Atualiza o progresso baseado no tipo (ex: 'combo', 'aura', 'level')
@@ -101,6 +141,13 @@ export const useAchievementSystem = create((set, get) => ({
             const updated = state.achievements.map(ach => {
                 if (ach.id === id && ach.completed && !ach.claimed) {
                     reward = ach.reward;
+
+                    if (typeof id === 'string') {
+                        // Se for prêmio semanal, atualiza no Firestore para não coletar infinito
+                        const prizeRef = doc(db, 'claimable_prizes', id);
+                        updateDoc(prizeRef, { claimed: true }).catch(e => console.error(e));
+                    }
+
                     return { ...ach, claimed: true };
                 }
                 return ach;
