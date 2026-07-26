@@ -77,7 +77,9 @@ export function MainMenu() {
                     color: #ccc; font-weight: bold; border-radius: 10px; cursor: pointer;
                     transition: all 0.2s; margin-bottom: 5px; font-size: 0.8rem;
                 }
-                .drawer-btn:hover { background: rgba(168,85,247,0.2); color: #fff; transform: translateX(5px);                .top-header {
+                .drawer-btn:hover { background: rgba(168,85,247,0.2); color: #fff; transform: translateX(5px); }
+
+                .top-header {
                     display: flex; align-items: center; gap: 8px; padding: 4px 15px 2px 15px;
                     background: linear-gradient(to bottom, rgba(168,85,247,0.15), transparent);
                     position: relative;
