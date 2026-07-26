@@ -64,15 +64,7 @@ export const useRankingSystem = create((set, get) => ({
     },
 
     checkAndClaimWeeklyRewards: async (uid, lastWeeklyReset, currentDiamonds) => {
-        const getWeekString = () => {
-            const d = new Date();
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-            return `${d.getUTCFullYear()}-W${weekNo}`;
-        };
-
-        const currentWeek = getWeekString();
+        const currentWeek = getCurrentWeekString();
         
         if (lastWeeklyReset && lastWeeklyReset !== currentWeek) {
             try {
