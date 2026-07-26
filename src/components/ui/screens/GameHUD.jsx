@@ -22,7 +22,7 @@ const MOCK_TOP_100 = [
 ].map((p, i) => ({ ...p, rank: i + 1 }));
 
 export function GameHUD() {
-    const { aura, title, message, lastPoints, comboCount, level, hitId } = useAuraSystem();
+    const { aura, title, message, lastPoints, comboCount, maxCombo, level, hitId } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const setScreen = useUISystem(state => state.setScreen);
     const nickname = stats.nickname || 'Marcos';
@@ -415,8 +415,13 @@ export function GameHUD() {
                             fontWeight: '900', fontStyle: 'italic', lineHeight: '1', marginTop: '2px',
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                         }}>
-                            {comboCount}
+                            {comboCount > 0 ? comboCount : '-'}
                         </span>
+                        {maxCombo > 0 && (
+                            <span style={{ color: '#fbbf24', fontSize: '0.45rem', fontWeight: 'bold', letterSpacing: '1px', marginTop: '2px' }}>
+                                MAX: {maxCombo}
+                            </span>
+                        )}
                     </div>
                 </div>
 
