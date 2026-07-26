@@ -55,18 +55,16 @@ export function LoginScreen() {
                 updateStats({ nickname: name.split(' ')[0], diamonds: 0 });
                 
                 setScreen('SPLASH'); 
-
             } else {
                 // Login
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
                 
-                // Lê os dados reais do Firestore
-                const docRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(docRef);
+                // Lê os dados através do DatabaseSystem, que já trata a virada da semana
+                const mDb = await import('../../../systems/useDatabaseSystem');
+                const data = await mDb.useDatabaseSystem.getState().loadPlayerData();
                 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
+                if (data) {
                     const realName = data.name ? data.name.split(' ')[0] : 'Jogador';
                     const realAura = data.aura || 0;
                     const realDiamonds = data.auracash || 0;

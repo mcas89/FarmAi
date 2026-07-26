@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { db, auth } from '../config/firebase';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { getCurrentWeekString } from '../utils/dateUtils';
 
 export const useRankingSystem = create((set, get) => ({
     globalRanking: [],
@@ -37,9 +38,11 @@ export const useRankingSystem = create((set, get) => ({
             const comboData = get().formatRankings(snapCombo.docs, 'maxCombo');
 
             // 3. WEEKLY RANKING (Top 50 por Aura Semanal)
-            const qWeekly = query(usersRef, orderBy('weeklyAura', 'desc'), limit(50));
+            const currentWeek = getCurrentWeekString();
+            const weeklyField = `weeklyAura_${currentWeek}`;
+            const qWeekly = query(usersRef, orderBy(weeklyField, 'desc'), limit(50));
             const snapWeekly = await getDocs(qWeekly);
-            const weeklyData = get().formatRankings(snapWeekly.docs, 'weeklyAura');
+            const weeklyData = get().formatRankings(snapWeekly.docs, weeklyField);
 
             set({
                 globalRanking: globalData,
@@ -71,10 +74,13 @@ export const useRankingSystem = create((set, get) => ({
 
         const currentWeek = getWeekString();
         
-        if (lastWeeklyReset !== currentWeek) {
+        if (lastWeeklyReset && lastWeeklyReset !== currentWeek) {
             try {
                 const usersRef = collection(db, 'users');
-                const qWeekly = query(usersRef, orderBy('weeklyAura', 'desc'), limit(3));
+                // The rewards belong to the PREVIOUS week, wait!
+                // If lastWeeklyReset !== currentWeek, then we want to check the rank of the PREVIOUS week (lastWeeklyReset).
+                const weeklyField = `weeklyAura_${lastWeeklyReset}`;
+                const qWeekly = query(usersRef, orderBy(weeklyField, 'desc'), limit(3));
                 const snap = await getDocs(qWeekly);
                 
                 let reward = 0;
