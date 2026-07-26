@@ -9,6 +9,7 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { CharacterScreen } from './screens/CharacterScreen';
 import { RankingScreen } from './screens/RankingScreen';
 import { AchievementsScreen } from './screens/AchievementsScreen';
+import { QuestsScreen } from './screens/QuestsScreen';
 import { GameHUD } from './screens/GameHUD';
 
 export function GameInterface() {
@@ -31,6 +32,8 @@ export function GameInterface() {
                 return <RankingScreen />;
             case 'ACHIEVEMENTS':
                 return <AchievementsScreen />;
+            case 'QUESTS':
+                return <QuestsScreen />;
             case 'GAME':
                 return <GameHUD />;
             default:

@@ -411,7 +411,7 @@ export function GameHUD() {
                     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', padding: '10px 5px', borderLeft: 'none', borderRadius: '0 12px 12px 0' }}>
                         <div className="left-menu-btn" onClick={() => setShowRankingModal(true)}><BarChart2 className="anim-float" size={16} /><span>Ranking</span></div>
                         <div className="left-menu-btn" onClick={() => setScreen('ACHIEVEMENTS')}><Shield className="anim-wobble" size={16} /><span>Conquistas</span></div>
-                        <div className="left-menu-btn" style={{ position: 'relative' }} onClick={() => setScreen('ACHIEVEMENTS', { tab: 'PENDING' })}>
+                        <div className="left-menu-btn" style={{ position: 'relative' }} onClick={() => setScreen('QUESTS')}>
                             <ScrollText size={16} color="#fff" />
                             <div className="anim-pulse" style={{ position: 'absolute', top: '6px', right: '6px', width: '4px', height: '4px', background: '#ef4444', borderRadius: '50%' }} />
                             <span>Missões</span>
