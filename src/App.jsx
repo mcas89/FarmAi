@@ -4,6 +4,7 @@ import { GameInterface } from './components/ui/GameInterface';
 import { useDatabaseSystem } from './systems/useDatabaseSystem';
 import { usePlayerSystem } from './systems/usePlayerSystem';
 import { useAuraSystem } from './systems/useAuraSystem';
+import { useUISystem } from './systems/useUISystem';
 import './index.css';
 
 // Error Boundary para capturar erros fatais (ex: 404 em modelos) e mostrar na tela
@@ -36,6 +37,8 @@ class ErrorBoundary extends Component {
 }
 
 function App() {
+  const currentScreen = useUISystem(state => state.currentScreen);
+
   useEffect(() => {
     // 1. Carrega os dados quando o app abre
     const loadGame = async () => {
@@ -65,9 +68,13 @@ function App() {
     <ErrorBoundary>
       <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#15151e' }}>
         <GameInterface />
-        <Suspense fallback={null}>
-          <Scene />
-        </Suspense>
+        
+        {/* Renderiza o mapa 3D apenas APÓS o login (no Splash em diante) */}
+        {currentScreen !== 'LOGIN' && (
+          <Suspense fallback={null}>
+            <Scene />
+          </Suspense>
+        )}
       </div>
     </ErrorBoundary>
   );

@@ -2,10 +2,11 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-// Chaves do Firebase injetadas diretamente (seguro para web app, a segurança real vem do Firestore Rules)
+// Chaves do Firebase fornecidas pelo console
 const firebaseConfig = {
   apiKey: "AIzaSyCaWUnzglJZvWzXbaQvRp4ntVCBC9gzOZY",
   authDomain: "farmaai-f4f38.firebaseapp.com",
+  databaseURL: "https://farmaai-f4f38-default-rtdb.firebaseio.com",
   projectId: "farmaai-f4f38",
   storageBucket: "farmaai-f4f38.firebasestorage.app",
   messagingSenderId: "843504104131",
