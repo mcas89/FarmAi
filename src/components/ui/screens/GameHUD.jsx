@@ -17,6 +17,8 @@ export function GameHUD() {
     const { aura, message, lastPoints, comboCount, maxCombo, hitId } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const setScreen = useUISystem(state => state.setScreen);
+    const isMapMode = useUISystem(state => state.isMapMode);
+    const toggleMapMode = useUISystem(state => state.toggleMapMode);
     const nickname = stats.nickname || 'Marcos';
 
     const [progression, setProgression] = useState(null);
@@ -475,13 +477,19 @@ export function GameHUD() {
                     <Joystick />
                 </div>
                 
-                <div className="glass-panel" style={{ padding: '4px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                <div className="glass-panel" style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
                     <div style={{ color: '#fcd34d', fontSize: '0.45rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                        <Sparkles size={8} /> FARM MODE
+                        <Sparkles size={8} /> SISTEMAS
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'space-between', width: '100%' }}>
                         <span style={{ color: '#aaa', fontSize: '0.45rem', fontWeight: 'bold' }}>AUTO HIDE</span>
                         <div className={`toggle-switch ${autoHide ? 'active' : ''}`} onClick={() => setAutoHide(!autoHide)}>
+                            <div className="toggle-knob" />
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ color: '#aaa', fontSize: '0.45rem', fontWeight: 'bold' }}>MAPA LIZZY</span>
+                        <div className={`toggle-switch ${isMapMode ? 'active' : ''}`} onClick={() => toggleMapMode()}>
                             <div className="toggle-knob" />
                         </div>
                     </div>

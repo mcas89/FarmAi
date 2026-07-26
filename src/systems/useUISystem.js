@@ -19,5 +19,8 @@ export const useUISystem = create((set) => ({
     setIsOnlineMode: (isOnline) => set({ isOnlineMode: isOnline }),
     
     // Atualiza status mockados se necessário no futuro
-    updateStats: (stats) => set((state) => ({ playerStats: { ...state.playerStats, ...stats } }))
+    updateStats: (stats) => set((state) => ({ playerStats: { ...state.playerStats, ...stats } })),
+
+    isMapMode: false,
+    toggleMapMode: () => set((state) => ({ isMapMode: !state.isMapMode }))
 }));

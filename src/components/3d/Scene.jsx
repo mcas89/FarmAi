@@ -21,10 +21,30 @@ function CameraController() {
     
     // Alvo fantasma para criar o "Smooth Follow" (Atraso natural elástico)
     const cameraTarget = useRef(new THREE.Vector3(0, 1.5, 0));
+    const isMapMode = useUISystem((state) => state.isMapMode);
     
     useFrame((state, delta) => {
         if (!controlsRef.current) return;
         
+        if (isMapMode) {
+            // ==========================================
+            // MODO MAPA: Visão aérea de toda a cidade
+            // ==========================================
+            const centerTarget = new THREE.Vector3(0, 0, 0);
+            cameraTarget.current.lerp(centerTarget, delta * 3.0);
+            
+            camera.fov = THREE.MathUtils.lerp(camera.fov, 45, delta * 2.0);
+            camera.updateProjectionMatrix();
+            
+            controlsRef.current.minDistance = THREE.MathUtils.lerp(controlsRef.current.minDistance || 3.5, 30, delta * 2.0);
+            controlsRef.current.maxDistance = 250;
+            controlsRef.current.autoRotate = true;
+            controlsRef.current.autoRotateSpeed = 0.5;
+            
+            controlsRef.current.target.copy(cameraTarget.current);
+            return;
+        }
+
         const pos = usePlayerSystem.getState().position;
         const currentState = usePlayerSystem.getState().currentState;
         const comboCount = useAuraSystem.getState().comboCount;
@@ -91,17 +111,21 @@ function CameraController() {
         const isAction = currentState !== 'idle' || isFarming;
         const targetMinDist = isAction ? 4.5 : 1.2;
         controlsRef.current.minDistance = THREE.MathUtils.lerp(controlsRef.current.minDistance || 3.5, targetMinDist, delta * 2.0);
+        controlsRef.current.maxDistance = 15; // Volta ao normal se sair do modo mapa
         
         // Passamos o alvo para o OrbitControls
         controlsRef.current.target.copy(cameraTarget.current);
     });
     
+    // Recalcula enablePan e outras props via componente para reatividade rápida
+    const isMapModeState = useUISystem((state) => state.isMapMode);
+    
     return <OrbitControls 
         ref={controlsRef} 
-        enablePan={false} 
+        enablePan={isMapModeState} 
         makeDefault 
         minDistance={1.2} // Valor inicial, será substituído no useFrame
-        maxDistance={15} 
+        maxDistance={isMapModeState ? 250 : 15} 
         maxPolarAngle={Math.PI / 2 - 0.15} 
         minPolarAngle={0.1} 
         enableDamping={true} 

@@ -459,7 +459,7 @@ export function ParkEnvironment() {
 
     // Registra a fonte da praça central no Radar
     useEffect(() => {
-        registerObstacle('main_fountain', 0, 0, 1.5); // Colisão menor
+        registerObstacle('main_fountain', 0, 0, 1.0); // Colisão menor ainda
         return () => removeObstacle('main_fountain');
     }, [registerObstacle, removeObstacle]);
     
@@ -571,7 +571,7 @@ export function ParkEnvironment() {
                 <Playground />
 
                 {/* 7. Fonte de Água (Centro da Praça) */}
-                <GLTFModel url="/itens/fonte2.glb" position={[0, -0.05, 0]} rotation={[0, 0, 0]} scale={0.65} />
+                <GLTFModel url="/itens/fonte2.glb" position={[0, -0.05, 0]} rotation={[0, 0, 0]} scale={0.25} />
             </group>
         </>
     );
