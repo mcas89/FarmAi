@@ -264,7 +264,6 @@ function ParkFurniture() {
             scale: 0.9, // um pouco maior para facilitar a visualização
             colRadius: 2.0 
         });
-        });
 
         items.push({
             id: 'pipoqueiro',
