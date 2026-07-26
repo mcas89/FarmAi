@@ -465,8 +465,13 @@ export function ParkEnvironment() {
     concreteTexture.repeat.set(8, 8); 
     concreteTexture.colorSpace = THREE.SRGBColorSpace;
 
-    // 3. Asfalto: Cinza bem escuro com manchas quase pretas (Limpo)
-    const asphaltTexture = useMemo(() => createSplotchTexture('#374151', '#1f2937', 100, 512, 15, 15), []);
+    // 3. Asfalto: Anime gerado por IA
+    const asphaltTexture = useTexture('/textures/anime_asphalt.jpg');
+    asphaltTexture.wrapS = THREE.RepeatWrapping;
+    asphaltTexture.wrapT = THREE.RepeatWrapping;
+    asphaltTexture.repeat.set(12, 12); 
+    asphaltTexture.colorSpace = THREE.SRGBColorSpace;
+    
     // 4. Chão dos Prédios: Cinza básico
     const cityBaseTexture = useMemo(() => createSplotchTexture('#6b7280', '#4b5563', 50, 512, 20, 20), []);
 

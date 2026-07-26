@@ -471,7 +471,7 @@ export function GameHUD() {
 
             {/* BOTTOM AREA */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: 'var(--bot-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', zIndex: 5, marginBottom: '85px' }}>
-                <div style={{ position: 'relative', width: '45px', height: '45px', transform: 'scale(0.75)', transformOrigin: 'bottom left', pointerEvents: 'auto' }}>
+                <div style={{ position: 'relative', width: '45px', height: '45px', transform: 'scale(1.1)', transformOrigin: 'bottom left', pointerEvents: 'auto' }}>
                     <Joystick />
                 </div>
                 
