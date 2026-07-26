@@ -532,9 +532,6 @@ export function ParkEnvironment() {
                 {/* 6.3 Mobiliário do Parque (Bancos, Foodtruck, Postes) */}
                 <ParkFurniture />
 
-                {/* 6.4 Prédios ao Redor */}
-                <CitySkyline />
-
                 {/* 6.5 Parquinho Infantil (Gramado Nordeste) */}
                 <Playground />
 
