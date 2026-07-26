@@ -378,7 +378,10 @@ export function GameHUD() {
                             <Diamond size={12} color="#34d399" />
                             <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: '900' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
                         </div>
-                        <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={() => setScreen('MENU')}><Home size={16} color="#fff" /></div>
+                        <div className="top-btn" style={{ width: '38px', height: '38px', borderRadius: '8px' }} onClick={() => {
+                            import('../../../systems/useMultiplayerSystem').then(m => m.useMultiplayerSystem.getState().leaveRoom());
+                            setScreen('MENU');
+                        }}><Home size={16} color="#fff" /></div>
                     </div>
 
                 </div>
