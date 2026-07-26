@@ -45,10 +45,17 @@ function PreviewAvatar({ url }) {
                         if (z !== undefined) bone.rotation.z = z;
                     }
                 };
-                setBone('leftUpperArm', 0, 0, 1.2);
-                setBone('rightUpperArm', 0, 0, -1.2);
-                setBone('leftLowerArm', -0.2, 0, 0.1);
-                setBone('rightLowerArm', -0.2, 0, -0.1);
+                
+                // Hips e Ombros
+                setBone('hips', 0, -0.27, 0);
+                setBone('leftShoulder', 0, 0, -0.39);
+                setBone('rightShoulder', 0, 0.09, 0.36);
+                
+                // Braços
+                setBone('leftUpperArm', 0, 0, -0.6);
+                setBone('leftLowerArm', 0, 0, -0.24);
+                setBone('rightUpperArm', 0, 0, 0.65);
+                setBone('rightLowerArm', 0, 0, 0.33);
             }
             setVrm(vrmData);
         });
