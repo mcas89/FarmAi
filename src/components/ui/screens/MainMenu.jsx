@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { 
-    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Diamond, Globe, Trophy, Target, CheckCircle
+    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Diamond, Globe, Trophy, Target, CheckCircle, LogOut
 } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
+import { auth } from '../../../config/firebase';
+import { signOut } from 'firebase/auth';
 
 const MOCK_TOP_100 = [
     { name: 'DeusFamer_99', aura: 2500000000 },
@@ -24,6 +26,16 @@ export function MainMenu() {
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showRankingModal, setShowRankingModal] = useState(false);
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            setScreen('LOGIN');
+        } catch (error) {
+            console.error('Erro ao sair:', error);
+            setScreen('LOGIN'); 
+        }
+    };
 
     // Cálculos de progressão
     const auraToNextLevel = 500 - (Math.floor(aura) % 500);
@@ -239,6 +251,10 @@ export function MainMenu() {
                 <div className="drawer-btn"><Info size={18} /> SOBRE O GAME</div>
                 <div className="drawer-btn"><ShieldAlert size={18} /> TERMO DE RESPONSABILIDADE</div>
                 <div className="drawer-btn"><FileText size={18} /> POLÍTICA DE PRIVACIDADE</div>
+                
+                <div className="drawer-btn" style={{ marginTop: '20px', color: '#f87171' }} onClick={handleLogout}>
+                    <LogOut size={18} /> SAIR DA CONTA
+                </div>
 
                 <div style={{ marginTop: 'auto', textAlign: 'center', color: '#666', fontSize: '0.6rem' }}>FARM AI v1.0.0</div>
             </div>
