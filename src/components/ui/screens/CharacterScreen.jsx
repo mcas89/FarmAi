@@ -34,12 +34,21 @@ function PreviewAvatar({ url }) {
             if (!isMounted) return;
             const vrmData = gltf.userData.vrm;
             vrmData.scene.rotation.y = Math.PI; 
-            // Levanta os braços um pouco para pose mais natural (Pose A)
+            
+            // Configurações de esqueleto idênticas ao "arms_down_pose" do personagem principal
             if (vrmData.humanoid) {
-                const leftArm = vrmData.humanoid.getNormalizedBoneNode('leftUpperArm');
-                const rightArm = vrmData.humanoid.getNormalizedBoneNode('rightUpperArm');
-                if (leftArm) leftArm.rotation.z = 1.1;
-                if (rightArm) rightArm.rotation.z = -1.1;
+                const setBone = (name, x, y, z) => {
+                    const bone = vrmData.humanoid.getNormalizedBoneNode(name);
+                    if (bone) {
+                        if (x !== undefined) bone.rotation.x = x;
+                        if (y !== undefined) bone.rotation.y = y;
+                        if (z !== undefined) bone.rotation.z = z;
+                    }
+                };
+                setBone('leftUpperArm', 0, 0, 1.2);
+                setBone('rightUpperArm', 0, 0, -1.2);
+                setBone('leftLowerArm', -0.2, 0, 0.1);
+                setBone('rightLowerArm', -0.2, 0, -0.1);
             }
             setVrm(vrmData);
         });
@@ -56,8 +65,23 @@ function PreviewAvatar({ url }) {
     useFrame((state, delta) => {
         if (vrm) {
             vrm.update(delta);
-            // Efeito de respiração suave
-            vrm.scene.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.015;
+            
+            // Efeito de respiração suave (LifeAnimation)
+            const time = state.clock.elapsedTime;
+            const breath = Math.sin(time * 2.0) * 0.03;
+            const chestBreath = Math.sin(time * 2.0) * 0.02;
+            
+            vrm.scene.position.y = Math.sin(time * 2) * 0.015; // Leve flutuação do corpo
+            
+            if (vrm.humanoid) {
+                const chest = vrm.humanoid.getNormalizedBoneNode('chest');
+                const leftShoulder = vrm.humanoid.getNormalizedBoneNode('leftShoulder');
+                const rightShoulder = vrm.humanoid.getNormalizedBoneNode('rightShoulder');
+                
+                if (chest) chest.rotation.x = chestBreath;
+                if (leftShoulder) leftShoulder.rotation.z = -breath;
+                if (rightShoulder) rightShoulder.rotation.z = breath;
+            }
             
             // Piscar os olhos aleatoriamente
             if (vrm.expressionManager) {
@@ -160,7 +184,7 @@ export function CharacterScreen() {
         }}>
             {/* Canvas 3D Dedicado Exclusivo para Preview */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'auto' }}>
-                <Canvas camera={{ position: [0, 1.0, 3.5], fov: 40 }}>
+                <Canvas camera={{ position: [0, 1.0, 7.0], fov: 40 }}>
                     <ambientLight intensity={0.7} />
                     <spotLight position={[2, 4, 3]} angle={0.5} penumbra={1} intensity={1.5} color="#d8b4fe" />
                     <spotLight position={[-2, -1, -2]} angle={0.8} penumbra={1} intensity={0.5} color="#4ade80" />
@@ -168,13 +192,12 @@ export function CharacterScreen() {
                     <OrbitControls 
                         enablePan={false} 
                         enableZoom={true} 
-                        minDistance={1.5}
-                        maxDistance={6.0}
+                        minDistance={2.0}
+                        maxDistance={12.0}
                         target={[0, 0.9, 0]}
                         maxPolarAngle={Math.PI / 2 + 0.2}
                         minPolarAngle={0.5}
-                        autoRotate={true}
-                        autoRotateSpeed={0.5}
+                        autoRotate={false}
                     />
                 </Canvas>
             </div>
@@ -252,20 +275,20 @@ export function CharacterScreen() {
                             onClick={() => handlePreview(char)}
                             style={{
                                 position: 'relative',
-                                padding: '15px',
-                                minWidth: '140px',
-                                height: '180px',
+                                padding: '10px',
+                                minWidth: '80px',
+                                height: '110px',
                                 background: isPreviewing ? 'rgba(20, 15, 30, 0.6)' : 'rgba(10, 5, 20, 0.4)',
                                 border: `1px solid ${isPreviewing ? '#a855f7' : 'rgba(255,255,255,0.1)'}`,
-                                borderRadius: '16px',
+                                borderRadius: '12px',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                transform: isPreviewing ? 'translateY(-10px)' : 'translateY(0)',
-                                boxShadow: isPreviewing ? 'none' : '0 5px 15px rgba(0,0,0,0.5)',
+                                transform: isPreviewing ? 'translateY(-5px)' : 'translateY(0)',
+                                boxShadow: isPreviewing ? 'none' : '0 2px 10px rgba(0,0,0,0.5)',
                                 animation: isPreviewing ? 'borderPulse 2s infinite' : 'none',
                                 backdropFilter: 'blur(10px)',
                                 overflow: 'hidden'
@@ -279,15 +302,15 @@ export function CharacterScreen() {
                                 }}></div>
                             )}
                             
-                            <div style={{ textAlign: 'center', zIndex: 1, marginTop: '10px' }}>
+                            <div style={{ textAlign: 'center', zIndex: 1, marginTop: '5px' }}>
                                 <h3 style={{ 
-                                    color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', 
-                                    fontSize: '1.2rem', fontWeight: '900', textShadow: '0 2px 10px rgba(0,0,0,0.8)'
+                                    color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '1px', 
+                                    fontSize: '0.8rem', fontWeight: '900', textShadow: '0 2px 10px rgba(0,0,0,0.8)'
                                 }}>
                                     {CHAR_NAMES[char]}
                                 </h3>
                                 {!isUnlocked && (
-                                    <div style={{ color: '#fca5a5', fontSize: '0.65rem', marginTop: '5px', fontWeight: 'bold' }}>
+                                    <div style={{ color: '#fca5a5', fontSize: '0.55rem', marginTop: '3px', fontWeight: 'bold' }}>
                                         NÍVEL {req.level}
                                     </div>
                                 )}
@@ -296,8 +319,8 @@ export function CharacterScreen() {
                             <button 
                                 onClick={(e) => handleEquip(char, e)}
                                 style={{ 
-                                    zIndex: 1, width: '100%', padding: '10px', borderRadius: '10px',
-                                    fontWeight: '900', letterSpacing: '1px', fontSize: '0.75rem',
+                                    zIndex: 1, width: '100%', padding: '6px', borderRadius: '8px',
+                                    fontWeight: '900', letterSpacing: '0px', fontSize: '0.55rem',
                                     cursor: isEquipped ? 'default' : 'pointer', transition: 'all 0.2s',
                                     boxShadow: isPreviewing && !isEquipped && isUnlocked ? '0 5px 15px rgba(168,85,247,0.4)' : 'none',
                                     ...btnStyle
