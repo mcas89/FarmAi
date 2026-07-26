@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
+import { useRankingSystem } from '../../../systems/useRankingSystem';
 import { 
     Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Diamond, Globe, Trophy, Target, CheckCircle, LogOut
 } from 'lucide-react';
@@ -505,10 +506,7 @@ export function MainMenu() {
                             <Globe size={14} /> RANKING GLOBAL
                         </div>
                         <div style={{ fontSize: '0.55rem', color: '#fff', opacity: 0.8, marginTop: '2px' }}>
-                            {rankings.isLoading ? 'CARREGANDO...' : (() => {
-                                const m = require('../../../systems/useRankingSystem');
-                                return `VOCÊ É O TOP #${m.useRankingSystem.getState().getMyPosition(rankings.global) || '?'}`;
-                            })()}
+                            {rankings.isLoading ? 'CARREGANDO...' : `VOCÊ É O TOP #${useRankingSystem.getState().getMyPosition(rankings.global) || '?'}`}
                         </div>
                     </div>
                 </div>
@@ -518,10 +516,7 @@ export function MainMenu() {
                             <Trophy size={14} /> RANKING SEMANAL
                         </div>
                         <div style={{ fontSize: '0.55rem', color: '#fff', opacity: 0.8, marginTop: '2px' }}>
-                            {rankings.isLoading ? 'CARREGANDO...' : (() => {
-                                const m = require('../../../systems/useRankingSystem');
-                                return `VOCÊ É O TOP #${m.useRankingSystem.getState().getMyPosition(rankings.weekly) || '?'}`;
-                            })()}
+                            {rankings.isLoading ? 'CARREGANDO...' : `VOCÊ É O TOP #${useRankingSystem.getState().getMyPosition(rankings.weekly) || '?'}`}
                         </div>
                     </div>
                 </div>
@@ -546,14 +541,14 @@ export function MainMenu() {
                                 <div className="ranking-modal-row">
                                     <span className="ranking-modal-lbl">MINHA POSIÇÃO</span>
                                     <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>
-                                        {rankings.isLoading ? '...' : `#${require('../../../systems/useRankingSystem').useRankingSystem.getState().getMyPosition(rankingType === 'global' ? rankings.global : rankings.weekly)}`}
+                                        {rankings.isLoading ? '...' : `#${useRankingSystem.getState().getMyPosition(rankingType === 'global' ? rankings.global : rankings.weekly)}`}
                                     </span>
                                 </div>
                                 <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
                                     <span className="ranking-modal-lbl">TOTAL AURA {rankingType === 'weekly' ? 'SEMANAL' : ''}</span>
                                     <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
                                         <Diamond size={16} color="#fcd34d" /> 
-                                        {rankingType === 'global' ? Math.floor(aura).toLocaleString() : Math.floor(require('../../../systems/useAuraSystem').useAuraSystem.getState().weeklyAura || 0).toLocaleString()}
+                                        {rankingType === 'global' ? Math.floor(aura).toLocaleString() : Math.floor(useAuraSystem.getState().weeklyAura || 0).toLocaleString()}
                                     </span>
                                 </div>
                             </div>
