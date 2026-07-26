@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getDatabase } from 'firebase/database';
 
 // Chaves do Firebase fornecidas pelo console
 const firebaseConfig = {
@@ -16,13 +17,15 @@ const firebaseConfig = {
 let app;
 let db;
 let auth;
+let rtdb;
 
 try {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   auth = getAuth(app);
+  rtdb = getDatabase(app);
 } catch (e) {
   console.error("🔥 Erro ao inicializar Firebase (possível chave inválida ou erro de rede):", e);
 }
 
-export { db, auth };
+export { db, auth, rtdb };

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { useRankingSystem } from '../../../systems/useRankingSystem';
+import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 import { 
-    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Diamond, Globe, Trophy, Target, CheckCircle, LogOut
+    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Diamond, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus
 } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
 import { auth } from '../../../config/firebase';
@@ -24,7 +25,11 @@ export function MainMenu() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showRankingModal, setShowRankingModal] = useState(false);
     const [showAboutModal, setShowAboutModal] = useState(false);
+    const [showLobbyModal, setShowLobbyModal] = useState(false);
     const [rankingType, setRankingType] = useState('global');
+    
+    const { rooms, fetchRooms, joinRoom, createRoom } = useMultiplayerSystem();
+    const setIsOnlineMode = useUISystem(state => state.setIsOnlineMode);
 
     const [progression, setProgression] = useState(null);
 
@@ -61,7 +66,27 @@ export function MainMenu() {
                 });
             });
         });
+
+        // Atualiza a lista de salas
+        fetchRooms();
     }, []);
+
+    const handleJoinRoom = async (roomId) => {
+        const success = await joinRoom(roomId, { name: nickname, model: stats.activeModel || 'san.vrm' });
+        if (success) {
+            setIsOnlineMode(true);
+            setScreen('GAME');
+        }
+    };
+
+    const handleCreateRoom = async () => {
+        const currentCount = Object.keys(rooms).length;
+        const roomName = `Farmaverso ${currentCount + 1}`;
+        const roomId = await createRoom(roomName);
+        if (roomId) {
+            handleJoinRoom(roomId);
+        }
+    };
 
     const handleClaimReward = async (questId) => {
         const m = await import('../../../systems/useQuestSystem');
@@ -190,7 +215,7 @@ export function MainMenu() {
 
                 .top-header {
                     display: flex; align-items: center; gap: 8px; padding: 4px 15px 2px 15px;
-                    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+                    background: transparent;
                     position: relative;
                 }
 
@@ -402,15 +427,31 @@ export function MainMenu() {
                     </div>
                 </div>
 
-                {/* 3. CARD INICIAR JOGO */}
-                <div className="play-card" onClick={() => setScreen('GAME')}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 1 }}>
-                        <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px' }}>VAMOS FARMAR</div>
-                        <div style={{ color: '#fff', fontSize: '1.4rem', fontWeight: '900', letterSpacing: '1px' }}>INICIAR JOGO</div>
+                {/* 3. CARDS DE JOGO (LOCAL E ONLINE) */}
+                <div style={{ display: 'flex', gap: '15px', margin: '0 15px 12px 15px' }}>
+                    
+                    {/* FARMAR LOCAL */}
+                    <div className="play-card" onClick={() => { setIsOnlineMode(false); setScreen('GAME'); }} style={{ margin: 0, flex: 1, padding: '12px', background: 'linear-gradient(135deg, rgba(52,211,153,0.3), rgba(16,185,129,0.3))', borderColor: 'rgba(52,211,153,0.3)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 1 }}>
+                            <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.6rem', fontWeight: 'bold', letterSpacing: '1px' }}>SOZINHO</div>
+                            <div style={{ color: '#fff', fontSize: '1.1rem', fontWeight: '900', letterSpacing: '1px' }}>LOCAL</div>
+                        </div>
+                        <div style={{ width: '32px', height: '32px', background: '#fff', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1, boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+                            <Play size={16} color="#10b981" style={{ marginLeft: '3px' }} />
+                        </div>
                     </div>
-                    <div style={{ width: '40px', height: '40px', background: '#fff', borderRadius: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1, boxShadow: '0 5px 15px rgba(0,0,0,0.3)', transition: 'transform 0.3s' }}>
-                        <Play size={20} color="#a855f7" style={{ marginLeft: '3px' }} />
+
+                    {/* FARMAR ONLINE */}
+                    <div className="play-card" onClick={() => setShowLobbyModal(true)} style={{ margin: 0, flex: 1, padding: '12px', background: 'linear-gradient(135deg, rgba(168,85,247,0.4), rgba(236,72,153,0.4))' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 1 }}>
+                            <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.6rem', fontWeight: 'bold', letterSpacing: '1px' }}>FARMAVERSO</div>
+                            <div style={{ color: '#fff', fontSize: '1.1rem', fontWeight: '900', letterSpacing: '1px' }}>ONLINE</div>
+                        </div>
+                        <div style={{ width: '32px', height: '32px', background: '#fff', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1, boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+                            <Globe size={16} color="#a855f7" />
+                        </div>
                     </div>
+
                 </div>
 
                 {/* 4. ASCENSÃO DA AURA */}
@@ -642,12 +683,95 @@ export function MainMenu() {
                                     fontWeight: '900', cursor: 'pointer', transition: 'all 0.3s', letterSpacing: '2px',
                                     boxShadow: '0 5px 15px rgba(168,85,247,0.2)', flexShrink: 0
                                 }}
-                                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; e.currentTarget.style.background = 'linear-gradient(90deg, rgba(168,85,247,0.4), rgba(216,180,254,0.4))'; }}
-                                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'linear-gradient(90deg, rgba(168,85,247,0.2), rgba(216,180,254,0.2))'; }}
                             >
                                 FECHAR
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL LOBBY (EXPLORADOR DE SERVIDORES) */}
+            {showLobbyModal && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 400, pointerEvents: 'auto'
+                }} onClick={() => setShowLobbyModal(false)}>
+                    
+                    <div style={{
+                        background: 'rgba(20, 18, 28, 0.95)', border: '1px solid rgba(168, 85, 247, 0.4)',
+                        borderRadius: '24px', padding: '25px', width: '90%', maxWidth: '500px', height: '80vh',
+                        display: 'flex', flexDirection: 'column',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(168, 85, 247, 0.1)',
+                        animation: 'modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                    }} onClick={e => e.stopPropagation()}>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Globe size={24} color="#a855f7" />
+                                <div>
+                                    <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', letterSpacing: '2px' }}>FARMAVERSO</h2>
+                                    <div style={{ color: '#a855f7', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '1px' }}>SERVIDORES ONLINE</div>
+                                </div>
+                            </div>
+                            <X size={24} color="#888" cursor="pointer" onClick={() => setShowLobbyModal(false)} />
+                        </div>
+
+                        <div className="ranking-modal-scroll" style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '10px' }}>
+                            {rooms.length === 0 ? (
+                                <div style={{ textAlign: 'center', color: '#888', marginTop: '20px', fontStyle: 'italic' }}>
+                                    Nenhuma sala ativa no momento.<br/>Seja o primeiro a criar uma!
+                                </div>
+                            ) : (
+                                rooms.map(room => {
+                                    const isFull = room.playersCount >= room.maxPlayers;
+                                    return (
+                                        <div key={room.id} style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            background: 'rgba(255,255,255,0.03)', padding: '12px 15px', borderRadius: '10px',
+                                            marginBottom: '8px', border: '1px solid rgba(255,255,255,0.05)'
+                                        }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '0.9rem' }}>{room.name}</span>
+                                                <span style={{ color: isFull ? '#ef4444' : '#34d399', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                                                    <Users size={10} style={{ display: 'inline', marginRight: '4px' }}/>
+                                                    {room.playersCount} / {room.maxPlayers} Jogadores
+                                                </span>
+                                            </div>
+                                            
+                                            <button 
+                                                onClick={() => !isFull && handleJoinRoom(room.id)}
+                                                disabled={isFull}
+                                                style={{
+                                                    background: isFull ? 'rgba(239,68,68,0.2)' : 'linear-gradient(90deg, #a855f7, #6b21a8)',
+                                                    border: isFull ? '1px solid rgba(239,68,68,0.4)' : 'none',
+                                                    color: isFull ? '#ef4444' : '#fff', padding: '8px 16px', borderRadius: '8px',
+                                                    fontWeight: 'bold', cursor: isFull ? 'not-allowed' : 'pointer', fontSize: '0.8rem',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                {isFull ? 'LOTADA' : 'ENTRAR'}
+                                            </button>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        <button 
+                            onClick={handleCreateRoom}
+                            style={{
+                                marginTop: '20px', width: '100%', background: 'rgba(52,211,153,0.1)',
+                                border: '1px solid rgba(52,211,153,0.4)', color: '#34d399', padding: '14px', borderRadius: '12px', 
+                                fontWeight: '900', cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '1px',
+                                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(52,211,153,0.2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(52,211,153,0.1)'}
+                        >
+                            <Plus size={18} /> CRIAR NOVA SALA
+                        </button>
                     </div>
                 </div>
             )}

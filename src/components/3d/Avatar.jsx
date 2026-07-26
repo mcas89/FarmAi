@@ -9,6 +9,8 @@ import { useMovementSystem } from '../../systems/useMovementSystem';
 import { usePlayerSystem } from '../../systems/usePlayerSystem';
 import { useAuraSystem } from '../../systems/useAuraSystem';
 import { useCollisionSystem } from '../../systems/useCollisionSystem';
+import { useUISystem } from '../../systems/useUISystem';
+import { useMultiplayerSystem } from '../../systems/useMultiplayerSystem';
 
 export function Avatar({ url }) {
   const [vrm, setVrm] = useState(null);
@@ -261,6 +263,10 @@ export function Avatar({ url }) {
 
     // Atualiza posição global para câmera e auras
     setPosition([vrm.scene.position.x, vrm.scene.position.y, vrm.scene.position.z]);
+    
+    if (useUISystem.getState().isOnlineMode) {
+        useMultiplayerSystem.getState().updatePosition(vrm.scene.position.x, vrm.scene.position.y, vrm.scene.position.z, newState, usePlayerSystem.getState().activeModel);
+    }
   });
 
   return vrm ? <primitive object={vrm.scene} /> : null;

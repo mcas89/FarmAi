@@ -8,6 +8,10 @@ import { ParkEnvironment } from './ParkEnvironment';
 import { usePlayerSystem } from '../../systems/usePlayerSystem';
 import { useAuraSystem } from '../../systems/useAuraSystem';
 import { useFarmSystem } from '../../systems/useFarmSystem';
+import { useUISystem } from '../../systems/useUISystem';
+import { useMultiplayerSystem } from '../../systems/useMultiplayerSystem';
+import { RemotePlayer } from './RemotePlayer';
+import { auth } from '../../config/firebase';
 import * as THREE from 'three';
 
 // Câmera que segue a personagem (Estilo Aventura 3D Profissional)
@@ -109,6 +113,9 @@ const MemoizedPostProcessing = React.memo(PostProcessingEffects);
 
 export function Scene() {
     const activeModel = usePlayerSystem(state => state.activeModel);
+    const isOnlineMode = useUISystem(state => state.isOnlineMode);
+    const playersInRoom = useMultiplayerSystem(state => state.playersInRoom);
+    const myUid = auth?.currentUser?.uid;
 
     return (
         <Canvas shadows={{ type: THREE.PCFShadowMap }} camera={{ position: [0, 5.5, -14], fov: 45 }}>
@@ -116,6 +123,13 @@ export function Scene() {
             <ParkEnvironment />
             
             <Avatar key={activeModel} url={`/models/${activeModel}`} />
+            
+            {/* Renderiza os outros jogadores se estiver online */}
+            {isOnlineMode && Object.entries(playersInRoom).map(([uid, data]) => {
+                if (uid === myUid) return null; // Não renderizar a si mesmo
+                return <RemotePlayer key={uid} playerData={data} />;
+            })}
+            
             <AuraEffects />
             {/* <MemoizedPostProcessing /> */}
             
