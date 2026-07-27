@@ -180,6 +180,7 @@ export function CharacterScreen() {
                     height: 100%;
                     min-height: 0;
                     -webkit-overflow-scrolling: touch;
+                    touch-action: pan-y !important;
                     padding-bottom: 40px;
                 }
                 
@@ -191,7 +192,6 @@ export function CharacterScreen() {
                     background: rgba(15, 10, 25, 0.75);
                     border: 1px solid rgba(168, 85, 247, 0.15);
                     border-radius: 16px;
-                    overflow: hidden;
                     display: flex;
                     flex-direction: column;
                     backdrop-filter: blur(12px);
@@ -206,13 +206,15 @@ export function CharacterScreen() {
                 
                 .char-img-container {
                     width: 100%;
-                    aspect-ratio: 1 / 1;
+                    height: 160px;
                     background: radial-gradient(circle at bottom, rgba(76, 29, 149, 0.4) 0%, rgba(0,0,0,0) 80%);
                     display: flex;
                     justify-content: center;
                     align-items: center;
                     border-bottom: 1px solid rgba(255,255,255,0.05);
-                    min-height: 120px; /* Garante que não suma */
+                    border-top-left-radius: 16px;
+                    border-top-right-radius: 16px;
+                    overflow: hidden;
                 }
                 
                 .char-img {
@@ -232,7 +234,7 @@ export function CharacterScreen() {
                     flex-direction: column;
                     align-items: center;
                     justify-content: flex-end;
-                    flex-grow: 1; /* Permite crescer se o card for maior, mas não colapsa */
+                    flex: none;
                 }
             `}</style>
 
