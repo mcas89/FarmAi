@@ -176,7 +176,8 @@ export function CharacterScreen() {
                     gap: 24px;
                     padding: 24px;
                     overflow-y: auto;
-                    height: calc(100% - 80px);
+                    flex: 1;
+                    min-height: 0;
                 }
                 
                 .store-grid::-webkit-scrollbar { width: 8px; }
@@ -214,10 +215,10 @@ export function CharacterScreen() {
                 }
                 
                 .char-img {
-                    height: 100%;
-                    object-fit: cover;
+                    height: 120%;
+                    object-fit: contain;
                     object-position: top center;
-                    transform: translateY(5%);
+                    transform: translateY(10%);
                     transition: transform 0.4s ease;
                     filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
                 }
