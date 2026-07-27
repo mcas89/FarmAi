@@ -1,125 +1,103 @@
 /**
  * LifeAnimation
+ * PRIORIDADE 03
  *
- * Camadas:
- * 1. Vida normal do personagem
- * 2. Progressão corporal enquanto farma
+ * Vida orgânica + progressão corporal durante a sessão.
  *
  * IMPORTANTE:
- * - Não controla a animação Six Seven dos braços.
- * - Não altera as poses do PoseRegistry.
- * - Gera apenas offsets adicionais.
+ * - Não controla a lógica do Six Seven.
+ * - Não altera o sistema de combo.
+ * - Mantém os movimentos orgânicos existentes.
+ * - Adiciona progressão gradual ao corpo.
  */
 
 const TIMERS = {
     breath: 0,
     head: 0,
     neck: 0,
+    lArm: 0,
+    rArm: 0,
     hips: 0,
     lShoulder: 0,
     rShoulder: 0,
-    bodyProgression: 0
+
+    // Novo relógio da progressão corporal
+    progression: 0
 };
 
+
+// Frequências independentes
 const FREQUENCIES = {
     breath: (Math.PI * 2) / 3.7,
     head: (Math.PI * 2) / 6.2,
     neck: (Math.PI * 2) / 8.0,
+    lArm: (Math.PI * 2) / 11.0,
+    rArm: (Math.PI * 2) / 14.0,
     hips: (Math.PI * 2) / 7.0,
     lShoulder: (Math.PI * 2) / 9.0,
     rShoulder: (Math.PI * 2) / 12.0
 };
 
-// ============================================================
-// PROGRESSÃO CORPORAL
-// ============================================================
-//
-// O tempo é contado enquanto qualquer lado está farmando.
-//
-// 0 - 5s   : normal
-// 5 - 10s  : primeira reação
-// 10 - 20s : alongamento
-// 20 - 35s : cansaço leve
-// 35 - 50s : esforço corporal
-// 50s+     : sobrecarga
-//
-// Nesta primeira versão NÃO existe ainda flutuação.
-// Primeiro vamos testar a base corporal.
-// ============================================================
 
-const PROGRESSION = {
-    AWARENESS_START: 5,
-    STRETCH_START: 10,
-    FATIGUE_START: 20,
-    EFFORT_START: 35,
-    OVERLOAD_START: 50
+// Limita um valor entre 0 e 1
+const clamp01 = (value) => {
+    return Math.max(0, Math.min(1, value));
 };
 
-const clamp01 = (value) => Math.max(0, Math.min(1, value));
 
+// Suavização para evitar movimentos robóticos
 const smoothStep = (value) => {
     const t = clamp01(value);
+
     return t * t * (3 - 2 * t);
 };
 
-const getPhaseProgress = (time, start, duration) => {
-    return smoothStep((time - start) / duration);
-};
 
 export const LifeAnimation = {
 
     getOffsets: (
         delta,
-        brainBreathMultiplier = 1.0,
-        isFarming = false
+        brainBreathMultiplier = 1.0
     ) => {
 
-        // ----------------------------------------------------
-        // TEMPO NORMAL DA VIDA
-        // ----------------------------------------------------
+        // ====================================================
+        // RELÓGIOS ORGÂNICOS EXISTENTES
+        // ====================================================
 
-        Object.keys(TIMERS).forEach((key) => {
+        Object.keys(FREQUENCIES).forEach(key => {
 
-            const noise = Math.sin(delta * 0.1) * 0.05;
+            const noise =
+                Math.sin(delta * 0.1) * 0.05;
 
-            TIMERS[key] += delta * (
-                FREQUENCIES[key] !== undefined
-                    ? FREQUENCIES[key] + noise
-                    : 1
-            );
+            TIMERS[key] +=
+                delta * (FREQUENCIES[key] + noise);
         });
 
-        // ----------------------------------------------------
-        // TEMPO DE FARM
-        // ----------------------------------------------------
 
-        if (isFarming) {
-            TIMERS.bodyProgression += delta;
-        } else {
-            // Retorno gradual da progressão quando para de farmar.
-            //
-            // Não zeramos instantaneamente para evitar
-            // uma pose quebrando de repente.
-            TIMERS.bodyProgression = Math.max(
-                0,
-                TIMERS.bodyProgression - delta * 3
-            );
-        }
+        // ====================================================
+        // RELÓGIO DA PROGRESSÃO
+        // ====================================================
 
-        const farmTime = TIMERS.bodyProgression;
+        TIMERS.progression += delta;
 
-        // ----------------------------------------------------
-        // RESPIRAÇÃO
-        // ----------------------------------------------------
+        const progressionTime =
+            TIMERS.progression;
 
-        const breathAmp = 0.015 * brainBreathMultiplier;
+
+        // ====================================================
+        // 1. RESPIRAÇÃO
+        // ====================================================
+
+        const breathAmp =
+            0.015 * brainBreathMultiplier;
 
         const breath =
             Math.sin(TIMERS.breath) * breathAmp;
 
-        // ----------------------------------------------------
-        // VIDA NORMAL
-        // ----------------------------------------------------
+
+        // ====================================================
+        // 2. MOVIMENTOS ORGÂNICOS EXISTENTES
+        // ====================================================
 
         const headMotion =
             Math.sin(TIMERS.head) * 0.05;
@@ -127,267 +105,192 @@ export const LifeAnimation = {
         const neckMotion =
             Math.cos(TIMERS.neck) * 0.04;
 
+
         const lShoulderMotion =
             Math.sin(TIMERS.lShoulder) * 0.03;
 
         const rShoulderMotion =
             Math.cos(TIMERS.rShoulder) * 0.03;
 
+
+        const lArmMotion =
+            Math.sin(TIMERS.lArm) * 0.04;
+
+        const rArmMotion =
+            Math.cos(TIMERS.rArm) * 0.04;
+
+
+        const lHandMotion =
+            Math.sin(TIMERS.lArm * 1.5) * 0.06;
+
+        const rHandMotion =
+            Math.cos(TIMERS.rArm * 1.5) * 0.06;
+
+
         const hipsMotion =
             Math.sin(TIMERS.hips) * 0.02;
 
-        // ----------------------------------------------------
-        // PROGRESSÃO CORPORAL
-        // ----------------------------------------------------
 
-        let progression = {
+        // ====================================================
+        // 3. PROGRESSÃO CORPORAL
+        // ====================================================
 
-            chest: {
-                x: 0,
-                y: 0,
-                z: 0
-            },
+        let progressionHeadX = 0;
+        let progressionHeadY = 0;
 
-            head: {
-                x: 0,
-                y: 0,
-                z: 0
-            },
+        let progressionNeckX = 0;
+        let progressionNeckY = 0;
 
-            neck: {
-                x: 0,
-                y: 0,
-                z: 0
-            },
+        let progressionChestX = 0;
 
-            hips: {
-                x: 0,
-                y: 0,
-                z: 0
-            },
+        let progressionHipsX = 0;
+        let progressionHipsY = 0;
 
-            leftUpperLeg: {
-                x: 0,
-                y: 0,
-                z: 0
-            },
-
-            rightUpperLeg: {
-                x: 0,
-                y: 0,
-                z: 0
-            },
-
-            leftLowerLeg: {
-                x: 0,
-                y: 0,
-                z: 0
-            },
-
-            rightLowerLeg: {
-                x: 0,
-                y: 0,
-                z: 0
-            }
-        };
 
         // ====================================================
         // FASE 1 — PRIMEIRA REAÇÃO
-        // 5s até 10s
+        //
+        // 5s → 10s
+        //
+        // Pequena mudança gradual na cabeça.
         // ====================================================
 
-        const awareness =
-            getPhaseProgress(
-                farmTime,
-                PROGRESSION.AWARENESS_START,
-                5
-            );
+        if (progressionTime >= 5) {
 
-        if (awareness > 0) {
+            const progress =
+                smoothStep(
+                    (progressionTime - 5) / 5
+                );
 
-            const reaction =
-                Math.sin(TIMERS.head * 0.7) *
-                0.025 *
-                awareness;
+            progressionHeadY =
+                0.12 * progress;
 
-            progression.head.y += reaction;
-            progression.neck.y += reaction * 0.35;
+            progressionHeadX =
+                -0.06 * progress;
+
+            progressionNeckY =
+                -0.025 * progress;
         }
+
 
         // ====================================================
         // FASE 2 — ALONGAMENTO
-        // 10s até 20s
+        //
+        // 10s → 20s
+        //
+        // O peito começa a se abrir.
         // ====================================================
 
-        const stretch =
-            getPhaseProgress(
-                farmTime,
-                PROGRESSION.STRETCH_START,
-                10
-            );
+        if (progressionTime >= 10) {
 
-        if (stretch > 0) {
+            const progress =
+                smoothStep(
+                    (progressionTime - 10) / 10
+                );
 
-            // Peito começa a abrir
-            progression.chest.x -=
-                0.035 * stretch;
+            progressionChestX =
+                -0.08 * progress;
 
-            // Quadril acompanha discretamente
-            progression.hips.x +=
-                0.012 * stretch;
+            progressionNeckX +=
+                -0.025 * progress;
         }
+
 
         // ====================================================
         // FASE 3 — CANSAÇO
-        // 20s até 35s
+        //
+        // 20s → 35s
+        //
+        // O corpo começa a ceder.
         // ====================================================
 
-        const fatigue =
-            getPhaseProgress(
-                farmTime,
-                PROGRESSION.FATIGUE_START,
-                15
-            );
+        if (progressionTime >= 20) {
 
-        if (fatigue > 0) {
+            const progress =
+                smoothStep(
+                    (progressionTime - 20) / 15
+                );
 
-            // Peito começa a perder a postura
-            progression.chest.x +=
-                0.04 * fatigue;
+            progressionChestX +=
+                0.12 * progress;
 
-            // Cabeça começa a acompanhar o cansaço
-            progression.head.x +=
-                0.018 * fatigue;
+            progressionHeadX +=
+                0.05 * progress;
 
-            // Quadril ganha uma pequena oscilação
-            progression.hips.x +=
-                Math.sin(TIMERS.hips * 0.7) *
-                0.025 *
-                fatigue;
+            progressionHipsX +=
+                0.05 * progress;
         }
+
 
         // ====================================================
         // FASE 4 — ESFORÇO
-        // 35s até 50s
+        //
+        // 35s+
+        //
+        // Começa uma oscilação corporal maior.
         // ====================================================
 
-        const effort =
-            getPhaseProgress(
-                farmTime,
-                PROGRESSION.EFFORT_START,
-                15
-            );
+        if (progressionTime >= 35) {
 
-        if (effort > 0) {
+            const progress =
+                smoothStep(
+                    (progressionTime - 35) / 15
+                );
 
-            // O personagem começa a usar mais as pernas
-            const legBend =
-                0.12 * effort;
+            progressionHipsY +=
+                Math.sin(TIMERS.hips * 0.5)
+                * 0.04
+                * progress;
 
-            progression.leftUpperLeg.x +=
-                legBend;
+            progressionHipsX +=
+                0.08 * progress;
 
-            progression.rightUpperLeg.x +=
-                legBend;
-
-            // Pequena compensação alternada
-            progression.leftLowerLeg.x +=
-                Math.sin(TIMERS.hips) *
-                0.04 *
-                effort;
-
-            progression.rightLowerLeg.x +=
-                Math.cos(TIMERS.hips) *
-                0.04 *
-                effort;
-
-            // Quadril começa a baixar visualmente
-            progression.hips.x +=
-                0.035 * effort;
+            progressionChestX +=
+                0.04 * progress;
         }
 
-        // ====================================================
-        // FASE 5 — SOBRECARGA
-        // 50s+
-        // ====================================================
-
-        const overload =
-            clamp01(
-                (farmTime - PROGRESSION.OVERLOAD_START) /
-                20
-            );
-
-        if (overload > 0) {
-
-            const intensity =
-                smoothStep(overload);
-
-            // Flexão mais evidente
-            progression.leftUpperLeg.x +=
-                0.18 * intensity;
-
-            progression.rightUpperLeg.x +=
-                0.18 * intensity;
-
-            progression.leftLowerLeg.x +=
-                0.08 * intensity;
-
-            progression.rightLowerLeg.x +=
-                0.08 * intensity;
-
-            // Corpo mais carregado
-            progression.chest.x +=
-                0.05 * intensity;
-
-            progression.hips.x +=
-                0.05 * intensity;
-        }
 
         // ====================================================
-        // OFFSETS FINAIS
+        // RESULTADO FINAL
         // ====================================================
 
         return {
 
-            // Respiração
             chest: {
-                x: breath + progression.chest.x
+                x:
+                    breath +
+                    progressionChestX
             },
 
-            // Cabeça
+
             head: {
                 x:
                     headMotion +
-                    progression.head.x,
+                    progressionHeadX,
 
                 y:
-                    headMotion * 0.6 +
-                    progression.head.y,
-
-                z:
-                    progression.head.z
+                    (headMotion * 0.6) +
+                    progressionHeadY
             },
 
-            // Pescoço
+
             neck: {
                 x:
                     neckMotion +
-                    progression.neck.x,
+                    progressionNeckX,
 
                 y:
-                    neckMotion * 0.6 +
-                    progression.neck.y,
-
-                z:
-                    progression.neck.z
+                    (neckMotion * 0.6) +
+                    progressionNeckY
             },
 
-            // Ombros
+
             leftShoulder: {
                 x:
                     lShoulderMotion +
                     breath * 0.3
             },
+
 
             rightShoulder: {
                 x:
@@ -395,50 +298,38 @@ export const LifeAnimation = {
                     breath * 0.3
             },
 
-            // IMPORTANTE:
-            // Os braços não recebem mais oscilações
-            // automáticas do LifeAnimation.
-            //
-            // Isso evita que a LifeAnimation brigue
-            // com o SixSevenAction.
 
-            // Quadril
+            // Mantido exatamente como antes
+            leftLowerArm: {
+                x: lArmMotion
+            },
+
+
+            rightLowerArm: {
+                x: rArmMotion
+            },
+
+
+            leftHand: {
+                x: lHandMotion,
+                z: lHandMotion * 0.3
+            },
+
+
+            rightHand: {
+                x: rHandMotion,
+                z: rHandMotion * 0.3
+            },
+
+
             hips: {
-                x:
-                    Math.abs(hipsMotion) * 0.3 +
-                    progression.hips.x,
-
                 y:
                     hipsMotion +
-                    progression.hips.y,
+                    progressionHipsY,
 
-                z:
-                    progression.hips.z
-            },
-
-            // Pernas
-            leftUpperLeg: {
-                x: progression.leftUpperLeg.x,
-                y: progression.leftUpperLeg.y,
-                z: progression.leftUpperLeg.z
-            },
-
-            rightUpperLeg: {
-                x: progression.rightUpperLeg.x,
-                y: progression.rightUpperLeg.y,
-                z: progression.rightUpperLeg.z
-            },
-
-            leftLowerLeg: {
-                x: progression.leftLowerLeg.x,
-                y: progression.leftLowerLeg.y,
-                z: progression.leftLowerLeg.z
-            },
-
-            rightLowerLeg: {
-                x: progression.rightLowerLeg.x,
-                y: progression.rightLowerLeg.y,
-                z: progression.rightLowerLeg.z
+                x:
+                    Math.abs(hipsMotion) * 0.3 +
+                    progressionHipsX
             }
         };
     }
