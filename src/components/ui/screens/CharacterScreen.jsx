@@ -11,6 +11,8 @@ const CHARACTERS = [
     { file: 'deric.vrm', name: 'Marc',  image: '/images/characters/Marc.png', price: 0,    level: 1,  desc: 'Um rapaz focado e muito ágil. Gosta de planejar bem as plantações.' },
     { file: 'carol.vrm', name: 'Carol', image: '/images/characters/Carol.png', price: 2000, level: 5,  desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
     { file: 'rafa.vrm',  name: 'Rafa',  image: '/images/characters/Rafa.png', price: 2000, level: 5,  desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
+    { file: 'mary.vrm',  name: 'Mary',  image: '/images/characters/Mary.png', price: 5000, level: 10, desc: 'Mestre da colheita e lenda entre os jardineiros.' },
+    { file: 'eric.vrm',  name: 'Eric',  image: '/images/characters/Eric.png', price: 5000, level: 10, desc: 'Especialista em magias da terra e solo sagrado.' },
 ];
 
 function CustomModal({ modal, onClose }) {
