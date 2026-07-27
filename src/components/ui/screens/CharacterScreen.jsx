@@ -9,8 +9,8 @@ import { getPlayerLevel } from '../../../systems/progressionRules';
 const CHARACTERS = [
     { file: 'san.vrm',   name: 'Samy',  image: '/images/characters/Samy.png', price: 0,    level: 1,  desc: 'Jardineira novata cheia de energia e vontade de cultivar a melhor fazenda.' },
     { file: 'deric.vrm', name: 'Marc',  image: '/images/characters/Marc.png', price: 0,    level: 1,  desc: 'Um rapaz focado e muito ágil. Gosta de planejar bem as plantações.' },
-    { file: 'carol.vrm', name: 'Carol', image: '/images/characters/Carol.png', price: 1000, level: 5,  desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
-    { file: 'rafa.vrm',  name: 'Rafa',  image: '/images/characters/Rafa.png', price: 1000, level: 5,  desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
+    { file: 'carol.vrm', name: 'Carol', image: '/images/characters/Carol.png', price: 2000, level: 5,  desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
+    { file: 'rafa.vrm',  name: 'Rafa',  image: '/images/characters/Rafa.png', price: 2000, level: 5,  desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
 ];
 
 function CustomModal({ modal, onClose }) {
@@ -116,25 +116,31 @@ export function CharacterScreen() {
         _doEquip(char, charConfig, false);
     };
 
-    const _doEquip = (char, charConfig, isBuying) => {
-        if (isBuying) {
-            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
-            const newDiamonds = diamonds - charConfig.price;
-            updateStats({ diamonds: newDiamonds });
-            const newUnlocked = [...usePlayerSystem.getState().unlockedCharacters, char];
-            usePlayerSystem.setState({ unlockedCharacters: newUnlocked });
-        }
+    const _doEquip = async (char, charConfig, isBuying) => {
+        try {
+            if (isBuying) {
+                const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+                const newDiamonds = diamonds - charConfig.price;
+                updateStats({ diamonds: newDiamonds });
+                
+                const currentUnlockedArray = usePlayerSystem.getState().unlockedCharacters;
+                if (!currentUnlockedArray.includes(char)) {
+                    const newUnlocked = [...currentUnlockedArray, char];
+                    usePlayerSystem.setState({ unlockedCharacters: newUnlocked });
+                }
+            }
 
-        setActiveModel(char);
+            setActiveModel(char);
 
-        // Salva silenciosamente no Firebase
-        Promise.all([
-            import('../../../systems/usePlayerSystem'),
-            import('../../../systems/useAuraSystem'),
-            import('../../../systems/useDatabaseSystem'),
-            import('../../../systems/useQuestSystem'),
-            import('../../../systems/useAchievementSystem')
-        ]).then(([pSys, aSys, dbSys, qSys, achSys]) => {
+            // Carrega sistemas dinamicamente
+            const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
+                import('../../../systems/usePlayerSystem'),
+                import('../../../systems/useAuraSystem'),
+                import('../../../systems/useDatabaseSystem'),
+                import('../../../systems/useQuestSystem'),
+                import('../../../systems/useAchievementSystem')
+            ]);
+            
             const pos = pSys.usePlayerSystem.getState().position;
             const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
             const diamonds = useUISystem.getState().playerStats.diamonds || 0;
@@ -142,12 +148,18 @@ export function CharacterScreen() {
             const achievements = achSys.useAchievementSystem.getState().getSavableData();
             const currentUnlocked = pSys.usePlayerSystem.getState().unlockedCharacters;
 
-            dbSys.useDatabaseSystem.getState().saveGameState(
+            // Salva no Firebase e aguarda
+            await dbSys.useDatabaseSystem.getState().saveGameState(
                 pos, comboCount, char, aura, diamonds,
                 maxCombo, dailyQuests, lastResetDate,
                 weeklyAura, undefined, achievements, currentUnlocked
             );
-        });
+            
+            console.log("✅ Compra/Equip executado e salvo com sucesso:", char);
+        } catch (err) {
+            console.error("❌ Erro ao equipar/comprar personagem:", err);
+            showAlert("Erro", "Ocorreu um erro ao processar a requisição. Tente novamente.");
+        }
     };
 
     return (
@@ -231,31 +243,30 @@ export function CharacterScreen() {
                 {/* ── HEADER LOJA ── */}
                 <div style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '20px 30px', background: 'rgba(0,0,0,0.4)',
+                    padding: '20px 30px', background: 'rgba(8,6,18,0.7)',
                     borderBottom: '1px solid rgba(168,85,247,0.2)',
-                    boxShadow: '0 4px 30px rgba(0,0,0,0.5)',
-                    backdropFilter: 'blur(10px)',
-                    zIndex: 10
+                    boxShadow: '0 4px 30px rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(20px)', zIndex: 10
                 }}>
                     <div>
                         <h2 style={{
                             color: '#fff', margin: 0, textTransform: 'uppercase',
-                            letterSpacing: '3px', fontSize: '1.5rem', fontWeight: '900',
-                            textShadow: '0 0 15px rgba(168,85,247,0.8)'
+                            letterSpacing: '2px', fontSize: '1.4rem', fontWeight: '900',
+                            textShadow: '0 2px 10px rgba(168,85,247,0.6)'
                         }}>
                             Loja de Personagens
                         </h2>
-                        <div style={{ color: '#d8b4fe', fontSize: '0.75rem', letterSpacing: '2px', fontWeight: 'bold' }}>
-                            SELECIONE OU COMPRE SEUS AVATARES
+                        <div style={{ color: '#d8b4fe', fontSize: '0.7rem', letterSpacing: '1px', fontWeight: 'bold' }}>
+                            ESCOLHA OU COMPRE SEU AVATAR
                         </div>
                     </div>
                     
-                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                         {/* Saldo do jogador */}
                         <div style={{ 
-                            display: 'flex', alignItems: 'center', gap: '8px', 
-                            background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.4)',
-                            padding: '8px 16px', borderRadius: '12px',
+                            display: 'flex', alignItems: 'center', gap: '6px', 
+                            background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)',
+                            padding: '10px 16px', borderRadius: '14px',
                             boxShadow: '0 0 15px rgba(52,211,153,0.15)'
                         }}>
                             <Diamond size={18} color="#34d399" />
@@ -268,14 +279,14 @@ export function CharacterScreen() {
                             onClick={() => setScreen('MENU')}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '10px 24px', background: 'rgba(255,255,255,0.05)',
-                                color: '#fff', border: '1px solid rgba(255,255,255,0.2)',
-                                borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold',
+                                padding: '11px 24px', background: 'rgba(255,255,255,0.06)',
+                                color: '#fff', border: '1px solid rgba(255,255,255,0.15)',
+                                borderRadius: '14px', cursor: 'pointer', fontWeight: 'bold',
                                 backdropFilter: 'blur(10px)', transition: 'background 0.2s',
                                 letterSpacing: '1px'
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                         >
                             <X size={18} /> FECHAR
                         </button>
