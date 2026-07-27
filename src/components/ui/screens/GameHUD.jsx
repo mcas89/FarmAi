@@ -335,7 +335,7 @@ export function GameHUD() {
             }}>
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr auto 1fr',
+                    gridTemplateColumns: 'auto 1fr auto',
                     alignItems: 'center',
                     gap: '8px',
                     background: 'rgba(8,6,18,0.6)',
