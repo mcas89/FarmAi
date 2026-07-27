@@ -1,7 +1,7 @@
 /**
  * SixSevenAction
  * PRIORIDADE 04 (Esquerda) e 05 (Direita)
- * Agora com cálculo dinâmico de velocidade de clique e proteção anti-travamento.
+ * Com cálculo dinâmico de velocidade de clique e proteção anti-travamento.
  */
 
 const STATES = {
@@ -34,22 +34,22 @@ const getInstance = (uuid) => {
 };
 
 const updateMachine = (sm, isActive, delta) => {
-    // Conta o tempo livre para saber se o cara clica rápido ou devagar
+    // Conta o tempo livre para calcular velocidade
     sm.timeSinceLastClick += delta;
 
-    // Detecta o exato momento do clique (mudança de Falso para Verdadeiro)
+    // Detecta o momento do clique
     if (isActive && !sm.wasActive) {
         const tempoEntreCliques = sm.timeSinceLastClick;
         
-        // Matemática de velocidade: Se clicou em 0.1s, fica super rápido. Se foi em 0.5s, fica normal/lento.
+        // Se clicar rápido, aumenta a velocidade (até 3x). Se demorar, mantém lento.
         sm.currentSpeed = Math.max(0.5, Math.min(3.0, 0.2 / (tempoEntreCliques + 0.01)));
         
         sm.timeSinceLastClick = 0; 
-        sm.idleCooldown = 0; // Cancela a intenção de abaixar o braço
+        sm.idleCooldown = 0; 
     }
     sm.wasActive = isActive;
 
-    // CORREÇÃO DO BRAÇO TRAVADO: Em vez de cortar no frame 1, damos uma tolerância de 200ms
+    // Proteção anti-travamento de braço: O braço espera 200ms antes de despencar
     if (!isActive) {
         sm.idleCooldown += delta;
         if (sm.idleCooldown > 0.2) { 
@@ -58,10 +58,10 @@ const updateMachine = (sm, isActive, delta) => {
             return { targetPose: null, lerpFactor: 0.1 }; 
         }
     } else {
-        sm.idleCooldown = 0; // Se segurar o botão, não deixa abaixar
+        sm.idleCooldown = 0;
     }
 
-    // O tempo passa mais rápido ou devagar dependendo da fúria do jogador
+    // Aplica a velocidade dinâmica
     sm.timeInState += (delta * sm.currentSpeed);
     const baseSpeed = 0.18; // Tempo alvo base por frame 
 
@@ -84,7 +84,6 @@ const updateMachine = (sm, isActive, delta) => {
 
     return {
         targetPose: sm.currentState,
-        // Mantém a sua lógica original de interpolação, mas levemente mais ágil no início
         lerpFactor: (sm.currentState === STATES.FRAME_1) ? 0.15 : 0.25 
     };
 };
