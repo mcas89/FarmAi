@@ -34,7 +34,9 @@ let lastHitTime = 0;
 let comboStartTime = 0;
 let timeCooldownUntil = 0;
 
-const breakCombo = () => {
+// DEBUG: Registra o motivo do break no console
+const breakCombo = (reason = 'decay') => {
+    console.warn(`[COMBO BREAK] motivo="${reason}" combo_era=${comboCount}`);
     comboCount = 0;
     lastValidSide = null;
     lastHitTime = 0;
@@ -42,11 +44,13 @@ const breakCombo = () => {
     useAuraSystem.getState().registerHit(0, '', 0); 
 };
 
-const resetDecayTimer = () => {
+// Decay normal = 800ms. Em milestones (múltiplos de 50) = 2000ms para absorver processamentos pesados.
+const resetDecayTimer = (isMilestone = false) => {
     if (decayTimer) clearTimeout(decayTimer);
+    const delay = isMilestone ? 2000 : 800;
     decayTimer = setTimeout(() => {
-        breakCombo();
-    }, 500); 
+        breakCombo('decay_timeout');
+    }, delay);
 };
 
 export const AuraSystem = {
@@ -59,9 +63,6 @@ export const AuraSystem = {
         state[side].isPressed = isPressed;
 
         if (isPressed) {
-            resetDecayTimer();
-            renewAnimationCycle(side); 
-
             // Inicia o cronômetro no primeiro hit
             if (comboCount === 0) {
                 comboStartTime = now;
@@ -69,14 +70,15 @@ export const AuraSystem = {
 
             // CASOS INVÁLIDOS (Errou alternância)
             if (lastValidSide === side) {
-                breakCombo(); 
+                breakCombo('mesmo_lado');
+                resetDecayTimer(); // Reseta o timer mesmo após break
                 return;
             }
 
             // LIMITE DE TEMPO: 20 minutos (1.200.000 ms)
             if (comboStartTime > 0 && (now - comboStartTime) > 1200000) {
-                breakCombo();
-                timeCooldownUntil = now + 5000; // Bloqueia por 5 segundos para quebrar o ritmo
+                breakCombo('20min_limite');
+                timeCooldownUntil = now + 5000;
                 useAuraSystem.getState().registerHit(0, 'Fadigado! Você farmou por 20 minutos direto, descanse!', 0);
                 
                 // Salva o estado e força a saída para o menu principal
@@ -106,16 +108,10 @@ export const AuraSystem = {
                 return;
             }
 
-            // ANTI-CHEAT: Apenas bloqueio básico de macro absurdo (< 40ms)
-            if (lastHitTime > 0) {
-                const interval = now - lastHitTime;
-                if (interval < 40) {
-                    breakCombo();
-                    return;
-                }
-            }
+
 
             // SUCESSO (1,2,1,2 mantido de forma orgânica)
+            renewAnimationCycle(side); 
             lastHitTime = now;
             lastValidSide = side;
             comboCount++;
@@ -123,8 +119,10 @@ export const AuraSystem = {
             // FASE 02 e 03: Pontuação e Mensagens
             let auraReward = 0;
             let message = '';
+            let isMilestone = false;
 
             if (comboCount > 0 && comboCount % 50 === 0) {
+                isMilestone = true;
                 const comboMilestone = comboCount;
                 const bonusMultiplier = comboCount / 50;
                 auraReward = comboMilestone + (bonusMultiplier * 10);
@@ -133,6 +131,9 @@ export const AuraSystem = {
                 auraReward = 10;
                 message = ' '; // Renderiza apenas o +10
             }
+
+            // Reseta decay DEPOIS de computar tudo — e com delay estendido se for milestone
+            resetDecayTimer(isMilestone);
 
             useAuraSystem.getState().registerHit(auraReward, message, comboCount);
         }

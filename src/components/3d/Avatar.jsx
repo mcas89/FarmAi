@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { useFarmSystem } from '../../systems/useFarmSystem';
 import { AnimationEngine } from '../../systems/animation/AnimationEngine';
+import { PoseSequencer } from '../../systems/animation/PoseSequencer';
 import { useMovementSystem } from '../../systems/useMovementSystem';
 import { usePlayerSystem } from '../../systems/usePlayerSystem';
 import { useAuraSystem } from '../../systems/useAuraSystem';
@@ -92,11 +93,16 @@ export function Avatar({ url }) {
       
       AnimationEngine.setBasePose('arms_down_pose');
       
+      // Inicia o sequenciador de poses ligado ao combo
+      const vrmUuid = vrmData.scene.uuid;
+      PoseSequencer.start(vrmUuid);
+      
       setVrm(vrmData);
     });
 
     return () => {
       isMounted = false;
+      PoseSequencer.stop();
       setVrm((currentVrm) => {
           if (currentVrm) {
               currentVrm.scene.traverse((child) => {

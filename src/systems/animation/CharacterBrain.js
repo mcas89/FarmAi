@@ -46,18 +46,14 @@ export const CharacterBrain = {
             triggered = { 10: false, 20: false, 30: false, 40: false, 50: false, 60: false };
         }
 
-        // 10s: Espreguiçar
+        // 10s: Mover quadril e peso da perna (cintura e pernas)
         if (idleTimer >= 10 && !triggered[10]) {
-            ACTIVE_DECISIONS.leftUpperArmX.target = -2.5; 
-            ACTIVE_DECISIONS.leftUpperArmX.duration = 4.0;
-            ACTIVE_DECISIONS.rightUpperArmX.target = -2.5;
-            ACTIVE_DECISIONS.rightUpperArmX.duration = 4.0;
-            ACTIVE_DECISIONS.leftShoulder.target = 0.2;
-            ACTIVE_DECISIONS.leftShoulder.duration = 4.0;
-            ACTIVE_DECISIONS.rightShoulder.target = -0.2;
-            ACTIVE_DECISIONS.rightShoulder.duration = 4.0;
-            ACTIVE_DECISIONS.headLookX.target = -0.3; 
-            ACTIVE_DECISIONS.headLookX.duration = 4.0;
+            ACTIVE_DECISIONS.hipsRotX.target = 0.15; 
+            ACTIVE_DECISIONS.hipsRotX.duration = 3.5;
+            ACTIVE_DECISIONS.leftUpperLeg.target = -0.2;
+            ACTIVE_DECISIONS.leftUpperLeg.duration = 3.5;
+            ACTIVE_DECISIONS.rightUpperLeg.target = 0.1;
+            ACTIVE_DECISIONS.rightUpperLeg.duration = 3.5;
             triggered[10] = true;
         } 
         // 20s: Mexer as pernas
@@ -85,22 +81,12 @@ export const CharacterBrain = {
             ACTIVE_DECISIONS.rightLowerArm.duration = 2.5;
             triggered[30] = true;
         }
-        // 40s: Agachar
+        // 40s: Bater o pé (movimento leve da perna, sem agachar)
         else if (idleTimer >= 40 && !triggered[40]) {
-            ACTIVE_DECISIONS.hipsPosY.target = -0.25; // Reduzido de -0.5 para -0.25 para não afundar no chão
-            ACTIVE_DECISIONS.hipsPosY.duration = 3.5;
-            ACTIVE_DECISIONS.hipsRotX.target = 0.2; 
-            ACTIVE_DECISIONS.hipsRotX.duration = 3.5;
-            
-            ACTIVE_DECISIONS.leftUpperLeg.target = -1.2; 
-            ACTIVE_DECISIONS.leftUpperLeg.duration = 3.5;
-            ACTIVE_DECISIONS.leftLowerLeg.target = 1.2;  
-            ACTIVE_DECISIONS.leftLowerLeg.duration = 3.5;
-            
-            ACTIVE_DECISIONS.rightUpperLeg.target = -1.2;
-            ACTIVE_DECISIONS.rightUpperLeg.duration = 3.5;
-            ACTIVE_DECISIONS.rightLowerLeg.target = 1.2;
-            ACTIVE_DECISIONS.rightLowerLeg.duration = 3.5;
+            ACTIVE_DECISIONS.leftUpperLeg.target = -0.1; 
+            ACTIVE_DECISIONS.leftUpperLeg.duration = 2.0;
+            ACTIVE_DECISIONS.leftLowerLeg.target = 0.2;  
+            ACTIVE_DECISIONS.leftLowerLeg.duration = 2.0;
             triggered[40] = true;
         }
         // 50s: Mão no cabelo
@@ -115,17 +101,12 @@ export const CharacterBrain = {
             ACTIVE_DECISIONS.headLookY.duration = 3.0;
             triggered[50] = true;
         }
-        // 60s: Cruzar os braços
+        // 60s: Esticar a perna para frente (sem agachar)
         else if (idleTimer >= 60 && !triggered[60]) {
-            ACTIVE_DECISIONS.leftUpperArmZ.target = -1.0;
-            ACTIVE_DECISIONS.leftUpperArmZ.duration = 6.0;
-            ACTIVE_DECISIONS.leftLowerArm.target = -1.5;
-            ACTIVE_DECISIONS.leftLowerArm.duration = 6.0;
-            
-            ACTIVE_DECISIONS.rightUpperArmZ.target = 1.0;
-            ACTIVE_DECISIONS.rightUpperArmZ.duration = 6.0;
-            ACTIVE_DECISIONS.rightLowerArm.target = -1.5;
-            ACTIVE_DECISIONS.rightLowerArm.duration = 6.0;
+            ACTIVE_DECISIONS.rightUpperLeg.target = -0.2;
+            ACTIVE_DECISIONS.rightUpperLeg.duration = 3.0;
+            ACTIVE_DECISIONS.rightLowerLeg.target = 0.3;
+            ACTIVE_DECISIONS.rightLowerLeg.duration = 3.0;
             triggered[60] = true;
         }
 
