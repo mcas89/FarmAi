@@ -172,9 +172,9 @@ export function CharacterScreen() {
                 
                 .store-grid {
                     display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 15px;
-                    padding: 15px;
+                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                    gap: 24px;
+                    padding: 24px;
                     overflow-y: auto;
                     height: calc(100% - 80px);
                 }
@@ -203,7 +203,7 @@ export function CharacterScreen() {
                 
                 .char-img-container {
                     width: 100%;
-                    height: 140px;
+                    height: 280px;
                     background: radial-gradient(circle at bottom, rgba(76, 29, 149, 0.4) 0%, rgba(0,0,0,0) 80%);
                     display: flex;
                     justify-content: center;
@@ -227,7 +227,7 @@ export function CharacterScreen() {
                 }
                 
                 .char-info {
-                    padding: 12px;
+                    padding: 20px;
                     display: flex;
                     flex-direction: column;
                     flex: 1;
