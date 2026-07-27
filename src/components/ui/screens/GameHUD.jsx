@@ -347,8 +347,8 @@ export function GameHUD() {
                     boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
                 }}>
 
-                    {/* ── COLUNA ESQUERDA: Avatar + Nome ── */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+                    {/* ── COLUNA ESQUERDA: Avatar (Nome/Título flutuando abaixo) ── */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', minWidth: 0 }}>
                         {/* Avatar circular */}
                         <div style={{ position: 'relative', flexShrink: 0 }}>
                             <div style={{
@@ -372,28 +372,33 @@ export function GameHUD() {
                             }}>
                                 LV {level}
                             </div>
-                        </div>
-                        {/* Nome e título */}
-                        <div style={{ minWidth: 0 }}>
+                            
+                            {/* Nome e Título posicionados fora do cabeçalho */}
                             <div style={{
-                                color: '#fff', fontSize: '0.82rem', fontWeight: '900',
-                                lineHeight: '1.1', whiteSpace: 'nowrap',
-                                overflow: 'hidden', textOverflow: 'ellipsis',
-                                maxWidth: '90px'
-                            }}>{nickname}</div>
-                            <div style={{
-                                color: '#c084fc', fontSize: '0.5rem', fontWeight: '700',
-                                textTransform: 'uppercase', letterSpacing: '0.8px',
-                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                maxWidth: '90px'
-                            }}>{title}</div>
+                                position: 'absolute', top: '48px', left: '50%',
+                                transform: 'translateX(-50%)',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                gap: '2px', pointerEvents: 'none'
+                            }}>
+                                <div style={{
+                                    color: '#fff', fontSize: '0.82rem', fontWeight: '900',
+                                    lineHeight: '1.1', whiteSpace: 'nowrap',
+                                    textShadow: '0 2px 5px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)'
+                                }}>{nickname}</div>
+                                <div style={{
+                                    color: '#c084fc', fontSize: '0.5rem', fontWeight: '700',
+                                    textTransform: 'uppercase', letterSpacing: '0.8px',
+                                    whiteSpace: 'nowrap',
+                                    textShadow: '0 2px 5px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)'
+                                }}>{title}</div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* ── COLUNA CENTRAL: AURA (destaque) ── */}
+                    {/* ── COLUNA CENTRAL: AURA (destaque adaptável) ── */}
                     <div style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        position: 'relative', padding: '2px 16px'
+                        position: 'relative', padding: '2px 8px', minWidth: 0
                     }}>
                         {/* Label AURA */}
                         <div style={{
@@ -401,9 +406,10 @@ export function GameHUD() {
                             color: '#c084fc', textTransform: 'uppercase', marginBottom: '1px'
                         }}>✦ AURA ✦</div>
 
-                        {/* Valor principal */}
+                        {/* Valor principal adaptável */}
                         <div style={{
-                            display: 'flex', alignItems: 'center', gap: '5px'
+                            display: 'flex', alignItems: 'center', gap: '5px',
+                            maxWidth: '100%'
                         }}>
                             <Sparkles size={13} color="#a855f7" className="anim-pulse" style={{ flexShrink: 0 }} />
                             <span style={{
@@ -414,13 +420,14 @@ export function GameHUD() {
                                     : '0 0 18px rgba(168,85,247,0.7)',
                                 transition: 'color 0.15s, text-shadow 0.15s',
                                 letterSpacing: '-0.5px',
-                                fontVariantNumeric: 'tabular-nums'
+                                fontVariantNumeric: 'tabular-nums',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                             }}>
                                 {Math.floor(aura).toLocaleString()}
                             </span>
                         </div>
 
-                        {/* +pontos flutuando — fora do card, não corta */}
+                        {/* +pontos flutuando — fora do card */}
                         {auraGlow && (
                             <div style={{
                                 position: 'absolute', top: '-18px', left: '50%',
@@ -438,21 +445,21 @@ export function GameHUD() {
                     {/* ── COLUNA DIREITA: Diamantes + Home ── */}
                     <div style={{
                         display: 'flex', alignItems: 'center',
-                        justifyContent: 'flex-end', gap: '7px'
+                        justifyContent: 'flex-end', gap: '7px', minWidth: 0
                     }}>
-                        {/* Contador de AuraCash */}
+                        {/* Contador de AuraCash adaptável */}
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: '4px',
                             background: 'rgba(52,211,153,0.1)',
                             border: '1px solid rgba(52,211,153,0.25)',
                             borderRadius: '10px', padding: '5px 9px',
-                            pointerEvents: 'auto'
+                            pointerEvents: 'auto', minWidth: 0
                         }}>
                             <Diamond size={11} color="#34d399" style={{ flexShrink: 0 }} />
                             <span style={{
                                 color: '#34d399', fontSize: '0.78rem', fontWeight: '900',
                                 whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
-                                maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis'
+                                overflow: 'hidden', textOverflow: 'ellipsis'
                             }}>
                                 {(stats.diamonds || 0).toLocaleString()}
                             </span>
