@@ -173,12 +173,14 @@ export function CharacterScreen() {
                 .store-grid {
                     display: grid;
                     grid-template-columns: repeat(2, 1fr);
-                    gap: 16px;
-                    padding: 20px;
+                    gap: 12px;
+                    padding: 16px;
                     overflow-y: auto;
-                    flex: 1;
+                    flex: 1 1 0;
+                    height: 100%;
                     min-height: 0;
                     -webkit-overflow-scrolling: touch;
+                    padding-bottom: 40px;
                 }
                 
                 .store-grid::-webkit-scrollbar { width: 8px; }
@@ -210,6 +212,7 @@ export function CharacterScreen() {
                     justify-content: center;
                     align-items: center;
                     border-bottom: 1px solid rgba(255,255,255,0.05);
+                    min-height: 120px; /* Garante que não suma */
                 }
                 
                 .char-img {
@@ -224,17 +227,20 @@ export function CharacterScreen() {
                 }
                 
                 .char-info {
-                    padding: 20px;
+                    padding: 12px;
                     display: flex;
                     flex-direction: column;
-                    flex: 1;
+                    align-items: center;
+                    justify-content: flex-end;
+                    flex-grow: 1; /* Permite crescer se o card for maior, mas não colapsa */
                 }
             `}</style>
 
             <CustomModal modal={modal} onClose={closeModal} />
 
             <div style={{
-                position: 'absolute', inset: 0,
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                width: '100%', height: '100%',
                 display: 'flex', flexDirection: 'column',
                 background: 'radial-gradient(ellipse at 50% -20%, #2e1065 0%, #05050a 100%)',
                 pointerEvents: 'auto', overflow: 'hidden'
