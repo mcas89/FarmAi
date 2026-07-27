@@ -1,24 +1,160 @@
 import React, { useState } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
-import { ShoppingCart, Diamond, UserPlus, Gift, Star, Zap, Package, Flame } from 'lucide-react';
+import { usePlayerSystem } from '../../../systems/usePlayerSystem';
+import { useAuraSystem } from '../../../systems/useAuraSystem';
+import { getPlayerLevel } from '../../../systems/progressionRules';
+import { CHARACTERS } from './CharacterScreen';
+import { ShoppingCart, Diamond, UserPlus, Gift, Star, Zap, Package, Lock, AlertCircle } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
+
+function CustomModal({ modal, onClose }) {
+    if (!modal) return null;
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+            animation: 'fadeIn 0.2s ease', pointerEvents: 'auto'
+        }}>
+            <div style={{
+                background: 'linear-gradient(135deg, #1a0e30, #0d0715)',
+                border: '1px solid rgba(168,85,247,0.4)',
+                borderRadius: '16px', padding: '28px 32px',
+                maxWidth: '360px', width: '90%',
+                boxShadow: '0 0 40px rgba(168,85,247,0.3)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <AlertCircle size={20} color="#a855f7" />
+                    <span style={{ color: '#fff', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px' }}>
+                        {modal.title}
+                    </span>
+                </div>
+                <p style={{ color: '#ccc', fontSize: '0.85rem', lineHeight: '1.6', margin: '0 0 24px' }}>
+                    {modal.message}
+                </p>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    {modal.type === 'confirm' && (
+                        <button
+                            onClick={onClose}
+                            style={{
+                                padding: '9px 20px', borderRadius: '8px', cursor: 'pointer',
+                                background: 'rgba(255,255,255,0.05)', color: '#aaa',
+                                border: '1px solid rgba(255,255,255,0.15)', fontWeight: 'bold', fontSize: '0.8rem'
+                            }}
+                        >
+                            CANCELAR
+                        </button>
+                    )}
+                    <button
+                        onClick={() => { modal.onConfirm?.(); onClose(); }}
+                        style={{
+                            padding: '9px 20px', borderRadius: '8px', cursor: 'pointer',
+                            background: 'linear-gradient(90deg, #a855f7, #6b21a8)',
+                            color: '#fff', border: 'none', fontWeight: '900', fontSize: '0.8rem',
+                            boxShadow: '0 4px 15px rgba(168,85,247,0.4)'
+                        }}
+                    >
+                        {modal.type === 'confirm' ? 'CONFIRMAR' : 'OK'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export function StoreScreen() {
     const setScreen = useUISystem(state => state.setScreen);
     const updateStats = useUISystem(state => state.updateStats);
     const stats = useUISystem(state => state.playerStats);
+    const { unlockedCharacters } = usePlayerSystem();
 
     const [activeTab, setActiveTab] = useState('PACKS'); // PACKS, CHARACTERS, ITEMS
+    const [modal, setModal] = useState(null);
+
+    const closeModal = () => setModal(null);
+    const showAlert = (title, message) => setModal({ type: 'alert', title, message, onConfirm: null });
+    const showConfirm = (title, message, onConfirm) => setModal({ type: 'confirm', title, message, onConfirm });
 
     const handlePurchaseAuraCash = (amount) => {
         const currentDiamonds = stats.diamonds || 0;
         updateStats({ diamonds: currentDiamonds + amount });
-        alert(`Sucesso! Você adquiriu ${amount.toLocaleString()} AuraCash!`);
+        showAlert("AuraCash Adquirido", `Sucesso! Você adquiriu ${amount.toLocaleString()} AuraCash!`);
     };
 
-    const handlePurchase = (itemName) => {
-        alert(`${itemName} adquirido com sucesso!`);
+    const handlePurchaseItem = (itemName) => {
+        showAlert("Item Adquirido", `${itemName} adquirido com sucesso!`);
     };
+
+    const handleCharacterPurchase = (charConfig) => {
+        const currentAura = useAuraSystem.getState().aura;
+        const currentLevel = getPlayerLevel(currentAura);
+
+        if (currentLevel < charConfig.level) {
+            showAlert(
+                'Personagem Bloqueado',
+                `Você precisa alcançar o Nível ${charConfig.level} para comprar ${charConfig.name}.\n\nSeu nível atual: ${currentLevel}.`
+            );
+            return;
+        }
+
+        const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+        if (diamonds < charConfig.price) {
+            showAlert(
+                'AuraCash Insuficiente',
+                `Você precisa de ${charConfig.price} AuraCash para comprar ${charConfig.name}.\n\nSeu saldo: ${diamonds} AuraCash.`
+            );
+            return;
+        }
+
+        showConfirm(
+            'Confirmar Compra',
+            `Deseja comprar ${charConfig.name} por ${charConfig.price} AuraCash?`,
+            () => _executePurchase(charConfig)
+        );
+    };
+
+    const _executePurchase = async (charConfig) => {
+        try {
+            const char = charConfig.file;
+            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+            const newDiamonds = diamonds - charConfig.price;
+            updateStats({ diamonds: newDiamonds });
+            
+            const currentUnlockedArray = usePlayerSystem.getState().unlockedCharacters;
+            let newUnlocked = [...currentUnlockedArray];
+            if (!currentUnlockedArray.includes(char)) {
+                newUnlocked = [...currentUnlockedArray, char];
+                usePlayerSystem.setState({ unlockedCharacters: newUnlocked });
+            }
+
+            const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
+                import('../../../systems/usePlayerSystem'),
+                import('../../../systems/useAuraSystem'),
+                import('../../../systems/useDatabaseSystem'),
+                import('../../../systems/useQuestSystem'),
+                import('../../../systems/useAchievementSystem')
+            ]);
+            
+            const pos = pSys.usePlayerSystem.getState().position;
+            const activeModel = pSys.usePlayerSystem.getState().activeModel;
+            const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
+            const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+            const achievements = achSys.useAchievementSystem.getState().getSavableData();
+
+            await dbSys.useDatabaseSystem.getState().saveGameState(
+                pos, comboCount, activeModel, aura, newDiamonds,
+                maxCombo, dailyQuests, lastResetDate,
+                weeklyAura, undefined, achievements, newUnlocked
+            );
+            
+            showAlert("Sucesso!", `Você comprou ${charConfig.name}! Acesse a tela "Personagens" para equipá-lo.`);
+        } catch (err) {
+            console.error("❌ Erro ao comprar personagem:", err);
+            showAlert("Erro", "Ocorreu um erro ao processar a compra. Tente novamente.");
+        }
+    };
+
+    const lockedCharacters = CHARACTERS.filter(char => !unlockedCharacters.includes(char.file));
 
     return (
         <div style={{
@@ -30,6 +166,9 @@ export function StoreScreen() {
             overflow: 'hidden'
         }}>
             <style>{`
+                @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+                @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
                 .store-card {
                     position: relative;
                     padding: 12px;
@@ -96,8 +235,76 @@ export function StoreScreen() {
                     padding: 6px 10px; border-radius: 8px; font-weight: 900; cursor: pointer; transition: all 0.2s;
                     display: flex; alignItems: center; gap: 4px; font-size: 0.7rem; border: none;
                 }
+
+                .store-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 12px;
+                    padding: 16px;
+                    overflow-y: auto;
+                    flex: 1 1 0;
+                    height: 100%;
+                    min-height: 0;
+                    -webkit-overflow-scrolling: touch;
+                    touch-action: pan-y !important;
+                    padding-bottom: 40px;
+                }
+                .store-grid::-webkit-scrollbar { width: 8px; }
+                .store-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+                .store-grid::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.4); border-radius: 4px; }
+
+                .char-card-2d {
+                    background: rgba(15, 10, 25, 0.75);
+                    border: 1px solid rgba(168, 85, 247, 0.15);
+                    border-radius: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    backdrop-filter: blur(12px);
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+                }
+                
+                .char-card-2d:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 15px 30px rgba(168, 85, 247, 0.25);
+                    border-color: rgba(168, 85, 247, 0.4);
+                }
+                
+                .char-img-container {
+                    width: 100%;
+                    height: 160px;
+                    background: radial-gradient(circle at bottom, rgba(76, 29, 149, 0.4) 0%, rgba(0,0,0,0) 80%);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                    border-top-left-radius: 16px;
+                    border-top-right-radius: 16px;
+                    overflow: hidden;
+                }
+                
+                .char-img {
+                    width: 90%;
+                    height: 90%;
+                    object-fit: contain;
+                    transition: transform 0.3s ease;
+                }
+                
+                .char-card-2d:hover .char-img {
+                    transform: scale(1.05);
+                }
+                
+                .char-info {
+                    padding: 12px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: flex-end;
+                    flex: none;
+                }
             `}</style>
             
+            <CustomModal modal={modal} onClose={closeModal} />
+
             {/* Splash Image Background */}
             <img 
                 src={splashImg} 
@@ -148,97 +355,123 @@ export function StoreScreen() {
             </div>
 
             {/* LIST */}
-            <div className="store-list" style={{ position: 'relative', zIndex: 1, flex: 1, overflowY: 'auto', padding: '20px', boxSizing: 'border-box' }}>
-                <div style={{ 
-                    maxWidth: '1000px', margin: '0 auto', display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '15px' 
-                }}>
-                    
-                    {/* PACKS */}
-                    {activeTab === 'PACKS' && (
-                        <>
-                            <div className="store-card">
-                                <Diamond size={32} color="#34d399" style={{ marginBottom: '8px' }} />
-                                <div style={{ color: '#fff', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>1.000</div>
-                                <div style={{ color: '#aaa', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
-                                <button className="buy-btn" onClick={() => handlePurchaseAuraCash(1000)}>R$ 4,90</button>
-                            </div>
-                            <div className="store-card premium-card">
-                                <div className="badge">POPULAR</div>
-                                <Gift size={36} color="#ec4899" style={{ marginBottom: '8px' }} />
-                                <div style={{ color: '#ec4899', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>5.000</div>
-                                <div style={{ color: '#f472b6', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
-                                <button className="buy-btn" onClick={() => handlePurchaseAuraCash(5000)}>R$ 9,90</button>
-                            </div>
-                            <div className="store-card">
-                                <div className="badge" style={{ background: '#a855f7', color: '#fff' }}>MELHOR</div>
-                                <Diamond size={32} color="#a855f7" style={{ marginBottom: '8px' }} />
-                                <div style={{ color: '#a855f7', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>15.000</div>
-                                <div style={{ color: '#d8b4fe', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
-                                <button className="buy-btn" onClick={() => handlePurchaseAuraCash(15000)}>R$ 24,90</button>
-                            </div>
-                        </>
-                    )}
-
-                    {/* PERSONAGENS */}
-                    {activeTab === 'CHARACTERS' && (
-                        <>
-                            <div className="store-card">
-                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
-                                    <Zap size={28} color="#60a5fa" />
+            <div className="store-list" style={{ position: 'relative', zIndex: 1, flex: 1, overflowY: 'auto', padding: activeTab === 'CHARACTERS' ? '0' : '20px', boxSizing: 'border-box' }}>
+                {activeTab !== 'CHARACTERS' ? (
+                    <div style={{ 
+                        maxWidth: '1000px', margin: '0 auto', display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '15px' 
+                    }}>
+                        {/* PACKS */}
+                        {activeTab === 'PACKS' && (
+                            <>
+                                <div className="store-card">
+                                    <Diamond size={32} color="#34d399" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#fff', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>1.000</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
+                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(1000)}>R$ 4,90</button>
                                 </div>
-                                <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900' }}>RAFA</div>
-                                <div style={{ color: '#60a5fa', fontSize: '0.55rem', fontWeight: 'bold', marginBottom: '8px', marginTop: '2px' }}>+20% COMBO</div>
-                                <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchase('Rafa')}>
-                                    <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>25k <Diamond size={10} /></span>
-                                </button>
-                            </div>
-                            <div className="store-card">
-                                <div className="badge" style={{ background: '#ef4444' }}>NOVO</div>
-                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(248,113,113,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
-                                    <Flame size={28} color="#f87171" />
+                                <div className="store-card premium-card">
+                                    <div className="badge">POPULAR</div>
+                                    <Gift size={36} color="#ec4899" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#ec4899', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>5.000</div>
+                                    <div style={{ color: '#f472b6', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
+                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(5000)}>R$ 9,90</button>
                                 </div>
-                                <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900' }}>DERIC</div>
-                                <div style={{ color: '#f87171', fontSize: '0.55rem', fontWeight: 'bold', marginBottom: '8px', marginTop: '2px' }}>+15% AURA</div>
-                                <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchase('Deric')}>
-                                    <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>35k <Diamond size={10} /></span>
-                                </button>
-                            </div>
-                            <div className="store-card premium-card">
-                                <div className="badge" style={{ background: '#ec4899' }}>LENDÁRIA</div>
-                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(236,72,153,0.2)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '8px' }}>
-                                    <Star size={28} color="#ec4899" />
+                                <div className="store-card">
+                                    <div className="badge" style={{ background: '#a855f7', color: '#fff' }}>MELHOR</div>
+                                    <Diamond size={32} color="#a855f7" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#a855f7', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>15.000</div>
+                                    <div style={{ color: '#d8b4fe', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
+                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(15000)}>R$ 24,90</button>
                                 </div>
-                                <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900' }}>CAROL</div>
-                                <div style={{ color: '#f472b6', fontSize: '0.55rem', fontWeight: 'bold', marginBottom: '8px', marginTop: '2px' }}>IMÃ DE ITENS</div>
-                                <button className="buy-btn" onClick={() => handlePurchase('Carol')}>R$ 29,90</button>
-                            </div>
-                        </>
-                    )}
+                            </>
+                        )}
 
-                    {/* ITEMS */}
-                    {activeTab === 'ITEMS' && (
-                        <>
-                            <div className="store-card">
-                                <Package size={32} color="#3b82f6" style={{ marginBottom: '8px' }} />
-                                <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: '900', marginBottom: '4px' }}>POÇÃO AURA</div>
-                                <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>2x Aura por 5 min</div>
-                                <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchase('Poção Aura')}>
-                                    <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>500 <Diamond size={10} /></span>
-                                </button>
+                        {/* ITEMS */}
+                        {activeTab === 'ITEMS' && (
+                            <>
+                                <div className="store-card">
+                                    <Package size={32} color="#3b82f6" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: '900', marginBottom: '4px' }}>POÇÃO AURA</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>2x Aura por 5 min</div>
+                                    <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchaseItem('Poção Aura')}>
+                                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>500 <Diamond size={10} /></span>
+                                    </button>
+                                </div>
+                                <div className="store-card">
+                                    <Zap size={32} color="#eab308" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: '900', marginBottom: '4px' }}>VELOCIDADE</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>Corra 50% + rápido</div>
+                                    <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchaseItem('Bota Velocidade')}>
+                                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>800 <Diamond size={10} /></span>
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    /* PERSONAGENS (GRID 2 COLUNAS) */
+                    <div className="store-grid">
+                        {lockedCharacters.length === 0 ? (
+                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#888', marginTop: '40px', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                                Você já comprou todos os personagens!
                             </div>
-                            <div className="store-card">
-                                <Zap size={32} color="#eab308" style={{ marginBottom: '8px' }} />
-                                <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: '900', marginBottom: '4px' }}>VELOCIDADE</div>
-                                <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>Corra 50% + rápido</div>
-                                <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchase('Bota Velocidade')}>
-                                    <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>800 <Diamond size={10} /></span>
-                                </button>
-                            </div>
-                        </>
-                    )}
+                        ) : (
+                            lockedCharacters.map((char, index) => {
+                                let btnLabel = char.price > 0 ? `COMPRAR (${char.price})` : `LIBERA NO LV ${char.level}`;
+                                let btnIcon = char.price > 0 ? <Diamond size={18} /> : <Lock size={18} />;
+                                let btnStyle = { 
+                                    background: 'linear-gradient(90deg, #c026d3, #9333ea)', 
+                                    color: '#fff', border: 'none', 
+                                    boxShadow: '0 8px 20px rgba(168,85,247,0.5)' 
+                                };
 
-                </div>
+                                return (
+                                    <div key={char.file} className="char-card-2d" style={{ animation: 'slideUp 0.4s ease-out backwards', animationDelay: `${index * 0.1}s` }}>
+                                        <div className="char-img-container">
+                                            <img src={char.image} alt={char.name} className="char-img" />
+                                        </div>
+                                        
+                                        <div className="char-info">
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
+                                                <h3 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+                                                    {char.name}
+                                                </h3>
+                                                <span style={{ 
+                                                    background: 'rgba(239,68,68,0.15)', color: '#fca5a5', 
+                                                    padding: '2px 8px', borderRadius: '6px', 
+                                                    fontSize: '0.65rem', fontWeight: '900', border: '1px solid rgba(239,68,68,0.3)',
+                                                    letterSpacing: '1px'
+                                                }}>
+                                                    REQ: LV {char.level}
+                                                </span>
+                                            </div>
+                                            
+                                            <button 
+                                                onClick={() => handleCharacterPurchase(char)}
+                                                style={{
+                                                    width: '100%', padding: '10px', borderRadius: '10px',
+                                                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
+                                                    fontWeight: '900', fontSize: '0.85rem', letterSpacing: '1px',
+                                                    cursor: 'pointer',
+                                                    transition: 'transform 0.1s, filter 0.2s',
+                                                    marginTop: 'auto',
+                                                    ...btnStyle
+                                                }}
+                                                onPointerDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+                                                onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.2)'}
+                                                onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+                                            >
+                                                {btnIcon} {btnLabel}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
