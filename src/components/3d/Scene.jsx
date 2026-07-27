@@ -14,6 +14,13 @@ import { RemotePlayer } from './RemotePlayer';
 import { auth } from '../../config/firebase';
 import * as THREE from 'three';
 
+// Decaimento exponencial independente de framerate.
+// Substitui lerp(a, b, delta*fator), que pode "estourar" (overshoot) em quedas de FPS
+// e causar o efeito de câmera "chacoalhando"/oscilando.
+function expDecay(current, target, decay, dt) {
+    return target + (current - target) * Math.exp(-decay * dt);
+}
+
 // Câmera que segue a personagem (Estilo Aventura 3D Profissional)
 function CameraController() {
     const controlsRef = useRef();
@@ -31,12 +38,14 @@ function CameraController() {
             // MODO MAPA: Visão aérea de toda a cidade
             // ==========================================
             const centerTarget = new THREE.Vector3(0, 0, 0);
-            cameraTarget.current.lerp(centerTarget, delta * 3.0);
+            cameraTarget.current.x = expDecay(cameraTarget.current.x, centerTarget.x, 3.0, delta);
+            cameraTarget.current.y = expDecay(cameraTarget.current.y, centerTarget.y, 3.0, delta);
+            cameraTarget.current.z = expDecay(cameraTarget.current.z, centerTarget.z, 3.0, delta);
             
-            camera.fov = THREE.MathUtils.lerp(camera.fov, 45, delta * 2.0);
+            camera.fov = expDecay(camera.fov, 45, 2.0, delta);
             camera.updateProjectionMatrix();
             
-            controlsRef.current.minDistance = THREE.MathUtils.lerp(controlsRef.current.minDistance || 3.5, 30, delta * 2.0);
+            controlsRef.current.minDistance = expDecay(controlsRef.current.minDistance || 3.5, 30, 2.0, delta);
             controlsRef.current.maxDistance = 250;
             controlsRef.current.autoRotate = true;
             controlsRef.current.autoRotateSpeed = 0.5;
@@ -61,7 +70,7 @@ function CameraController() {
         else if (isFarming) targetFov = 48; // Abre para ver o personagem farmando
         else if (currentState === 'walk') targetFov = 42; 
         
-        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, delta * 2.0);
+        camera.fov = expDecay(camera.fov, targetFov, 2.0, delta);
         camera.updateProjectionMatrix();
 
         // ==========================================
@@ -73,7 +82,7 @@ function CameraController() {
         
         if (targetAutoRotateSpeed > 0) {
             controlsRef.current.autoRotate = true;
-            controlsRef.current.autoRotateSpeed = THREE.MathUtils.lerp(controlsRef.current.autoRotateSpeed || 0, targetAutoRotateSpeed, delta);
+            controlsRef.current.autoRotateSpeed = expDecay(controlsRef.current.autoRotateSpeed || 0, targetAutoRotateSpeed, 3.0, delta);
         } else {
             controlsRef.current.autoRotate = false;
         }
@@ -101,7 +110,9 @@ function CameraController() {
         const idealTarget = new THREE.Vector3(pos[0] + shakeX, pos[1] + 1.8 + shakeY + breathY, pos[2] + shakeZ);
         
         const followSpeed = currentState === 'run' ? 4.0 : 6.0; 
-        cameraTarget.current.lerp(idealTarget, delta * followSpeed);
+        cameraTarget.current.x = expDecay(cameraTarget.current.x, idealTarget.x, followSpeed, delta);
+        cameraTarget.current.y = expDecay(cameraTarget.current.y, idealTarget.y, followSpeed, delta);
+        cameraTarget.current.z = expDecay(cameraTarget.current.z, idealTarget.z, followSpeed, delta);
         
         // ==========================================
         // 5. Auto-Zoom Dinâmico (Restaurar Visão)
@@ -110,7 +121,7 @@ function CameraController() {
         // a distância mínima empurra a câmera suavemente para trás.
         const isAction = currentState !== 'idle' || isFarming;
         const targetMinDist = isAction ? 4.5 : 1.2;
-        controlsRef.current.minDistance = THREE.MathUtils.lerp(controlsRef.current.minDistance || 3.5, targetMinDist, delta * 2.0);
+        controlsRef.current.minDistance = expDecay(controlsRef.current.minDistance || 3.5, targetMinDist, 2.0, delta);
         controlsRef.current.maxDistance = 15; // Volta ao normal se sair do modo mapa
         
         // Passamos o alvo para o OrbitControls
@@ -128,8 +139,10 @@ function CameraController() {
         maxDistance={isMapModeState ? 250 : 15} 
         maxPolarAngle={Math.PI / 2 - 0.15} 
         minPolarAngle={0.1} 
-        enableDamping={true} 
-        dampingFactor={0.06} 
+        // O damping nativo do OrbitControls foi desligado de propósito: a suavização já
+        // é feita manualmente acima via expDecay (cameraTarget). Manter os dois juntos
+        // empilha dois smoothings, o que causava aquela sensação de câmera "atrasada"/borrachuda.
+        enableDamping={false} 
     />;
 }
 

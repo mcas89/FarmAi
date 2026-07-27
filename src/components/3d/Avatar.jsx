@@ -13,11 +13,22 @@ import { useCollisionSystem } from '../../systems/useCollisionSystem';
 import { useUISystem } from '../../systems/useUISystem';
 import { useMultiplayerSystem } from '../../systems/useMultiplayerSystem';
 
+// Decaimento exponencial independente de framerate.
+// Substitui lerp(a, b, fator_fixo), que varia com o FPS e pode "estourar" (overshoot)
+// em quedas de frame. decay maior = resposta mais rápida/rígida.
+function expDecay(current, target, decay, dt) {
+    return target + (current - target) * Math.exp(-decay * dt);
+}
+
 export function Avatar({ url }) {
   const [vrm, setVrm] = useState(null);
   const keys = useRef({ isLeftDebug: false, isRightDebug: false, shift: false });
   const blinkStateRef = useRef({ timer: 4.0, state: 0 });
   const levitationWeightRef = useRef(0);
+  // Velocidade atual do personagem (acumulada com aceleração/atrito) e última
+  // direção de movimento válida, usada para desacelerar suavemente ao soltar o joystick.
+  const currentSpeedRef = useRef(0);
+  const lastMoveDirRef = useRef(new THREE.Vector3(0, 0, -1));
   const comboCount = useAuraSystem(state => state.comboCount);
   const [ascension, setAscension] = useState(0);
   
@@ -178,47 +189,66 @@ export function Avatar({ url }) {
     // =====================================
     // SISTEMA DE MOVIMENTAÇÃO (JOYSTICK)
     // =====================================
-    if (isMoving) {
-        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-        forward.y = 0;
-        forward.normalize();
-        
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-        right.y = 0;
-        right.normalize();
-        
-        const moveDir = new THREE.Vector3();
-        moveDir.addScaledVector(forward, -joystick.y);
-        moveDir.addScaledVector(right, joystick.x);
-        moveDir.normalize();
-        
-        const speed = isRunning ? 6.5 : 2.5; 
-        
-        const nextPosition = vrm.scene.position.clone().addScaledVector(moveDir, speed * delta);
-        
-        // =====================================
-        // FÍSICA DE COLISÃO DINÂMICA (Radar)
-        // =====================================
-        const obstacles = useCollisionSystem.getState().obstacles;
-        
-        for (const ob of obstacles) {
-            const dx = nextPosition.x - ob.x;
-            const dz = nextPosition.z - ob.z;
-            const dist = Math.hypot(dx, dz);
-            
-            if (dist < ob.radius) {
-                // Se tentar entrar no raio, empurra de volta para a borda (cria efeito de deslizar ao redor)
-                const angleFromCenter = Math.atan2(dx, dz);
-                nextPosition.x = ob.x + Math.sin(angleFromCenter) * ob.radius;
-                nextPosition.z = ob.z + Math.cos(angleFromCenter) * ob.radius;
-            }
+    {
+        // Direção de movimento (calculada sempre que há input; mantém a última
+        // direção válida quando o joystick é solto, para desacelerar em linha reta).
+        let moveDir = lastMoveDirRef.current;
+
+        if (isMoving) {
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            forward.y = 0;
+            forward.normalize();
+
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            right.y = 0;
+            right.normalize();
+
+            moveDir = new THREE.Vector3();
+            moveDir.addScaledVector(forward, -joystick.y);
+            moveDir.addScaledVector(right, joystick.x);
+            moveDir.normalize();
+            lastMoveDirRef.current = moveDir;
         }
-        
-        vrm.scene.position.copy(nextPosition);
-        
-        const targetAngle = Math.atan2(moveDir.x, moveDir.z);
-        const targetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
-        vrm.scene.quaternion.slerp(targetQuat, 0.15); 
+
+        // Aceleração/atrito: a velocidade acompanha o alvo (0 quando parado, senão
+        // walk/run) com decaimento exponencial, em vez de ligar/desligar instantâneo.
+        const targetSpeed = isMoving ? (isRunning ? 6.5 : 2.5) : 0;
+        const accelRate = isMoving ? 14 : 10; // acelera um pouco mais rápido do que freia
+        currentSpeedRef.current = expDecay(currentSpeedRef.current, targetSpeed, accelRate, delta);
+
+        if (currentSpeedRef.current > 0.001) {
+            const nextPosition = vrm.scene.position.clone().addScaledVector(moveDir, currentSpeedRef.current * delta);
+
+            // =====================================
+            // FÍSICA DE COLISÃO DINÂMICA (Radar)
+            // =====================================
+            const obstacles = useCollisionSystem.getState().obstacles;
+
+            for (const ob of obstacles) {
+                const dx = nextPosition.x - ob.x;
+                const dz = nextPosition.z - ob.z;
+                const dist = Math.hypot(dx, dz);
+
+                if (dist < ob.radius) {
+                    // Se tentar entrar no raio, empurra de volta para a borda (cria efeito de deslizar ao redor)
+                    const angleFromCenter = Math.atan2(dx, dz);
+                    nextPosition.x = ob.x + Math.sin(angleFromCenter) * ob.radius;
+                    nextPosition.z = ob.z + Math.cos(angleFromCenter) * ob.radius;
+                }
+            }
+
+            vrm.scene.position.copy(nextPosition);
+        }
+
+        // Gira o personagem só quando há direção de input ativa (evita girar "sozinho"
+        // durante a desaceleração residual quando o joystick já foi solto).
+        if (isMoving) {
+            const turnDecay = 12; // quanto maior, mais rápido o personagem vira
+            const t = 1 - Math.exp(-turnDecay * delta);
+            const targetAngle = Math.atan2(moveDir.x, moveDir.z);
+            const targetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
+            vrm.scene.quaternion.slerp(targetQuat, t);
+        }
     }
 
     // =====================================
