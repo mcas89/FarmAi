@@ -172,12 +172,13 @@ export function CharacterScreen() {
                 
                 .store-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                    gap: 24px;
-                    padding: 24px;
+                    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                    gap: 20px;
+                    padding: 20px;
                     overflow-y: auto;
                     flex: 1;
                     min-height: 0;
+                    -webkit-overflow-scrolling: touch;
                 }
                 
                 .store-grid::-webkit-scrollbar { width: 8px; }
@@ -204,27 +205,23 @@ export function CharacterScreen() {
                 
                 .char-img-container {
                     width: 100%;
-                    height: 280px;
+                    height: 250px;
                     background: radial-gradient(circle at bottom, rgba(76, 29, 149, 0.4) 0%, rgba(0,0,0,0) 80%);
                     display: flex;
                     justify-content: center;
                     align-items: center;
-                    position: relative;
-                    overflow: hidden;
                     border-bottom: 1px solid rgba(255,255,255,0.05);
                 }
                 
                 .char-img {
-                    height: 120%;
+                    width: 90%;
+                    height: 90%;
                     object-fit: contain;
-                    object-position: top center;
-                    transform: translateY(10%);
-                    transition: transform 0.4s ease;
-                    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+                    transition: transform 0.3s ease;
                 }
                 
                 .char-card-2d:hover .char-img {
-                    transform: translateY(0%) scale(1.05);
+                    transform: scale(1.05);
                 }
                 
                 .char-info {
