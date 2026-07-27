@@ -158,9 +158,9 @@ export function CharacterScreen() {
                 
                 .store-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                    gap: 24px;
-                    padding: 24px;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 15px;
+                    padding: 15px;
                     overflow-y: auto;
                     height: calc(100% - 80px);
                 }
@@ -172,7 +172,7 @@ export function CharacterScreen() {
                 .char-card-2d {
                     background: rgba(15, 10, 25, 0.75);
                     border: 1px solid rgba(168, 85, 247, 0.15);
-                    border-radius: 20px;
+                    border-radius: 16px;
                     overflow: hidden;
                     display: flex;
                     flex-direction: column;
@@ -182,14 +182,14 @@ export function CharacterScreen() {
                 }
                 
                 .char-card-2d:hover {
-                    transform: translateY(-8px);
-                    box-shadow: 0 15px 35px rgba(168, 85, 247, 0.25);
+                    transform: translateY(-5px);
+                    box-shadow: 0 15px 30px rgba(168, 85, 247, 0.25);
                     border-color: rgba(168, 85, 247, 0.4);
                 }
                 
                 .char-img-container {
                     width: 100%;
-                    height: 280px;
+                    height: 140px;
                     background: radial-gradient(circle at bottom, rgba(76, 29, 149, 0.4) 0%, rgba(0,0,0,0) 80%);
                     display: flex;
                     justify-content: center;
@@ -213,7 +213,7 @@ export function CharacterScreen() {
                 }
                 
                 .char-info {
-                    padding: 20px;
+                    padding: 12px;
                     display: flex;
                     flex-direction: column;
                     flex: 1;
@@ -322,36 +322,33 @@ export function CharacterScreen() {
                                     <img src={char.image} alt={char.name} className="char-img" />
                                 </div>
                                 
-                                {/* Informações */}
+                                {/* Informações minimalistas */}
                                 <div className="char-info">
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <h3 style={{ margin: 0, color: '#fff', fontSize: '1.6rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '2px', textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
+                                        <h3 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
                                             {char.name}
                                         </h3>
                                         {!isUnlocked && (
                                             <span style={{ 
                                                 background: 'rgba(239,68,68,0.15)', color: '#fca5a5', 
-                                                padding: '4px 8px', borderRadius: '8px', 
-                                                fontSize: '0.7rem', fontWeight: '900', border: '1px solid rgba(239,68,68,0.3)',
+                                                padding: '2px 8px', borderRadius: '6px', 
+                                                fontSize: '0.65rem', fontWeight: '900', border: '1px solid rgba(239,68,68,0.3)',
                                                 letterSpacing: '1px'
                                             }}>
-                                                NV. REQ: {char.level}
+                                                REQ: LV {char.level}
                                             </span>
                                         )}
                                     </div>
                                     
-                                    <p style={{ color: '#aaa', fontSize: '0.9rem', lineHeight: '1.5', margin: '0 0 24px 0', flex: 1 }}>
-                                        {char.desc}
-                                    </p>
-                                    
                                     <button 
                                         onClick={() => !isEquipped && handleAction(char)}
                                         style={{
-                                            width: '100%', padding: '14px', borderRadius: '12px',
-                                            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
-                                            fontWeight: '900', fontSize: '1rem', letterSpacing: '2px',
+                                            width: '100%', padding: '10px', borderRadius: '10px',
+                                            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
+                                            fontWeight: '900', fontSize: '0.85rem', letterSpacing: '1px',
                                             cursor: isEquipped ? 'default' : 'pointer',
                                             transition: 'transform 0.1s, filter 0.2s',
+                                            marginTop: 'auto',
                                             ...btnStyle
                                         }}
                                         onPointerDown={e => { if (!isEquipped) e.currentTarget.style.transform = 'scale(0.97)' }}
