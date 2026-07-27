@@ -7,7 +7,7 @@ import { Joystick } from './Joystick';
 
 export function MobileHUD() {
     const { aura, message, lastPoints } = useAuraSystem();
-    const { activeModel, setActiveModel } = usePlayerSystem();
+    const { activeModel, setActiveModel, isDancing, advanceDance } = usePlayerSystem();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const characters = ['san.vrm', 'deric.vrm', 'carol.vrm', 'rafa.vrm'];
 
@@ -88,7 +88,7 @@ export function MobileHUD() {
                     </div>
                 </div>
                 
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                     <button 
                         onClick={() => setIsModalOpen(true)}
                         style={{
@@ -103,6 +103,34 @@ export function MobileHUD() {
                         }}
                     >
                         Trocar Personagem
+                    </button>
+
+                    {/* Botão do Passinho do Jamal */}
+                    <button
+                        onPointerDown={(e) => { e.stopPropagation(); advanceDance(); }}
+                        style={{
+                            padding: '12px 18px',
+                            background: isDancing
+                                ? 'linear-gradient(135deg, #ff6ec7, #ffb347)'
+                                : 'rgba(255, 80, 160, 0.75)',
+                            color: 'white',
+                            border: isDancing ? '2px solid #fff' : '1px solid #ff9edc',
+                            borderRadius: '12px',
+                            fontWeight: 'bold',
+                            fontSize: '0.95rem',
+                            cursor: 'pointer',
+                            pointerEvents: 'auto',
+                            boxShadow: isDancing
+                                ? '0 0 20px rgba(255, 100, 180, 0.9)'
+                                : '0 2px 8px rgba(255, 80, 160, 0.4)',
+                            transform: isDancing ? 'scale(1.06)' : 'scale(1)',
+                            transition: 'all 0.12s ease',
+                            letterSpacing: '0.5px',
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                        }}
+                    >
+                        🕺 Passinho do Jamal
                     </button>
                 </div>
             </div>

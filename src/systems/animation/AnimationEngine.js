@@ -52,7 +52,7 @@ export const AnimationEngine = {
         // PRIO 4: A Vida oscila de forma autônoma
         const lifeOffsets = LifeAnimation.getOffsets(delta, brainOffsets.breathMultiplier);
 
-        const applyBone = (boneName, axes, side) => {
+        const applyBone = (boneName, axes, side, lerpOverride) => {
             const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
             if (!bone) return;
 
@@ -60,7 +60,7 @@ export const AnimationEngine = {
 
             // Verifica quem dita a "Camada 1" deste osso baseado no Lado.
             let actionTargetPose = null;
-            let actionLerp = 0.1;
+            let actionLerp = lerpOverride || 0.1;
             
             if (side === 'left') {
                 actionTargetPose = actionStates.left.targetPose;
@@ -138,9 +138,15 @@ export const AnimationEngine = {
         applyBone('rightHand', ['x', 'y', 'z'], 'right');
 
         // PERNAS
-        applyBone('leftUpperLeg', ['x', 'y', 'z'], 'body');
-        applyBone('leftLowerLeg', ['x', 'y', 'z'], 'body');
-        applyBone('rightUpperLeg', ['x', 'y', 'z'], 'body');
-        applyBone('rightLowerLeg', ['x', 'y', 'z'], 'body');
+        // lerp mais rápido que o padrão (0.1) — pernas com giro grande (ex: pos2)
+        // não tinham tempo de chegar na extensão total antes do próximo passo do
+        // passinho, então nunca ficavam retas / pareciam voltar antes de esticar.
+        const LEG_LERP = 0.22;
+        applyBone('leftUpperLeg', ['x', 'y', 'z'], 'body', LEG_LERP);
+        applyBone('leftLowerLeg', ['x', 'y', 'z'], 'body', LEG_LERP);
+        applyBone('rightUpperLeg', ['x', 'y', 'z'], 'body', LEG_LERP);
+        applyBone('rightLowerLeg', ['x', 'y', 'z'], 'body', LEG_LERP);
+        applyBone('leftFoot', ['x', 'y', 'z'], 'body', LEG_LERP);
+        applyBone('rightFoot', ['x', 'y', 'z'], 'body', LEG_LERP);
     }
 };

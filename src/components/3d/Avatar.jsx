@@ -6,6 +6,7 @@ import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { useFarmSystem } from '../../systems/useFarmSystem';
 import { AnimationEngine } from '../../systems/animation/AnimationEngine';
 import { PoseSequencer } from '../../systems/animation/PoseSequencer';
+import { DanceSystem } from '../../systems/animation/DanceSystem';
 import { useMovementSystem } from '../../systems/useMovementSystem';
 import { usePlayerSystem } from '../../systems/usePlayerSystem';
 import { useAuraSystem } from '../../systems/useAuraSystem';
@@ -36,6 +37,7 @@ export function Avatar({ url }) {
   const { joystick, isMoving } = useMovementSystem();
   const { setPosition } = usePlayerSystem();
 
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       const key = e.key.toLowerCase();
@@ -61,6 +63,7 @@ export function Avatar({ url }) {
         window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
+
   
   useEffect(() => {
     let isMounted = true;
@@ -107,6 +110,7 @@ export function Avatar({ url }) {
       // Inicia o sequenciador de poses ligado ao combo
       const vrmUuid = vrmData.scene.uuid;
       PoseSequencer.start(vrmUuid);
+      DanceSystem.register(vrmUuid); // Registra o UUID para o sistema de dança
       
       setVrm(vrmData);
     });

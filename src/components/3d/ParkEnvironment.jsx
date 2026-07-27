@@ -573,7 +573,7 @@ export function ParkEnvironment() {
                 <Playground />
 
                 {/* 7. Fonte de Água (Centro da Praça) */}
-                <GLTFModel url="/itens/fonte2.glb" position={[0, 0.0, 0]} rotation={[0, 0, 0]} scale={0.325} />
+                <GLTFModel url="/itens/fonte2.glb" position={[0, 0.0, 0]} rotation={[0, 0, 0]} scale={2} />
             </group>
         </>
     );

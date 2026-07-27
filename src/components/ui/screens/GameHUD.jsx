@@ -3,6 +3,7 @@ import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { useUISystem } from '../../../systems/useUISystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { AuraSystem } from '../../../systems/rhythm/AuraSystem';
+import { DanceSystem, useDanceSystem } from '../../../systems/animation/DanceSystem';
 import { Joystick } from '../Joystick';
 import { 
     Settings, Trophy, Crown, 
@@ -20,6 +21,8 @@ export function GameHUD() {
     const isMapMode = useUISystem(state => state.isMapMode);
     const toggleMapMode = useUISystem(state => state.toggleMapMode);
     const nickname = stats.nickname || 'Marcos';
+    const isDancing = useDanceSystem(state => state.isDancing);
+
 
     const [progression, setProgression] = useState(null);
     useEffect(() => {
@@ -505,6 +508,47 @@ export function GameHUD() {
                     </div>
 
                 </div>
+            </div>
+
+            {/* ══════════ BOTÃO PASSINHO DO JAMAL — Canto superior direito ══════════ */}
+            <div style={{
+                position: 'absolute',
+                top: '80px',
+                right: '14px',
+                pointerEvents: 'auto',
+                zIndex: 20,
+                display: 'none' // Botão oculto a pedido
+            }}>
+                <button
+                    onPointerDown={(e) => { e.stopPropagation(); DanceSystem.toggleDance(); }}
+                    style={{
+                        padding: '10px 14px',
+                        background: isDancing
+                            ? 'linear-gradient(135deg, #ff6ec7, #ffb347)'
+                            : 'rgba(20, 10, 35, 0.75)',
+                        color: 'white',
+                        border: isDancing
+                            ? '2px solid rgba(255,255,255,0.8)'
+                            : '1px solid rgba(255, 100, 180, 0.5)',
+                        borderRadius: '12px',
+                        fontWeight: '800',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        boxShadow: isDancing
+                            ? '0 0 22px rgba(255, 100, 180, 0.85)'
+                            : '0 2px 10px rgba(0,0,0,0.5)',
+                        transform: isDancing ? 'scale(1.07)' : 'scale(1)',
+                        transition: 'all 0.12s ease',
+                        letterSpacing: '0.5px',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    🕺 Passinho
+                </button>
             </div>
 
             {/* Popups de Acerto */}
