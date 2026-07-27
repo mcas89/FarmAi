@@ -20,7 +20,7 @@ function CustomModal({ modal, onClose }) {
             position: 'fixed', inset: 0, zIndex: 9999,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
-            animation: 'fadeIn 0.2s ease'
+            animation: 'fadeIn 0.2s ease', pointerEvents: 'auto'
         }}>
             <div style={{
                 background: 'linear-gradient(135deg, #1a0e30, #0d0715)',
