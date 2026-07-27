@@ -8,6 +8,13 @@ import { SixSevenAction } from './SixSevenAction';
 /**
  * AnimationEngine
  * Mestre da Integração Matemático-Acumulativa.
+ * 
+ * Ordem estrita de prioridades:
+ * 1. Current Base Pose
+ * 2. Character Brain
+ * 3. Walk Animation
+ * 4. Life Animation
+ * 5/6. Left/Right Arm Actions
  */
 
 const engineInstances = {};
@@ -61,25 +68,16 @@ export const AnimationEngine = {
             } else if (side === 'right') {
                 actionTargetPose = actionStates.right.targetPose;
                 actionLerp = actionStates.right.lerpFactor;
-            } else if (side === 'body') {
-                // CORREÇÃO: Faz o corpo central e pernas seguirem a pose do farm!
-                if (actionStates.left.targetPose && actionStates.left.targetPose !== 'IDLE') {
-                    actionTargetPose = actionStates.left.targetPose;
-                    actionLerp = actionStates.left.lerpFactor;
-                } else if (actionStates.right.targetPose && actionStates.right.targetPose !== 'IDLE') {
-                    actionTargetPose = actionStates.right.targetPose;
-                    actionLerp = actionStates.right.lerpFactor;
-                }
             }
             
-            // Se não está farmando, a BasePose assume.
+            // Se o braço não está em ação, ou é um osso do corpo central, a BasePose assume.
             const targetPoseName = actionTargetPose || inst.currentBasePose;
 
             axes.forEach(axis => {
                 // [PRIO 1] - O valor absoluto intocável da pose
                 const targetValue = getPoseValue(targetPoseName, boneName, axis);
                 
-                // Interpola para suavizar a transição
+                // Interpola para suavizar a transição de qualquer estado para outro
                 inst.smoothedPose[boneName][axis] = THREE.MathUtils.lerp(
                     inst.smoothedPose[boneName][axis], 
                     targetValue, 
@@ -94,6 +92,7 @@ export const AnimationEngine = {
                 // [PRIO 3] - Puxa o offset da caminhada
                 let walkOffset = 0;
                 if (walkData && walkData.offsets[boneName] && walkData.offsets[boneName][axis] !== undefined) {
+                    // O braço só balança pela caminhada se NÃO estiver farmando!
                     const isFarmingThisSide = (side === 'left' && actionTargetPose) || (side === 'right' && actionTargetPose);
                     if (!isFarmingThisSide) {
                         walkOffset = walkData.offsets[boneName][axis] * walkData.weight;
@@ -105,7 +104,7 @@ export const AnimationEngine = {
                     ? lifeOffsets[boneName][axis] 
                     : 0;
 
-                // A MATEMÁTICA FINAL ACUMULATIVA
+                // A MATEMÁTICA FINAL ACUMULATIVA (Nenhuma camada apaga a outra)
                 bone.rotation[axis] = inst.smoothedPose[boneName][axis] + brainOffset + walkOffset + lifeOffset;
             });
         };
@@ -120,15 +119,11 @@ export const AnimationEngine = {
             hipsBone.position.y = hipsBone.userData.baseY + brainHipsY;
         }
 
-        // CORPO CENTRAL E PERNAS
+        // CORPO CENTRAL
         applyBone('hips', ['x', 'y', 'z'], 'body');
         applyBone('chest', ['x', 'y', 'z'], 'body');
         applyBone('neck', ['x', 'y', 'z'], 'body');
         applyBone('head', ['x', 'y', 'z'], 'body');
-        applyBone('leftUpperLeg', ['x', 'y', 'z'], 'body');
-        applyBone('leftLowerLeg', ['x', 'y', 'z'], 'body');
-        applyBone('rightUpperLeg', ['x', 'y', 'z'], 'body');
-        applyBone('rightLowerLeg', ['x', 'y', 'z'], 'body');
         
         // BRAÇO ESQUERDO
         applyBone('leftShoulder', ['x', 'y', 'z'], 'left');
@@ -141,5 +136,11 @@ export const AnimationEngine = {
         applyBone('rightUpperArm', ['x', 'y', 'z'], 'right');
         applyBone('rightLowerArm', ['x', 'y', 'z'], 'right');
         applyBone('rightHand', ['x', 'y', 'z'], 'right');
+
+        // PERNAS
+        applyBone('leftUpperLeg', ['x', 'y', 'z'], 'body');
+        applyBone('leftLowerLeg', ['x', 'y', 'z'], 'body');
+        applyBone('rightUpperLeg', ['x', 'y', 'z'], 'body');
+        applyBone('rightLowerLeg', ['x', 'y', 'z'], 'body');
     }
 };
