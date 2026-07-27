@@ -172,8 +172,8 @@ export function CharacterScreen() {
                 
                 .store-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                    gap: 20px;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 16px;
                     padding: 20px;
                     overflow-y: auto;
                     flex: 1;
@@ -193,19 +193,18 @@ export function CharacterScreen() {
                     display: flex;
                     flex-direction: column;
                     backdrop-filter: blur(12px);
-                    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
                     box-shadow: 0 10px 20px rgba(0,0,0,0.4);
                 }
                 
                 .char-card-2d:hover {
-                    transform: translateY(-5px);
+                    transform: translateY(-2px);
                     box-shadow: 0 15px 30px rgba(168, 85, 247, 0.25);
                     border-color: rgba(168, 85, 247, 0.4);
                 }
                 
                 .char-img-container {
                     width: 100%;
-                    height: 250px;
+                    aspect-ratio: 1 / 1;
                     background: radial-gradient(circle at bottom, rgba(76, 29, 149, 0.4) 0%, rgba(0,0,0,0) 80%);
                     display: flex;
                     justify-content: center;
