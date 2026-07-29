@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
+import { useMultiplayerSystem } from '../../systems/useMultiplayerSystem';
 import { Send, MessageCircle, X } from 'lucide-react';
 
 export function MultiplayerChat() {
