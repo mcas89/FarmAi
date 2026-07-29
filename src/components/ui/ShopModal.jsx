@@ -26,10 +26,11 @@ export function ShopModal() {
     const handleBuy = (potion) => {
         if (auracash >= potion.price) {
             spendAuracash(potion.price);
-            setMultiplier(potion.multiplier, 5 * 60 * 1000);
-            import('../../systems/useQuestSystem').then(module => {
-                module.useQuestSystem.getState().updateQuestProgress('use_potion', 1);
-            });
+            
+            // Adiciona a poção no inventário em vez de ativar imediatamente
+            const addPotion = useUISystem.getState().addPotionToInventory;
+            addPotion({ name: potion.name, multiplier: potion.multiplier, price: potion.price });
+
             // Tentar salvar no banco de dados
             import('../../systems/useDatabaseSystem').then(dbSys => {
                 const pSys = import('../../systems/usePlayerSystem');
@@ -39,9 +40,12 @@ export function ShopModal() {
                     const model = pModule.usePlayerSystem.getState().activeModel;
                     const { comboCount, maxCombo, aura, weeklyAura } = aModule.useAuraSystem.getState();
                     const newDiamonds = auracash - potion.price;
-                    dbSys.useDatabaseSystem.getState().saveGameState(pos, comboCount, model, aura, newDiamonds, maxCombo);
+                    const newInventory = useUISystem.getState().inventory;
+                    dbSys.useDatabaseSystem.getState().saveGameState(pos, comboCount, model, aura, newDiamonds, maxCombo, undefined, undefined, weeklyAura, undefined, undefined, undefined, newInventory);
                 });
             });
+            
+            alert(`Você comprou a ${potion.name}! Ela foi adicionada ao seu inventário.`);
         }
     };
 

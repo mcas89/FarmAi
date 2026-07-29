@@ -9,7 +9,7 @@ import { Joystick } from '../Joystick';
 import { 
     Settings, Trophy, Crown, 
     BarChart2, Shield, ScrollText, Gift, Briefcase, ShoppingCart, 
-    Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map
+    Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map, FlaskConical
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
@@ -22,6 +22,8 @@ export function GameHUD() {
     const toggleMapMode = useUISystem(state => state.toggleMapMode);
     const nickname = stats.nickname || 'Marcos';
     const isDancing = useDanceSystem(state => state.isDancing);
+    const inventory = useUISystem(state => state.inventory || []);
+    const [showInventoryModal, setShowInventoryModal] = useState(false);
 
 
     const [progression, setProgression] = useState(null);
@@ -675,10 +677,32 @@ export function GameHUD() {
                 </div>
             </div>
 
-            {/* BOTÃO MAPA (Lado Direito) */}
+            {/* BOTÕES LADO DIREITO (Inventário e Mapa) */}
             <div style={{
-                position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, pointerEvents: 'auto'
+                position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, pointerEvents: 'auto',
+                display: 'flex', flexDirection: 'column', gap: '15px'
             }}>
+                {/* Botão Inventário de Poções */}
+                <div className="top-btn anim-float" style={{ 
+                    width: '45px', height: '45px', borderRadius: '50%', position: 'relative',
+                    background: showInventoryModal ? 'rgba(168, 85, 247, 0.4)' : 'var(--bg-glass)',
+                    border: showInventoryModal ? '1px solid #a855f7' : '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: showInventoryModal ? '0 0 15px rgba(168, 85, 247, 0.5)' : 'none'
+                }} onClick={() => setShowInventoryModal(true)}>
+                    <FlaskConical size={22} color={showInventoryModal ? "#fff" : "#a855f7"} />
+                    {inventory.length > 0 && (
+                        <div style={{
+                            position: 'absolute', top: '-5px', right: '-5px',
+                            background: '#ef4444', color: '#fff', borderRadius: '50%',
+                            width: '20px', height: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            fontSize: '0.6rem', fontWeight: 'bold', border: '2px solid #000'
+                        }}>
+                            {inventory.length}
+                        </div>
+                    )}
+                </div>
+
+                {/* Botão Mapa */}
                 <div className="top-btn anim-float" style={{ 
                     width: '45px', height: '45px', borderRadius: '50%', 
                     background: isMapMode ? 'rgba(168, 85, 247, 0.4)' : 'var(--bg-glass)',
@@ -688,6 +712,78 @@ export function GameHUD() {
                     <Map size={22} color={isMapMode ? "#fff" : "#a855f7"} />
                 </div>
             </div>
+
+            {/* MODAL INVENTÁRIO DE POÇÕES */}
+            {showInventoryModal && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 100,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'auto'
+                }} onClick={() => setShowInventoryModal(false)}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+                        border: '2px solid #ec4899', borderRadius: '16px',
+                        width: '90%', maxWidth: '400px', padding: '24px',
+                        boxShadow: '0 0 30px rgba(236, 72, 153, 0.4)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FlaskConical color="#ec4899" /> Suas Poções
+                            </h2>
+                            <button onClick={() => setShowInventoryModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
+                        </div>
+
+                        {inventory.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px 0', fontStyle: 'italic' }}>
+                                Seu inventário está vazio.<br/>Compre poções na loja!
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '50vh', overflowY: 'auto' }}>
+                                {inventory.map((potion) => (
+                                    <div key={potion.instanceId} style={{
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(236, 72, 153, 0.3)',
+                                        borderRadius: '12px', padding: '12px'
+                                    }}>
+                                        <div>
+                                            <h3 style={{ margin: 0, color: '#ec4899', fontSize: '1rem' }}>{potion.name}</h3>
+                                            <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>Multiplicador {potion.multiplier}x (5 min)</p>
+                                        </div>
+                                        <button onClick={async () => {
+                                            const { setMultiplier } = useAuraSystem.getState();
+                                            setMultiplier(potion.multiplier, 5 * 60 * 1000);
+                                            useUISystem.getState().removePotionFromInventory(potion.instanceId);
+                                            
+                                            // Progresso de quest
+                                            import('../../../systems/useQuestSystem').then(m => m.useQuestSystem.getState().updateQuestProgress('use_potion', 1));
+                                            
+                                            // Salvar novo inventario e status
+                                            const [pSys, aSys, dbSys] = await Promise.all([
+                                                import('../../../systems/usePlayerSystem'),
+                                                import('../../../systems/useAuraSystem'),
+                                                import('../../../systems/useDatabaseSystem')
+                                            ]);
+                                            const pos = pSys.usePlayerSystem.getState().position;
+                                            const model = pSys.usePlayerSystem.getState().activeModel;
+                                            const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
+                                            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
+                                            const newInventory = useUISystem.getState().inventory;
+                                            await dbSys.useDatabaseSystem.getState().saveGameState(pos, comboCount, model, aura, diamonds, maxCombo, undefined, undefined, weeklyAura, undefined, undefined, undefined, newInventory);
+                                            
+                                            setShowInventoryModal(false);
+                                        }} style={{
+                                            background: '#ec4899', color: '#fff', border: 'none',
+                                            padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
+                                        }}>
+                                            USAR
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* BOTTOM STATS HUD (COMPACT PILL) */}
             <div className={comboCount > 50 ? 'anim-footer-fire' : comboCount > 10 ? 'anim-footer-epic' : ''} style={{ 

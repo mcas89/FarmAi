@@ -103,7 +103,7 @@ export const useDatabaseSystem = create((set, get) => ({
   },
 
   // Salva o estado atual do jogo no Firebase
-  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura = 0, lastWeeklyReset = '', achievements = [], unlockedCharacters = ['san.vrm', 'deric.vrm']) => {
+  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura = 0, lastWeeklyReset = '', achievements = [], unlockedCharacters = ['san.vrm', 'deric.vrm'], inventory = []) => {
     if (!db || !auth.currentUser) return; 
     
     try {
@@ -124,6 +124,7 @@ export const useDatabaseSystem = create((set, get) => ({
         dailyQuests: dailyQuests || [],
         achievements: achievements || [],
         unlockedCharacters: unlockedCharacters || ['san.vrm', 'deric.vrm'],
+        inventory: inventory || [],
         lastResetDate: lastResetDate || '',
         lastWeeklyReset: currentWeek, // Marca que a aura salva pertence à semana atual
         lastUpdate: new Date().toISOString()

@@ -87,19 +87,16 @@ export function StoreScreen() {
             showAlert("Item Adquirido", `${itemName} adquirido com sucesso!`);
             return;
         }
-        const { playerStats, spendAuracash } = useUISystem.getState();
+        const { playerStats, spendAuracash, addPotionToInventory, inventory } = useUISystem.getState();
         const currentAuracash = playerStats?.diamonds || 0;
         
         if (currentAuracash >= price) {
             spendAuracash(price);
-            useAuraSystem.getState().setMultiplier(multiplier, 5 * 60 * 1000);
             
-            // Progressão de missão de poção
-            import('../../../systems/useQuestSystem').then(module => {
-                module.useQuestSystem.getState().updateQuestProgress('use_potion', 1);
-            });
+            // Adiciona a poção no inventário em vez de ativar imediatamente
+            addPotionToInventory({ name: itemName, multiplier, price });
 
-            // Salvar novo saldo no banco de dados
+            // Salvar novo saldo e inventário no banco de dados
             import('../../../systems/useDatabaseSystem').then(dbSys => {
                 const pSys = import('../../../systems/usePlayerSystem');
                 const aSys = import('../../../systems/useAuraSystem');
@@ -108,11 +105,12 @@ export function StoreScreen() {
                     const model = pModule.usePlayerSystem.getState().activeModel;
                     const { comboCount, maxCombo, aura, weeklyAura } = aModule.useAuraSystem.getState();
                     const newDiamonds = currentAuracash - price;
-                    dbSys.useDatabaseSystem.getState().saveGameState(pos, comboCount, model, aura, newDiamonds, maxCombo);
+                    const newInventory = useUISystem.getState().inventory;
+                    dbSys.useDatabaseSystem.getState().saveGameState(pos, comboCount, model, aura, newDiamonds, maxCombo, undefined, undefined, weeklyAura, undefined, undefined, undefined, newInventory);
                 });
             });
             
-            showAlert("Poção Adquirida", `Você comprou a ${itemName}! O multiplicador de ${multiplier}x foi ativado.`);
+            showAlert("Poção Comprada", `Você comprou a ${itemName}! Ela foi adicionada ao seu inventário.`);
         } else {
             showAlert("Saldo Insuficiente", "Você não tem Auracash suficiente.");
         }

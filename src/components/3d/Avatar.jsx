@@ -149,7 +149,10 @@ export function Avatar({ url }) {
     
     // Personagem só está ocioso se não se move, não farma e não segura teclas extras
     const isIdle = !isMoving && !leftFarmActive && !rightFarmActive && !keys.current.shift;
-    const isRunning = isMoving && keys.current.shift;
+    
+    // Calcula o quão longe o joystick está sendo puxado (0.0 a 1.0)
+    const joystickDist = Math.hypot(joystick.x, joystick.y);
+    const isRunning = isMoving && (keys.current.shift || joystickDist > 0.8);
 
     AnimationEngine.update(vrm, delta, leftFarmActive, rightFarmActive, isMoving, isIdle, isRunning);
     // SISTEMA COMPLEMENTAR: PISCAR OLHOS (BLINK)

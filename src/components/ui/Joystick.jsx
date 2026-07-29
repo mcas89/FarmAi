@@ -6,7 +6,7 @@ export function Joystick() {
     const [stickPos, setStickPos] = useState({ x: 0, y: 0 });
     const { setJoystick } = useMovementSystem();
 
-    const radius = 20; 
+    const radius = 40; 
 
     const handleMove = (clientX, clientY) => {
         if (!baseRef.current) return;
@@ -36,9 +36,12 @@ export function Joystick() {
     return (
         <div 
             style={{
-                position: 'relative',
-                width: '60px',
-                height: '60px',
+                position: 'absolute',
+                bottom: '30px',
+                left: '50%',
+                transform: 'translateX(calc(-50% + 40px))',
+                width: '90px',
+                height: '90px',
                 borderRadius: '50%',
                 background: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -71,8 +74,8 @@ export function Joystick() {
             
             <div 
                 style={{
-                    width: '25px',
-                    height: '25px',
+                    width: '40px',
+                    height: '40px',
                     borderRadius: '50%',
                     background: 'rgba(168, 85, 247, 0.5)',
                     boxShadow: '0 0 10px rgba(168, 85, 247, 0.3)',

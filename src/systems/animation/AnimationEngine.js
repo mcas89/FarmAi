@@ -110,13 +110,19 @@ export const AnimationEngine = {
         };
 
         // ==========================================
-        // DESLOCAMENTOS DE POSIÇÃO (Eixo Y para Agachamentos)
+        // DESLOCAMENTOS DE POSIÇÃO (Eixo Y para Agachamentos e Passos)
         // ==========================================
         const hipsBone = vrm.humanoid.getNormalizedBoneNode('hips');
         if (hipsBone) {
             if (hipsBone.userData.baseY === undefined) hipsBone.userData.baseY = hipsBone.position.y;
             const brainHipsY = brainOffsets.hipsPosY || 0;
-            hipsBone.position.y = hipsBone.userData.baseY + brainHipsY;
+            
+            let walkHipsY = 0;
+            if (walkData && walkData.offsets && walkData.offsets.hipsPosition && walkData.offsets.hipsPosition.y !== undefined) {
+                walkHipsY = walkData.offsets.hipsPosition.y * walkData.weight;
+            }
+            
+            hipsBone.position.y = hipsBone.userData.baseY + brainHipsY + walkHipsY;
         }
 
         // CORPO CENTRAL

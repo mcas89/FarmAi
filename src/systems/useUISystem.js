@@ -41,6 +41,15 @@ export const useUISystem = create((set) => ({
     isOnlineMode: false,
     setIsOnlineMode: (isOnline) => set({ isOnlineMode: isOnline }),
     
+    // Inventário de Poções
+    inventory: [],
+    addPotionToInventory: (potion) => set((state) => ({
+        inventory: [...state.inventory, { ...potion, instanceId: Date.now() + Math.random() }]
+    })),
+    removePotionFromInventory: (instanceId) => set((state) => ({
+        inventory: state.inventory.filter(p => p.instanceId !== instanceId)
+    })),
+
     // Atualiza status mockados (ou carregados do Firebase)
     updateStats: (stats) => set((state) => ({ playerStats: { ...state.playerStats, ...stats, auracash: stats.diamonds || stats.auracash || state.playerStats.auracash } })),
 

@@ -65,6 +65,7 @@ export function LoginScreen() {
                     lastResetDate: '',
                     activeModel: 'san.vrm', // modelo padrão inicial
                     position: { x: 0, y: 0.1, z: 0 },
+                    inventory: [],
                     createdAt: new Date()
                 });
 
@@ -87,6 +88,8 @@ export function LoginScreen() {
                     const realDiamonds = data.auracash || 0;
                     
                     updateStats({ nickname: realName, diamonds: realDiamonds });
+                    useUISystem.setState({ inventory: data.inventory || [] });
+                    
                     useAuraSystem.setState({ 
                         aura: realAura, 
                         weeklyAura: data.weeklyAura || 0,
