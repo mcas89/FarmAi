@@ -2,16 +2,27 @@ const { Room } = require("colyseus");
 const { Schema, type, MapSchema } = require("@colyseus/schema");
 
 // O Esquema define os dados que serão sincronizados com todos os clientes
-class Player extends Schema {}
+class Vector3Schema extends Schema {}
+type("number")(Vector3Schema.prototype, "x");
+type("number")(Vector3Schema.prototype, "y");
+type("number")(Vector3Schema.prototype, "z");
+
+class Player extends Schema {
+    constructor() {
+        super();
+    }
+}
 type("string")(Player.prototype, "id");
 type("string")(Player.prototype, "name");
+type("string")(Player.prototype, "model");      // modelo VRM do jogador ex: 'san.vrm'
 type("number")(Player.prototype, "x");
 type("number")(Player.prototype, "y");
 type("number")(Player.prototype, "z");
 type("number")(Player.prototype, "rotation");
-type("number")(Player.prototype, "score");
+type("number")(Player.prototype, "aura");       // pontuação de aura (era "score")
 type("string")(Player.prototype, "animation");
-type("string")(Player.prototype, "model");
+type("boolean")(Player.prototype, "leftFarm");  // braço esquerdo ativo
+type("boolean")(Player.prototype, "rightFarm"); // braço direito ativo
 
 class FarmaAiState extends Schema {
     constructor() {
@@ -34,18 +45,21 @@ class FarmaAiRoom extends Room {
         this.onMessage("position", (client, data) => {
             const player = this.state.players.get(client.sessionId);
             if (player) {
-                player.x = data.x;
-                player.y = data.y;
-                player.z = data.z;
-                player.rotation = data.rotation;
+                player.x = data.x ?? player.x;
+                player.y = data.y ?? player.y;
+                player.z = data.z ?? player.z;
+                player.rotation = data.rotation ?? player.rotation;
             }
         });
 
-        // Recebe atualização de animação do cliente
+        // Recebe atualização de animação do cliente (idle, walk, run, farm)
         this.onMessage("animation", (client, data) => {
             const player = this.state.players.get(client.sessionId);
             if (player) {
                 player.animation = data.animation;
+                // Sincroniza os braços de farm
+                if (data.leftFarm !== undefined) player.leftFarm = data.leftFarm;
+                if (data.rightFarm !== undefined) player.rightFarm = data.rightFarm;
             }
         });
 
@@ -53,26 +67,33 @@ class FarmaAiRoom extends Room {
         this.onMessage("updateScore", (client, data) => {
             const player = this.state.players.get(client.sessionId);
             if (player) {
-                player.score = data.score;
+                player.aura = data.score ?? data.aura ?? player.aura;
             }
+        });
+
+        // Chat
+        this.onMessage("chat", (client, message) => {
+            this.broadcast("chat", message);
         });
         
         console.log(`[FarmaAiRoom] Sala criada!`);
     }
 
     onJoin (client, options) {
-        console.log(`[FarmaAiRoom] Jogador entrou: ${client.sessionId}`);
+        console.log(`[FarmaAiRoom] Jogador entrou: ${client.sessionId} | nome: ${options.name} | modelo: ${options.model}`);
         
         const newPlayer = new Player();
         newPlayer.id = client.sessionId;
         newPlayer.name = options.name || "Jogador";
+        newPlayer.model = options.model || "san.vrm";
         newPlayer.x = 0;
         newPlayer.y = 0;
         newPlayer.z = 0;
         newPlayer.rotation = 0;
-        newPlayer.score = 0;
-        newPlayer.animation = "Idle";
-        newPlayer.model = options.model || "san.vrm";
+        newPlayer.aura = 0;
+        newPlayer.animation = "idle";
+        newPlayer.leftFarm = false;
+        newPlayer.rightFarm = false;
 
         this.state.players.set(client.sessionId, newPlayer);
     }
