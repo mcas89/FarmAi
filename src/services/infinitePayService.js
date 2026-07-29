@@ -27,7 +27,10 @@ function getApiBase() {
  */
 export async function initInfinitePayCheckout(packId, priceCents, description, userId) {
     try {
-        const orderNsu = `FARMAAI_${packId}_${userId}_${Date.now()}`;
+        // Gera um identificador único CURTO para o pedido (NSU)
+        // Muitos gateways limitam o tamanho do NSU (ex: 32 chars).
+        // Usar "FA-" + timestamp garante unicidade e é bem curto (16 caracteres).
+        const orderNsu = `FA-${Date.now()}`;
 
         // URL de retorno pós-pagamento com todos os parâmetros necessários
         const redirectUrl = `${window.location.origin}${window.location.pathname}`
