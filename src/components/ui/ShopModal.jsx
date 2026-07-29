@@ -6,9 +6,10 @@ import { AuracashIcon } from './AuracashIcon';
 export function ShopModal() {
     const isShopModalOpen = useUISystem(state => state.isShopModalOpen);
     const setShopModalOpen = useUISystem(state => state.setShopModalOpen);
-    // Usar a Aura ganha no jogo como moeda da loja
-    const auracash = useAuraSystem(state => state.aura);
-    const spendAura = useAuraSystem(state => state.spendAura);
+    // Extraindo auracash do state persistente (diamonds)
+    const playerStats = useUISystem(state => state.playerStats);
+    const spendAuracash = useUISystem(state => state.spendAuracash);
+    const auracash = playerStats?.diamonds !== undefined ? playerStats.diamonds : (playerStats?.auracash || 0);
     
     const setMultiplier = useAuraSystem(state => state.setMultiplier);
     const currentMultiplier = useAuraSystem(state => state.auraMultiplier);
@@ -24,10 +25,22 @@ export function ShopModal() {
 
     const handleBuy = (potion) => {
         if (auracash >= potion.price) {
-            spendAura(potion.price);
+            spendAuracash(potion.price);
             setMultiplier(potion.multiplier, 5 * 60 * 1000);
             import('../../systems/useQuestSystem').then(module => {
                 module.useQuestSystem.getState().updateQuestProgress('use_potion', 1);
+            });
+            // Tentar salvar no banco de dados
+            import('../../systems/useDatabaseSystem').then(dbSys => {
+                const pSys = import('../../systems/usePlayerSystem');
+                const aSys = import('../../systems/useAuraSystem');
+                Promise.all([pSys, aSys]).then(([pModule, aModule]) => {
+                    const pos = pModule.usePlayerSystem.getState().position;
+                    const model = pModule.usePlayerSystem.getState().activeModel;
+                    const { comboCount, maxCombo, aura, weeklyAura } = aModule.useAuraSystem.getState();
+                    const newDiamonds = auracash - potion.price;
+                    dbSys.useDatabaseSystem.getState().saveGameState(pos, comboCount, model, aura, newDiamonds, maxCombo);
+                });
             });
         }
     };
