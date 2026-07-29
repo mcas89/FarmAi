@@ -91,15 +91,28 @@ export async function verifyInfinitePayment(orderNsu) {
             order_nsu: orderNsu
         };
 
-        const res = await fetch(`${getApiBase()}/payment_check`, {
+        const endpoint = `${getApiBase()}/payment_check`;
+        console.log(`[InfinitePay] 📡 Chamando API de validação: POST ${endpoint}`);
+
+        const res = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
 
-        if (!res.ok) return false;
+        if (!res.ok) {
+            console.error(`[InfinitePay] ❌ Falha na API de validação. Status: ${res.status} ${res.statusText}`);
+            try {
+                const errorData = await res.json();
+                console.error("[InfinitePay] Detalhes do erro da API:", errorData);
+            } catch (e) {
+                console.error("[InfinitePay] A resposta de erro não é um JSON válido.");
+            }
+            return false;
+        }
 
         const data = await res.json();
+        console.log("[InfinitePay] 📥 Resposta de validação da InfinitePay:", data);
 
         // Cobre as variações de resposta conhecidas da API da InfinitePay
         return (
@@ -109,7 +122,7 @@ export async function verifyInfinitePayment(orderNsu) {
             data.status === "paid"
         );
     } catch (err) {
-        console.error("Erro ao verificar pagamento InfinitePay:", err);
+        console.error("[InfinitePay] ❌ Erro de rede/CORS ao verificar pagamento InfinitePay:", err);
         return false;
     }
 }
