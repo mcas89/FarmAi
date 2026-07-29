@@ -1,0 +1,13 @@
+app = "farmaai-server"
+primary_region = "gru" # São Paulo, BR para melhor latência
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 2567
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
