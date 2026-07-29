@@ -4,12 +4,14 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { AnimationEngine } from '../../systems/animation/AnimationEngine';
+import { AuraEffects } from './AuraEffects';
 import { Html } from '@react-three/drei';
 import { Diamond } from 'lucide-react';
 import { getPlayerLevel, getPlayerTitle } from '../../systems/progressionRules';
 
 export function RemotePlayer({ playerData }) {
   const [vrm, setVrm] = useState(null);
+  const remoteComboRef = useRef(0);
   
   const targetPos = useRef(new THREE.Vector3(
     playerData.position?.[0] || 0, 
@@ -140,6 +142,15 @@ export function RemotePlayer({ playerData }) {
     const rightFarmActive = playerData.rightFarm || false;
     const isIdle = !isMoving && !leftFarmActive && !rightFarmActive;
 
+    // Atualiza o combo local simulado para gerar a aura
+    if (leftFarmActive || rightFarmActive) {
+       remoteComboRef.current += delta * 180; // Sobe rápido
+       if (remoteComboRef.current > 1500) remoteComboRef.current = 1500;
+    } else {
+       remoteComboRef.current -= delta * 120; // Desce aos poucos
+       if (remoteComboRef.current < 0) remoteComboRef.current = 0;
+    }
+
     // comboCount simulado: se está fazendo farm, usa 4 (threshold mínimo para ativar animação)
     // Os braços vão se mover se leftFarm ou rightFarm estiver ativo
     const simulatedCombo = (leftFarmActive || rightFarmActive) ? 4 : 0;
@@ -155,6 +166,10 @@ export function RemotePlayer({ playerData }) {
 
   return vrm ? (
     <group ref={groupRef}>
+        <AuraEffects 
+            isRemote={true} 
+            remoteComboRef={remoteComboRef} 
+        />
         <primitive object={vrm.scene} />
         
         {/* CSS para Animação Flutuante */}

@@ -540,9 +540,23 @@ function NovaShockwaves({ comboCount, crashRef }) {
 // =========================================
 // AURA EFFECTS — Componente Principal
 // =========================================
-export function AuraEffects() {
-    const { comboCount, hitId, lastPoints, message } = useAuraSystem();
-    const position = usePlayerSystem((state) => state.position);
+export function AuraEffects({ 
+    isRemote = false, 
+    remoteComboRef = null, 
+    remoteHitId = 0, 
+    remoteLastPoints = 0, 
+    remoteMessage = '', 
+    remotePosition = [0, 0, 0] 
+} = {}) {
+    const localAura = useAuraSystem();
+    const localPosition = usePlayerSystem((state) => state.position);
+
+    // Usa Ref se for remoto (para evitar re-renders no react tree) ou Zustand se for local
+    const comboCount = isRemote && remoteComboRef ? remoteComboRef.current : localAura.comboCount;
+    const hitId = isRemote ? remoteHitId : localAura.hitId;
+    const lastPoints = isRemote ? remoteLastPoints : localAura.lastPoints;
+    const message = isRemote ? remoteMessage : localAura.message;
+    const position = isRemote ? remotePosition : localPosition;
 
     const groupRef = useRef();
     const tier = getTier(comboCount);
