@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import * as Colyseus from '@colyseus/sdk';
 
-// URL do servidor local para desenvolvimento
-// Quando for para o Fly.io, trocaremos para wss://farmaai-server.fly.dev
+// URL do servidor de produção (Render)
+// Troque para ws://localhost:2567 para testar localmente
 const COLYSEUS_SERVER = "wss://farmai-server.onrender.com";
 const ROOM_NAME = "farma_room";
 
@@ -13,6 +13,7 @@ export const useMultiplayerSystem = create((set, get) => ({
     isConnected: false,
     isTryingToJoin: false,
     currentRoomId: null,
+    mySessionId: null,
     remotePlayers: {},
     localPlayerInfo: null,
     latency: 0,
@@ -33,9 +34,9 @@ export const useMultiplayerSystem = create((set, get) => ({
         set({ localPlayerInfo: playerInfo, isTryingToJoin: true });
 
         try {
-            // joinOrCreate vai conectar à sala ou criá-la se não existir
             const room = await client.joinOrCreate(ROOM_NAME, {
-                name: playerInfo?.name || 'Jogador'
+                name: playerInfo?.name || 'Jogador',
+                model: playerInfo?.model || 'san.vrm',
             });
 
             currentRoom = room;
@@ -44,120 +45,99 @@ export const useMultiplayerSystem = create((set, get) => ({
                 isConnected: true,
                 isTryingToJoin: false,
                 currentRoomId: room.id,
+                mySessionId: room.sessionId,
             });
 
-            console.log("Conectado ao Colyseus! ID da Sessão:", room.sessionId);
+            console.log(`[Multiplayer] Conectado! Sessão: ${room.sessionId}`);
 
-            // Sincronizar estado completo usando onStateChange para compatibilidade máxima com Colyseus 0.17
+            // Escuta mudanças de estado e sincroniza os remotePlayers
             room.onStateChange((state) => {
                 if (!state.players) return;
 
-                set((stateObj) => {
-                    const newRemotePlayers = { ...stateObj.remotePlayers };
-                    const activeSessions = new Set();
-                    let hasChanges = false;
-
-                    // Iterar sobre o Map/MapSchema
-                    state.players.forEach((player, sessionId) => {
-                        activeSessions.add(sessionId);
-                        
-                        if (sessionId !== room.sessionId) {
-                            const newPos = player.position ? [player.position.x, player.position.y, player.position.z] : [player.x || 0, player.y || 0, player.z || 0];
-                            const newRot = player.rotation ? [player.rotation.x, player.rotation.y, player.rotation.z] : [0, player.rotation || 0, 0];
-                            const newAnim = player.animation || 'Idle';
-                            const newModel = player.model;
-                            const newName = player?.name;
-
-                            const existing = newRemotePlayers[sessionId];
-                            
-                            // Só atualiza se algo de fato mudou
-                            if (!existing || 
-                                existing.position[0] !== newPos[0] || existing.position[1] !== newPos[1] || existing.position[2] !== newPos[2] ||
-                                existing.rotation[0] !== newRot[0] || existing.rotation[1] !== newRot[1] || existing.rotation[2] !== newRot[2] ||
-                                existing.animation !== newAnim ||
-                                existing.model !== newModel ||
-                                existing.name !== newName) 
-                            {
-                                newRemotePlayers[sessionId] = {
-                                    id: sessionId,
-                                    position: newPos,
-                                    rotation: newRot,
-                                    animation: newAnim,
-                                    name: newName,
-                                    model: newModel
-                                };
-                                hasChanges = true;
-                            }
-                        }
-                    });
-
-                    // Remover jogadores que saíram
-                    Object.keys(newRemotePlayers).forEach(sessionId => {
-                        if (!activeSessions.has(sessionId)) {
-                            console.log("Jogador desconectado:", newRemotePlayers[sessionId].name, sessionId);
-                            delete newRemotePlayers[sessionId];
-                            hasChanges = true;
-                        }
-                    });
-
-                    if (hasChanges) {
-                        return { remotePlayers: newRemotePlayers };
-                    }
+                set((storeState) => {
+                    const newRemotePlayers = {};
                     
-                    return stateObj;
+                    state.players.forEach((player, sessionId) => {
+                        // Ignora o próprio jogador
+                        if (sessionId === room.sessionId) return;
+                        
+                        newRemotePlayers[sessionId] = {
+                            id: sessionId,
+                            name: player.name,
+                            model: player.model || 'san.vrm',
+                            position: [player.x || 0, player.y || 0, player.z || 0],
+                            rotation: player.rotation || 0,
+                            animation: player.animation || 'idle',
+                            leftFarm: player.leftFarm || false,
+                            rightFarm: player.rightFarm || false,
+                            aura: player.aura || 0,
+                        };
+                    });
+
+                    return { remotePlayers: newRemotePlayers };
                 });
             });
 
-            // Lidar com mensagens de chat (se formos usar room.onMessage)
+            // Chat
             room.onMessage("chat", (message) => {
                 set((state) => ({
-                    chatMessages: [...state.chatMessages, message]
+                    chatMessages: [...state.chatMessages.slice(-49), message]
                 }));
             });
 
             room.onLeave((code) => {
-                console.log("Você saiu da sala Colyseus.", code);
-                set({ isConnected: false, currentRoomId: null, remotePlayers: {} });
+                console.log("[Multiplayer] Saiu da sala. Código:", code);
+                currentRoom = null;
+                set({ isConnected: false, currentRoomId: null, mySessionId: null, remotePlayers: {} });
             });
 
             room.onError((code, message) => {
-                console.error("Colyseus Error:", code, message);
+                console.error("[Multiplayer] Erro:", code, message);
             });
 
         } catch (e) {
-            console.error("Erro ao conectar no Colyseus:", e);
+            console.error("[Multiplayer] Erro ao conectar:", e);
             set({ isTryingToJoin: false, isConnected: false });
+            return false;
         }
 
         return true;
     },
 
+    // Envia posição e rotação do jogador local para o servidor
     sendPosition: (position, rotation) => {
         if (!currentRoom) return;
         currentRoom.send("position", {
-            x: position.x,
-            y: position.y,
-            z: position.z,
-            rotation: rotation
+            x: position[0] ?? position.x ?? 0,
+            y: position[1] ?? position.y ?? 0,
+            z: position[2] ?? position.z ?? 0,
+            rotation: rotation,
         });
     },
 
+    // Envia o estado da animação e dos braços de farm
+    sendAnimation: (animationName, leftFarm = false, rightFarm = false) => {
+        if (!currentRoom) return;
+        currentRoom.send("animation", {
+            animation: animationName,
+            leftFarm,
+            rightFarm,
+        });
+    },
+
+    // Envia o valor de aura atualizado
     updateAuraValue: (score) => {
         if (!currentRoom) return;
         currentRoom.send("updateScore", { score });
     },
 
-    sendAnimation: (animationName) => {
-        if (!currentRoom) return;
-        currentRoom.send("animation", { animation: animationName });
-    },
-
-    sendMessage: (text) => {
+    // Envia mensagem de chat
+    sendChatMessage: (text) => {
         if (!currentRoom) return;
         const { localPlayerInfo } = get();
         currentRoom.send("chat", {
             sender: localPlayerInfo?.name || "Jogador",
-            text: text
+            text: text,
         });
     },
 
@@ -166,6 +146,6 @@ export const useMultiplayerSystem = create((set, get) => ({
             currentRoom.leave();
             currentRoom = null;
         }
-        set({ isConnected: false, currentRoomId: null, remotePlayers: {} });
+        set({ isConnected: false, currentRoomId: null, mySessionId: null, remotePlayers: {} });
     }
 }));

@@ -154,6 +154,14 @@ export const AuraSystem = {
             resetDecayTimer(isMilestone);
 
             useAuraSystem.getState().registerHit(auraReward, message, comboCount, isMilestone, side);
+            
+            // Sincroniza a aura com o servidor multiplayer para os outros jogadores verem
+            if (auraReward > 0) {
+                import('../useMultiplayerSystem').then(({ useMultiplayerSystem }) => {
+                    const newAura = useAuraSystem.getState().aura;
+                    useMultiplayerSystem.getState().updateAuraValue(newAura);
+                });
+            }
         }
     }
 };

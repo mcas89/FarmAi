@@ -308,11 +308,12 @@ export function Avatar({ url }) {
     setPosition([vrm.scene.position.x, vrm.scene.position.y, vrm.scene.position.z]);
     
     if (useUISystem.getState().isOnlineMode) {
+        const { isLeftFarming, isRightFarming } = useFarmSystem.getState();
         useMultiplayerSystem.getState().sendPosition(
-            { x: vrm.scene.position.x, y: vrm.scene.position.y, z: vrm.scene.position.z }, 
+            [vrm.scene.position.x, vrm.scene.position.y, vrm.scene.position.z],
             vrm.scene.rotation.y
         );
-        useMultiplayerSystem.getState().sendAnimation(newState);
+        useMultiplayerSystem.getState().sendAnimation(newState, isLeftFarming, isRightFarming);
     }
   });
 
