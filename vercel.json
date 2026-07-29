@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/infinitepay/:path*",
+      "destination": "https://api.checkout.infinitepay.io/:path*"
+    }
+  ]
+}

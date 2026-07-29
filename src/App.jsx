@@ -41,9 +41,11 @@ class ErrorBoundary extends Component {
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './config/firebase';
+import { usePaymentReturn } from './systems/usePaymentReturn';
 
 function App() {
   const currentScreen = useUISystem(state => state.currentScreen);
+  usePaymentReturn(); // Detecta retorno de pagamento InfinitePay
 
   useEffect(() => {
     // 1. Escuta o estado de autenticação do Firebase para Persistência (Auto-Login)

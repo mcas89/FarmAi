@@ -5,8 +5,10 @@ import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { getPlayerLevel } from '../../../systems/progressionRules';
 import { CHARACTERS } from './CharacterScreen';
 import { AuracashIcon } from '../AuracashIcon';
-import { ShoppingCart, UserPlus, Gift, Star, Zap, Package, Lock, AlertCircle } from 'lucide-react';
+import { ShoppingCart, UserPlus, Gift, Star, Zap, Package, Lock, AlertCircle, CreditCard } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
+import { initInfinitePayCheckout, AURACASH_PACKS } from '../../../services/infinitePayService';
+import { auth } from '../../../config/firebase';
 
 function CustomModal({ modal, onClose }) {
     if (!modal) return null;
@@ -76,10 +78,22 @@ export function StoreScreen() {
     const showAlert = (title, message) => setModal({ type: 'alert', title, message, onConfirm: null });
     const showConfirm = (title, message, onConfirm) => setModal({ type: 'confirm', title, message, onConfirm });
 
-    const handlePurchaseAuraCash = (amount) => {
-        const currentDiamonds = stats.diamonds || 0;
-        updateStats({ diamonds: currentDiamonds + amount });
-        showAlert("AuraCash Adquirido", `Sucesso! Você adquiriu ${amount.toLocaleString()} AuraCash!`);
+    const [buyingPack, setBuyingPack] = useState(null); // ID do pack sendo processado
+
+    const handlePurchaseAuraCash = async (packId) => {
+        const pack = AURACASH_PACKS[packId];
+        if (!pack) return;
+
+        const userId = auth.currentUser?.uid || 'anonimo';
+        setBuyingPack(packId);
+        try {
+            await initInfinitePayCheckout(packId, pack.priceCents, pack.description, userId);
+            // Se chegou aqui sem redirecionar, algo deu errado
+        } catch (err) {
+            showAlert("Erro no Pagamento", err.message || "Não foi possível iniciar o checkout. Tente novamente.");
+        } finally {
+            setBuyingPack(null);
+        }
     };
 
     const handlePurchaseItem = (itemName, price, multiplier) => {
@@ -395,38 +409,79 @@ export function StoreScreen() {
                         {/* PACKS */}
                         {activeTab === 'PACKS' && (
                             <>
+                                {/* Banner de informação */}
+                                <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(52,211,153,0.1), rgba(16,185,129,0.1))', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <CreditCard size={16} color="#34d399" />
+                                    <span style={{ color: '#34d399', fontSize: '0.7rem', fontWeight: 'bold' }}>Pagamento seguro via InfinitePay · PIX, Cartão ou Boleto</span>
+                                </div>
+
                                 <div className="store-card">
                                     <AuracashIcon size={32} color="#94a3b8" style={{ marginBottom: '8px' }} />
                                     <div style={{ color: '#fff', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>1.000</div>
                                     <div style={{ color: '#aaa', fontSize: '0.6rem', marginBottom: '8px' }}>Inicial</div>
-                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(1000)}>R$ 4,90</button>
+                                    <button
+                                        className="buy-btn"
+                                        disabled={!!buyingPack}
+                                        onClick={() => handlePurchaseAuraCash('pack_1000')}
+                                        style={{ opacity: buyingPack === 'pack_1000' ? 0.6 : 1 }}
+                                    >
+                                        {buyingPack === 'pack_1000' ? '⏳ Aguarde...' : 'R$ 4,90'}
+                                    </button>
                                 </div>
                                 <div className="store-card">
                                     <AuracashIcon size={32} color="#34d399" style={{ marginBottom: '8px' }} />
                                     <div style={{ color: '#34d399', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>2.500</div>
                                     <div style={{ color: '#6ee7b7', fontSize: '0.6rem', marginBottom: '8px' }}>Pequeno</div>
-                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(2500)}>R$ 9,90</button>
+                                    <button
+                                        className="buy-btn"
+                                        disabled={!!buyingPack}
+                                        onClick={() => handlePurchaseAuraCash('pack_2500')}
+                                        style={{ opacity: buyingPack === 'pack_2500' ? 0.6 : 1 }}
+                                    >
+                                        {buyingPack === 'pack_2500' ? '⏳ Aguarde...' : 'R$ 9,90'}
+                                    </button>
                                 </div>
                                 <div className="store-card premium-card">
                                     <div className="badge" style={{ background: '#3b82f6', color: '#fff' }}>POPULAR</div>
                                     <Gift size={36} color="#60a5fa" style={{ marginBottom: '8px' }} />
                                     <div style={{ color: '#60a5fa', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>7.000</div>
                                     <div style={{ color: '#93c5fd', fontSize: '0.6rem', marginBottom: '8px' }}>Médio</div>
-                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(7000)}>R$ 19,90</button>
+                                    <button
+                                        className="buy-btn"
+                                        disabled={!!buyingPack}
+                                        onClick={() => handlePurchaseAuraCash('pack_7000')}
+                                        style={{ opacity: buyingPack === 'pack_7000' ? 0.6 : 1 }}
+                                    >
+                                        {buyingPack === 'pack_7000' ? '⏳ Aguarde...' : 'R$ 19,90'}
+                                    </button>
                                 </div>
                                 <div className="store-card premium-card" style={{ border: '1px solid #ec4899', background: 'rgba(236, 72, 153, 0.05)' }}>
                                     <div className="badge" style={{ background: '#ec4899', color: '#fff' }}>MELHOR</div>
                                     <Gift size={36} color="#ec4899" style={{ marginBottom: '8px' }} />
                                     <div style={{ color: '#ec4899', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>18.000</div>
                                     <div style={{ color: '#f472b6', fontSize: '0.6rem', marginBottom: '8px' }}>Grande</div>
-                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(18000)}>R$ 39,90</button>
+                                    <button
+                                        className="buy-btn"
+                                        disabled={!!buyingPack}
+                                        onClick={() => handlePurchaseAuraCash('pack_18000')}
+                                        style={{ opacity: buyingPack === 'pack_18000' ? 0.6 : 1 }}
+                                    >
+                                        {buyingPack === 'pack_18000' ? '⏳ Aguarde...' : 'R$ 39,90'}
+                                    </button>
                                 </div>
                                 <div className="store-card" style={{ border: '2px solid #fbbf24', background: 'rgba(251, 191, 36, 0.1)' }}>
                                     <div className="badge" style={{ background: '#fbbf24', color: '#000' }}>ÉPICO</div>
                                     <AuracashIcon size={32} color="#fbbf24" style={{ marginBottom: '8px' }} />
                                     <div style={{ color: '#fbbf24', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>50.000</div>
                                     <div style={{ color: '#fde68a', fontSize: '0.6rem', marginBottom: '8px' }}>Supremo</div>
-                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(50000)} style={{ background: 'linear-gradient(90deg, #d97706, #fbbf24)' }}>R$ 89,90</button>
+                                    <button
+                                        className="buy-btn"
+                                        disabled={!!buyingPack}
+                                        onClick={() => handlePurchaseAuraCash('pack_50000')}
+                                        style={{ background: 'linear-gradient(90deg, #d97706, #fbbf24)', opacity: buyingPack === 'pack_50000' ? 0.6 : 1 }}
+                                    >
+                                        {buyingPack === 'pack_50000' ? '⏳ Aguarde...' : 'R$ 89,90'}
+                                    </button>
                                 </div>
                             </>
                         )}
