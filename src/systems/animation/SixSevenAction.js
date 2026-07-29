@@ -123,10 +123,19 @@ export const SixSevenAction = {
         };
 
         // LERP muito alto (0.85) é obrigatório aqui! Se for baixo (ex: 0.3), 
-        // a suavização engole as extremidades da animação e o braço só "treme" sem fazer o movimento completo!
         const lerpFactor = 0.85; 
 
-        // Se estiver num combo acelerado, a pose de corpo toma conta.
+        // Se o jogador não fez uma sequência mínima de 4 toques (6,7,6,7), 
+        // a animação não inicia e os braços ficam em repouso.
+        if (comboCount < 4) {
+            return {
+                left: { targetPose: null, lerpFactor },
+                right: { targetPose: null, lerpFactor },
+                body: { targetPose: null, lerpFactor }
+            };
+        }
+
+        // Se estiver num combo acelerado (>= 4), a pose de corpo toma conta.
         // Se estiver apenas solto batendo 1 lado (não combo), apenas aquele braço e o corpo acompanham.
         return {
             left: { targetPose: (isInCombo || isLeftFarming) ? mathPose : null, lerpFactor },

@@ -93,6 +93,10 @@ export const AuraSystem = {
         state[side].isPressed = isPressed;
 
         if (isPressed) {
+            // A animação visual deve obedecer SEMPRE ao clique do usuário, 
+            // mesmo que ele tenha clicado no mesmo lado e errado o combo.
+            renewAnimationCycle(side); 
+
             // Inicia o cronômetro no primeiro hit
             if (comboCount === 0) {
                 comboStartTime = now;
@@ -138,10 +142,7 @@ export const AuraSystem = {
                 return;
             }
 
-
-
             // SUCESSO (1,2,1,2 mantido de forma orgânica)
-            renewAnimationCycle(side); 
             lastHitTime = now;
             lastValidSide = side;
             comboCount++;

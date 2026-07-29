@@ -121,10 +121,12 @@ export function GameHUD() {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
+            if (useUISystem.getState().farmMode !== 'six_seven') return;
             if (e.key === '6' && !e.repeat) AuraSystem.setRawInput('left', true);
             if (e.key === '7' && !e.repeat) AuraSystem.setRawInput('right', true);
         };
         const handleKeyUp = (e) => {
+            if (useUISystem.getState().farmMode !== 'six_seven') return;
             if (e.key === '6') AuraSystem.setRawInput('left', false);
             if (e.key === '7') AuraSystem.setRawInput('right', false);
         };
