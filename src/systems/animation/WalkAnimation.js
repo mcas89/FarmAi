@@ -728,9 +728,9 @@ export const WalkAnimation = {
             };
         };
 
-        const getWalkBone = getLerpedFrame(walkData, walkTime, CYCLE_DURATION_WALK);
+        const getWalkBone = getLerpedFrame(walkData, inst.walkTime, CYCLE_DURATION_WALK);
         // Podemos usar a mesma variável walkTime para sincronizar os passos, ou ajustar se dessincronizar
-        const getRunBone = getLerpedFrame(runData, walkTime, CYCLE_DURATION_RUN);
+        const getRunBone = getLerpedFrame(runData, inst.walkTime, CYCLE_DURATION_RUN);
 
         const lerpBone = (boneName) => {
             const walk = getWalkBone(boneName);
