@@ -8,37 +8,44 @@ const POLL_INTERVAL_MS = 10_000; // 10 segundos
 const POLL_TIMEOUT_MS  = 300_000; // 5 minutos
 
 /**
- * Credita AuraCash e salva no Firebase silenciosamente (sem nenhum alerta).
+ * Credita AuraCash atomicamente no Firebase via increment().
+ * Isso evita a race condition onde o app carrega os dados do Firebase
+ * DEPOIS do crédito, sobrescrevendo o saldo novo com o valor antigo.
+ *
+ * Após salvar no Firebase, faz getDoc para ler o valor real atualizado
+ * e sincroniza com o estado local (Zustand).
  */
 async function creditAuraCash(pack, updateStats) {
-    const currentDiamonds = useUISystem.getState().playerStats?.diamonds || 0;
-    const newDiamonds = currentDiamonds + pack.auracash;
-    updateStats({ diamonds: newDiamonds });
-
     try {
-        const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
-            import('./usePlayerSystem'),
-            import('./useAuraSystem'),
-            import('./useDatabaseSystem'),
-            import('./useQuestSystem'),
-            import('./useAchievementSystem')
-        ]);
-        const pos      = pSys.usePlayerSystem.getState().position;
-        const model    = pSys.usePlayerSystem.getState().activeModel;
-        const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
-        const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
-        const achievements = achSys.useAchievementSystem.getState().getSavableData();
-        const inventory = useUISystem.getState().inventory || [];
+        const dbSys = await import('./useDatabaseSystem');
 
-        await dbSys.useDatabaseSystem.getState().saveGameState(
-            pos, comboCount, model, aura,
-            newDiamonds, maxCombo,
-            dailyQuests, lastResetDate,
-            weeklyAura, undefined, achievements, undefined, inventory
-        );
-        console.log(`[InfinitePay] ✅ +${pack.auracash.toLocaleString()} AuraCash creditados e salvos no Firebase.`);
+        // 1. Incremento atômico no Firebase — não depende do estado local
+        const success = await dbSys.useDatabaseSystem.getState().incrementAuracash(pack.auracash);
+
+        if (!success) {
+            console.error('[InfinitePay] ❌ Falha no incremento atômico. Salvando como pendente.');
+            return false;
+        }
+
+        // 2. Lê o valor real do Firebase para sincronizar o estado local
+        const { db, auth } = await import('../config/firebase');
+        const { doc, getDoc } = await import('firebase/firestore');
+
+        if (auth.currentUser && db) {
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            const snap = await getDoc(userRef);
+            if (snap.exists()) {
+                const realDiamonds = snap.data().auracash || 0;
+                // Sincroniza o estado Zustand com o valor correto do banco
+                updateStats({ diamonds: realDiamonds });
+                console.log(`[InfinitePay] ✅ Saldo local sincronizado: ${realDiamonds.toLocaleString()} AuraCash.`);
+            }
+        }
+
+        return true;
     } catch (err) {
-        console.error('[InfinitePay] ❌ Erro ao salvar no Firebase:', err);
+        console.error('[InfinitePay] ❌ Erro ao creditar AuraCash:', err);
+        return false;
     }
 }
 
@@ -71,9 +78,23 @@ async function pollPaymentConfirmation(orderNsu, packId, updateStats) {
         const isPaid = await verifyInfinitePayment(orderNsu);
 
         if (isPaid) {
+            // Marca como processado ANTES de creditar (evita duplo crédito)
             localStorage.setItem(processedKey, '1');
-            await creditAuraCash(pack, updateStats);
-            return; // Encerra o loop — pagamento confirmado
+
+            const credited = await creditAuraCash(pack, updateStats);
+            if (credited) {
+                console.log(`[InfinitePay] ✅ Pagamento confirmado e AuraCash creditados. NSU: ${orderNsu}`);
+            } else {
+                // Se o crédito falhou, remove o flag para tentar novamente
+                localStorage.removeItem(processedKey);
+                // Salva como pendente
+                const pending = JSON.parse(localStorage.getItem('pending_payments') || '[]');
+                if (!pending.find(p => p.orderNsu === orderNsu)) {
+                    pending.push({ orderNsu, packId, ts: Date.now() });
+                    localStorage.setItem('pending_payments', JSON.stringify(pending));
+                }
+            }
+            return; // Encerra o loop independente do resultado do crédito
         }
 
         console.log(`[InfinitePay] ⏳ Ainda não confirmado. Próxima tentativa em ${POLL_INTERVAL_MS / 1000}s...`);
@@ -109,7 +130,11 @@ async function reprocessPendingPayments(updateStats) {
             const pack = AURACASH_PACKS[item.packId];
             if (pack) {
                 localStorage.setItem(processedKey, '1');
-                await creditAuraCash(pack, updateStats);
+                const credited = await creditAuraCash(pack, updateStats);
+                if (!credited) {
+                    localStorage.removeItem(processedKey);
+                    remaining.push(item); // Tenta de novo na próxima sessão
+                }
             }
         } else {
             // Mantém como pendente por até 24h

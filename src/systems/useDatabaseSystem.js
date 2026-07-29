@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { db, auth } from '../config/firebase';
-import { doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs, increment } from 'firebase/firestore';
 import { getCurrentWeekString } from '../utils/dateUtils';
 
 export const useDatabaseSystem = create((set, get) => ({
@@ -144,6 +144,26 @@ export const useDatabaseSystem = create((set, get) => ({
       set({ lastSavedAt: Date.now() });
     } catch (error) {
       console.error('❌ Erro ao salvar no Firebase:', error);
+    }
+  }
+  // Incrementa o saldo de AuraCash atomicamente via FieldValue.increment()
+  // Isso evita race conditions quando o app carrega e dados do Firebase chegam depois do crédito
+  incrementAuracash: async (amount) => {
+    if (!db || !auth.currentUser) {
+      console.error('[InfinitePay] incrementAuracash: sem auth ou db disponível.');
+      return false;
+    }
+    try {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(userRef, {
+        auracash: increment(amount),
+        lastUpdate: new Date().toISOString()
+      });
+      console.log(`[InfinitePay] ✅ +${amount.toLocaleString()} AuraCash incrementados atomicamente no Firebase.`);
+      return true;
+    } catch (err) {
+      console.error('[InfinitePay] ❌ Erro ao incrementar AuraCash no Firebase:', err);
+      return false;
     }
   }
 }));
