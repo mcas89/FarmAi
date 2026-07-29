@@ -50,7 +50,7 @@ export const AnimationEngine = {
         const walkData = WalkAnimation.getOffsets(delta, isMoving, isRunning);
 
         // PRIO 4: A Vida oscila de forma autônoma
-        const lifeOffsets = LifeAnimation.getOffsets(delta, brainOffsets.breathMultiplier);
+        const lifeOffsets = LifeAnimation.getOffsets(delta, brainOffsets.breathMultiplier, isIdle);
 
         const applyBone = (boneName, axes, side, lerpOverride) => {
             const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
