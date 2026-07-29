@@ -4,6 +4,7 @@ import { useUISystem } from '../../../systems/useUISystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { useRankingSystem } from '../../../systems/useRankingSystem';
 import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
+import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { 
     Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles
 } from 'lucide-react';
@@ -17,6 +18,7 @@ export function MainMenu() {
     const { aura, comboCount, weeklyAura } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const updateStats = useUISystem(state => state.updateStats);
+    const activeModel = usePlayerSystem(state => state.activeModel);
     const nickname = stats.nickname || 'Marcos';
 
     const [dailyQuests, setDailyQuests] = useState([]);
@@ -70,7 +72,12 @@ export function MainMenu() {
     }, []);
 
     const handleJoinRoom = async (roomId) => {
-        const success = await joinRoom(roomId, { name: nickname, model: stats.activeModel || 'san.vrm' });
+        const aura = useAuraSystem.getState().aura || 0;
+        const success = await joinRoom(roomId, { 
+            name: nickname, 
+            model: activeModel || 'san.vrm',
+            aura
+        });
         if (success) {
             setIsOnlineMode(true);
             setScreen('GAME');

@@ -37,6 +37,7 @@ export const useMultiplayerSystem = create((set, get) => ({
             const room = await client.joinOrCreate(ROOM_NAME, {
                 name: playerInfo?.name || 'Jogador',
                 model: playerInfo?.model || 'san.vrm',
+                aura: playerInfo?.aura || 0,
             });
 
             currentRoom = room;

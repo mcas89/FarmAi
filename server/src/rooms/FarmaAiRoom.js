@@ -90,7 +90,7 @@ class FarmaAiRoom extends Room {
         newPlayer.y = 0;
         newPlayer.z = 0;
         newPlayer.rotation = 0;
-        newPlayer.aura = 0;
+        newPlayer.aura = options.aura || 0;
         newPlayer.animation = "idle";
         newPlayer.leftFarm = false;
         newPlayer.rightFarm = false;

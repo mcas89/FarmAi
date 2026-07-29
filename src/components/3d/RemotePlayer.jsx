@@ -11,8 +11,16 @@ import { getPlayerLevel, getPlayerTitle } from '../../systems/progressionRules';
 export function RemotePlayer({ playerData }) {
   const [vrm, setVrm] = useState(null);
   
-  const targetPos = useRef(new THREE.Vector3(playerData.position?.[0] || 0, playerData.position?.[1] || 0, playerData.position?.[2] || 0));
-  const currentPos = useRef(new THREE.Vector3(playerData.position?.[0] || 0, playerData.position?.[1] || 0, playerData.position?.[2] || 0));
+  const targetPos = useRef(new THREE.Vector3(
+    playerData.position?.[0] || 0, 
+    playerData.position?.[1] || 0, 
+    playerData.position?.[2] || 0
+  ));
+  const currentPos = useRef(new THREE.Vector3(
+    playerData.position?.[0] || 0, 
+    playerData.position?.[1] || 0, 
+    playerData.position?.[2] || 0
+  ));
   const groupRef = useRef();
   
   // Efeito Visual de ganho de aura (Float UP)
@@ -22,23 +30,24 @@ export function RemotePlayer({ playerData }) {
 
   useEffect(() => {
     let timeout;
-    if (playerData.aura > lastAuraRef.current) {
-        const diff = Math.floor(playerData.aura - lastAuraRef.current);
+    if ((playerData.aura || 0) > lastAuraRef.current) {
+        const diff = Math.floor((playerData.aura || 0) - lastAuraRef.current);
         setAuraGain(diff);
         setShowAuraVfx(true);
-        
-        timeout = setTimeout(() => setShowAuraVfx(false), 1000);
+        timeout = setTimeout(() => setShowAuraVfx(false), 1200);
     }
     lastAuraRef.current = playerData.aura || 0;
     return () => clearTimeout(timeout);
   }, [playerData.aura]);
   
+  // Carrega o modelo VRM correto quando o modelo mudar
   useEffect(() => {
     let isMounted = true;
     const loader = new GLTFLoader();
     loader.register((parser) => new VRMLoaderPlugin(parser));
     
-    const url = playerData.model ? `/models/${playerData.model}` : '/models/san.vrm';
+    const modelFile = playerData.model || 'san.vrm';
+    const url = `/models/${modelFile}`;
 
     loader.load(url, (gltf) => {
       if (!isMounted) {
@@ -64,10 +73,13 @@ export function RemotePlayer({ playerData }) {
       });
       
       vrmData.scene.rotation.y = Math.PI; 
-      vrmData.scene.position.set(0, 0, 0); // Vrm fica no 0,0,0 local do grupo
+      vrmData.scene.position.set(0, 0, 0);
       
-      AnimationEngine.setBasePose('arms_down_pose');
+      // Cada RemotePlayer tem seu próprio estado de pose isolado
+      AnimationEngine.setBasePose('arms_down_pose', vrmData.scene.uuid);
       setVrm(vrmData);
+    }, undefined, (err) => {
+      console.error(`[RemotePlayer] Erro ao carregar modelo ${modelFile}:`, err);
     });
 
     return () => {
@@ -89,43 +101,57 @@ export function RemotePlayer({ playerData }) {
     };
   }, [playerData.model]);
 
+  // Atualiza a posição alvo sempre que receber nova posição do servidor
   useEffect(() => {
-    targetPos.current.set(playerData.position?.[0] || 0, playerData.position?.[1] || 0, playerData.position?.[2] || 0);
+    if (playerData.position) {
+      targetPos.current.set(
+        playerData.position[0] || 0, 
+        playerData.position[1] || 0, 
+        playerData.position[2] || 0
+      );
+    }
   }, [playerData.position]);
 
   useFrame((state, delta) => {
     if (!vrm) return;
     vrm.update(delta);
     
-    currentPos.current.lerp(targetPos.current, 10 * delta);
+    // Interpola posição suavemente
+    currentPos.current.lerp(targetPos.current, Math.min(10 * delta, 1));
     
     if (groupRef.current) {
         groupRef.current.position.copy(currentPos.current);
     }
     
+    // Rotaciona o avatar na direção que está se movendo
     const dir = new THREE.Vector3().subVectors(targetPos.current, currentPos.current);
     dir.y = 0;
     if (dir.lengthSq() > 0.001) {
         dir.normalize();
         const targetAngle = Math.atan2(dir.x, dir.z);
         const targetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
-        vrm.scene.quaternion.slerp(targetQuat, 10 * delta); 
+        vrm.scene.quaternion.slerp(targetQuat, Math.min(10 * delta, 1)); 
     }
 
+    // Estado de animação vindo do servidor
     const isMoving = playerData.animation === 'run' || playerData.animation === 'walk';
     const isRunning = playerData.animation === 'run';
-    
     const leftFarmActive = playerData.leftFarm || false;
     const rightFarmActive = playerData.rightFarm || false;
+    const isIdle = !isMoving && !leftFarmActive && !rightFarmActive;
+
+    // comboCount simulado: se está fazendo farm, usa 4 (threshold mínimo para ativar animação)
+    // Os braços vão se mover se leftFarm ou rightFarm estiver ativo
+    const simulatedCombo = (leftFarmActive || rightFarmActive) ? 4 : 0;
     
-    const isIdle = (playerData.animation === 'idle' || !isMoving) && !leftFarmActive && !rightFarmActive;
-    
-    AnimationEngine.update(vrm, delta, leftFarmActive, rightFarmActive, isMoving, isIdle, isRunning);
+    // AnimationEngine é isolado por uuid do VRM — não afeta o jogador local
+    AnimationEngine.update(vrm, delta, leftFarmActive, rightFarmActive, isMoving, isIdle, isRunning, simulatedCombo);
   });
 
   const aura = playerData.aura || 0;
   const level = getPlayerLevel(aura);
   const title = getPlayerTitle(level);
+  const playerName = playerData.name || 'Jogador';
 
   return vrm ? (
     <group ref={groupRef}>
@@ -149,7 +175,7 @@ export function RemotePlayer({ playerData }) {
                     color: auraGain >= 50 ? '#a855f7' : '#4ade80', 
                     fontSize: '1.5rem', fontWeight: '900', fontStyle: 'italic',
                     textShadow: auraGain >= 50 ? '0 0 10px rgba(168,85,247,0.8)' : '0 0 10px rgba(74,222,128,0.8)',
-                    animation: 'floatUp 1s ease forwards'
+                    animation: 'floatUp 1.2s ease forwards'
                 }}>
                     +{auraGain}
                 </div>
@@ -158,7 +184,7 @@ export function RemotePlayer({ playerData }) {
 
         <Html position={[0, 3.2, 0]} center style={{ pointerEvents: 'none' }}>
             <div style={{
-                background: 'rgba(10, 10, 15, 0.7)', backdropFilter: 'blur(6px)',
+                background: 'rgba(10, 10, 15, 0.75)', backdropFilter: 'blur(8px)',
                 padding: '4px 10px', borderRadius: '12px',
                 border: '1px solid rgba(168,85,247,0.4)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -166,7 +192,7 @@ export function RemotePlayer({ playerData }) {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ background: '#a855f7', color: '#fff', fontSize: '0.6rem', fontWeight: '900', padding: '1px 4px', borderRadius: '4px' }}>LV {level}</span>
-                    <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900', textShadow: '0 0 5px rgba(255,255,255,0.5)' }}>{playerData.name || 'Jogador'}</span>
+                    <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900', textShadow: '0 0 5px rgba(255,255,255,0.5)' }}>{playerName}</span>
                 </div>
                 <div style={{ color: '#d8b4fe', fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
                     {title}
