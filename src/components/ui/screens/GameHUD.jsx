@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { MultiplayerChat } from '../MultiplayerChat';
 
 export function GameHUD() {
     const { aura, message, lastPoints, comboCount, maxCombo, hitId, isMilestone, hitSide, auraMultiplier, multiplierEndTime } = useAuraSystem();
@@ -28,6 +29,7 @@ export function GameHUD() {
 
     const isMapMode = useUISystem(state => state.isMapMode);
     const toggleMapMode = useUISystem(state => state.toggleMapMode);
+    const isOnlineMode = useUISystem(state => state.isOnlineMode);
     const nickname = stats.nickname || 'Marcos';
     const isDancing = useDanceSystem(state => state.isDancing);
     const inventory = useUISystem(state => state.inventory || []);
@@ -1056,6 +1058,9 @@ export function GameHUD() {
                     </div>
                 </div>
             )}
+
+            {/* Chat multiplayer (só aparece no modo online) */}
+            {isOnlineMode && <MultiplayerChat />}
         </div>
     );
 }

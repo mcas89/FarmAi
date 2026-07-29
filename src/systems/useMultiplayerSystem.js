@@ -105,16 +105,22 @@ export const useMultiplayerSystem = create((set, get) => ({
         return true;
     },
 
-    // Envia posição e rotação do jogador local para o servidor
-    sendPosition: (position, rotation) => {
-        if (!currentRoom) return;
-        currentRoom.send("position", {
-            x: position[0] ?? position.x ?? 0,
-            y: position[1] ?? position.y ?? 0,
-            z: position[2] ?? position.z ?? 0,
-            rotation: rotation,
-        });
-    },
+    // Envia posição e rotação do jogador local (throttle: 30fps max)
+    sendPosition: (() => {
+        let lastSent = 0;
+        return (position, rotation) => {
+            if (!currentRoom) return;
+            const now = Date.now();
+            if (now - lastSent < 33) return; // throttle: 30fps
+            lastSent = now;
+            currentRoom.send("position", {
+                x: position[0] ?? position.x ?? 0,
+                y: position[1] ?? position.y ?? 0,
+                z: position[2] ?? position.z ?? 0,
+                rotation: rotation,
+            });
+        };
+    })(),
 
     // Envia o estado da animação e dos braços de farm
     sendAnimation: (animationName, leftFarm = false, rightFarm = false) => {

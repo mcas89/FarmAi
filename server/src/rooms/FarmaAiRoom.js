@@ -40,6 +40,10 @@ class FarmaAiRoom extends Room {
 
     onCreate (options) {
         this.setState(new FarmaAiState());
+        
+        // 30 atualizações de estado por segundo (padrão é 20)
+        // Aumentar demais (ex: 60) pode sobrecarregar clientes mobile
+        this.setPatchRate(1000 / 30);
 
         // Recebe atualização de movimento do cliente
         this.onMessage("position", (client, data) => {
@@ -71,9 +75,14 @@ class FarmaAiRoom extends Room {
             }
         });
 
-        // Chat
+        // Chat — broadcast para todos na sala
         this.onMessage("chat", (client, message) => {
-            this.broadcast("chat", message);
+            const player = this.state.players.get(client.sessionId);
+            this.broadcast("chat", {
+                sender: player?.name || message.sender || 'Jogador',
+                text: message.text,
+                time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            });
         });
         
         console.log(`[FarmaAiRoom] Sala criada!`);
