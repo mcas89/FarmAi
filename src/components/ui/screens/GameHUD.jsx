@@ -14,6 +14,7 @@ import {
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { MultiplayerChat } from '../MultiplayerChat';
+import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 
 export function GameHUD() {
     const { aura, message, lastPoints, comboCount, maxCombo, hitId, isMilestone, hitSide, auraMultiplier, multiplierEndTime } = useAuraSystem();
@@ -30,6 +31,7 @@ export function GameHUD() {
     const isMapMode = useUISystem(state => state.isMapMode);
     const toggleMapMode = useUISystem(state => state.toggleMapMode);
     const isOnlineMode = useUISystem(state => state.isOnlineMode);
+    const onlinePlayersCount = useMultiplayerSystem(state => state.players ? Object.keys(state.players).length : 0);
     const nickname = stats.nickname || 'Marcos';
     const isDancing = useDanceSystem(state => state.isDancing);
     const inventory = useUISystem(state => state.inventory || []);
@@ -485,11 +487,27 @@ export function GameHUD() {
 
                     </div>
 
-                    {/* ── COLUNA DIREITA: Diamantes + Home ── */}
                     <div style={{
                         display: 'flex', alignItems: 'center',
                         justifyContent: 'flex-end', gap: '7px', minWidth: 0
                     }}>
+                        {/* Contador de Jogadores Online (aparece se estiver online) */}
+                        {isOnlineMode && (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                background: 'rgba(56, 189, 248, 0.15)',
+                                border: '1px solid rgba(56, 189, 248, 0.3)',
+                                borderRadius: '10px', padding: '5px 9px',
+                                pointerEvents: 'auto', minWidth: 0,
+                                boxShadow: '0 0 10px rgba(56, 189, 248, 0.2)'
+                            }}>
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', boxShadow: '0 0 5px #38bdf8' }} className="anim-pulse" />
+                                <span style={{ color: '#38bdf8', fontSize: '0.78rem', fontWeight: '900', fontVariantNumeric: 'tabular-nums' }}>
+                                    {onlinePlayersCount}/30
+                                </span>
+                            </div>
+                        )}
+
                         {/* Contador de AuraCash adaptável */}
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: '4px',

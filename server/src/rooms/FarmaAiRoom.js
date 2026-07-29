@@ -35,7 +35,7 @@ type({ map: Player })(FarmaAiState.prototype, "players");
 class FarmaAiRoom extends Room {
     constructor() {
         super();
-        this.maxClients = 100;
+        this.maxClients = 30;
     }
 
     onCreate (options) {
