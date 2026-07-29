@@ -41,6 +41,13 @@ export const SixSevenAction = {
         // Decai a energia pela metade a cada 0.4 segundos (suaviza a transição e mantém a inércia)
         inst.cps = inst.cps * Math.pow(0.5, delta / 0.4);
 
+        // Se for um jogador remoto (uuid !== 'default') e estiver farmando, forçar CPS alto 
+        // já que o comboCount não incrementa perfeitamente via WebSocket a cada clique
+        if (uuid !== 'default' && (isLeftFarming || isRightFarming)) {
+            inst.cps = 1.8; // cps alto para manter os braços bem rápidos
+            inst.timeSinceLastClick = 0;
+        }
+
         // Se passar muito tempo sem clicar E NÃO estiver no combo, volta para IDLE (null)
         if (inst.timeSinceLastClick > 0.4 && !isInCombo) {
             return {

@@ -1,7 +1,17 @@
 import { getPoseValue } from './PoseRegistry';
 
-let walkTime = 0;
-let blendWeight = 0;
+const instances = {};
+
+const getInstance = (uuid) => {
+    if (!instances[uuid]) {
+        instances[uuid] = {
+            walkTime: 0,
+            blendWeight: 0,
+            runWeight: 0
+        };
+    }
+    return instances[uuid];
+};
 
 const walkData = {
   "name": "andar",
@@ -662,29 +672,25 @@ const runData = {
 const CYCLE_DURATION_WALK = walkData.frames.reduce((sum, f) => sum + f.duration, 0);
 const CYCLE_DURATION_RUN = runData.frames.reduce((sum, f) => sum + f.duration, 0);
 
-// Suavização do estado de corrida
-let runWeight = 0;
+
 
 export const WalkAnimation = {
-    getOffsets: (delta, isMoving, isRunning = false) => {
-        const cycleSpeed = isRunning ? 1.0 : 1.0; 
-        
-        if (isMoving) {
-            blendWeight = Math.min(1.0, blendWeight + delta * 3.0);
-            walkTime += delta * cycleSpeed; 
-        } else {
-            blendWeight = Math.max(0.0, blendWeight - delta * 4.0);
-            if (blendWeight > 0) walkTime += delta * (cycleSpeed * 0.5); 
+    getOffsets: (delta, isMoving, isRunning, uuid = 'default') => {
+        const inst = getInstance(uuid);
+
+        const targetBlend = isMoving ? 1.0 : 0.0;
+        inst.blendWeight = inst.blendWeight + (targetBlend - inst.blendWeight) * Math.min(delta * 10, 1);
+
+        const targetRun = isRunning ? 1.0 : 0.0;
+        inst.runWeight = inst.runWeight + (targetRun - inst.runWeight) * Math.min(delta * 8, 1);
+
+        if (inst.blendWeight < 0.01) {
+            inst.walkTime = 0;
+            return { weight: 0, offsets: {} };
         }
 
-        if (blendWeight <= 0.01) return null;
-
-        // Anima a transição entre andar e correr
-        if (isRunning && isMoving) {
-            runWeight = Math.min(1.0, runWeight + delta * 4.0);
-        } else {
-            runWeight = Math.max(0.0, runWeight - delta * 4.0);
-        }
+        const speedMultiplier = 1.0 + (inst.runWeight * 0.5);
+        inst.walkTime += delta * speedMultiplier;
 
         const getLerpedFrame = (animData, time, cycleDuration) => {
             let t = time % cycleDuration;
@@ -728,20 +734,20 @@ export const WalkAnimation = {
 
         const lerpBone = (boneName) => {
             const walk = getWalkBone(boneName);
-            if (runWeight <= 0) return walk;
+            if (inst.runWeight <= 0) return walk;
 
             const run = getRunBone(boneName);
-            if (runWeight >= 1) return run;
+            if (inst.runWeight >= 1) return run;
 
             return {
-                x: walk.x + (run.x - walk.x) * runWeight,
-                y: walk.y + (run.y - walk.y) * runWeight,
-                z: walk.z + (run.z - walk.z) * runWeight
+                x: walk.x + (run.x - walk.x) * inst.runWeight,
+                y: walk.y + (run.y - walk.y) * inst.runWeight,
+                z: walk.z + (run.z - walk.z) * inst.runWeight
             };
         };
 
         return {
-            weight: blendWeight,
+            weight: inst.blendWeight,
             offsets: {
                 spine: lerpBone('spine'),
                 chest: lerpBone('chest'),

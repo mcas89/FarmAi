@@ -47,7 +47,7 @@ export const AnimationEngine = {
         const brainOffsets = CharacterBrain.update(delta, isIdle);
 
         // PRIO 3: Caminhada (Gerador procedural das pernas e braços)
-        const walkData = WalkAnimation.getOffsets(delta, isMoving, isRunning);
+        const walkData = WalkAnimation.getOffsets(delta, isMoving, isRunning, uuid);
 
         // PRIO 4: A Vida oscila de forma autônoma
         const lifeOffsets = LifeAnimation.getOffsets(delta, brainOffsets.breathMultiplier, isIdle);
