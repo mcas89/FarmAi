@@ -102,6 +102,17 @@ export function LoginScreen() {
                         m.useQuestSystem.getState().initializeQuests(data.dailyQuests, data.lastResetDate);
                     });
                     
+                    if (data.achievements) {
+                        import('../../../systems/useAchievementSystem').then(m => {
+                            m.useAchievementSystem.setState({ achievements: data.achievements });
+                        });
+                    }
+
+                    if (data.unlockedCharacters) {
+                        import('../../../systems/usePlayerSystem').then(m => {
+                            m.usePlayerSystem.setState({ unlockedCharacters: data.unlockedCharacters });
+                        });
+                    }
                     // Restaura posição e personagem se existirem
                     if (data.position) {
                         import('../../../systems/usePlayerSystem').then(m => {

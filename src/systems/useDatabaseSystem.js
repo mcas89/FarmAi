@@ -103,7 +103,7 @@ export const useDatabaseSystem = create((set, get) => ({
   },
 
   // Salva o estado atual do jogo no Firebase
-  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura = 0, lastWeeklyReset = '', achievements = [], unlockedCharacters = ['san.vrm', 'deric.vrm'], inventory = []) => {
+  saveGameState: async (position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, lastWeeklyReset, achievements, unlockedCharacters, inventory) => {
     if (!db || !auth.currentUser) return; 
     
     try {
@@ -111,27 +111,33 @@ export const useDatabaseSystem = create((set, get) => ({
       const currentWeek = getCurrentWeekString();
       
       const payload = {
-        position: { 
-            x: (position && position[0]) || 0, 
-            y: (position && position[1]) || 0, 
-            z: (position && position[2]) || 0 
-        },
-        comboCount: comboCount || 0,
-        maxCombo: maxCombo || 0,
-        activeModel: activeModel || 'san.vrm',
-        aura: aura || 0,
-        auracash: diamonds || 0,
-        dailyQuests: dailyQuests || [],
-        achievements: achievements || [],
-        unlockedCharacters: unlockedCharacters || ['san.vrm', 'deric.vrm'],
-        inventory: inventory || [],
-        lastResetDate: lastResetDate || '',
-        lastWeeklyReset: currentWeek, // Marca que a aura salva pertence à semana atual
         lastUpdate: new Date().toISOString()
       };
 
-      // Salva a Aura semanal no campo com o nome específico da semana (Ex: weeklyAura_2026_W30)
-      payload[`weeklyAura_${currentWeek}`] = weeklyAura || 0;
+      if (position !== undefined) {
+          payload.position = { 
+              x: (position && position[0]) || 0, 
+              y: (position && position[1]) || 0, 
+              z: (position && position[2]) || 0 
+          };
+      }
+      if (comboCount !== undefined) payload.comboCount = comboCount;
+      if (maxCombo !== undefined) payload.maxCombo = maxCombo;
+      if (activeModel !== undefined) payload.activeModel = activeModel;
+      if (aura !== undefined) payload.aura = aura;
+      if (diamonds !== undefined) payload.auracash = diamonds;
+      if (dailyQuests !== undefined) payload.dailyQuests = dailyQuests;
+      if (achievements !== undefined) payload.achievements = achievements;
+      if (unlockedCharacters !== undefined) payload.unlockedCharacters = unlockedCharacters;
+      if (inventory !== undefined) payload.inventory = inventory;
+      if (lastResetDate !== undefined) payload.lastResetDate = lastResetDate;
+
+      if (weeklyAura !== undefined) {
+          payload[`weeklyAura_${currentWeek}`] = weeklyAura;
+          payload.lastWeeklyReset = currentWeek;
+      } else if (lastWeeklyReset !== undefined) {
+          payload.lastWeeklyReset = lastWeeklyReset;
+      }
 
       await setDoc(userRef, payload, { merge: true }); 
       
