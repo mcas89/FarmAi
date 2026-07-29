@@ -34,14 +34,14 @@ export const AnimationEngine = {
         getEngineInstance(uuid).currentBasePose = poseName; 
     },
     
-    update: (vrm, delta, isLeftFarming, isRightFarming, isMoving = false, isIdle = false, isRunning = false) => {
+    update: (vrm, delta, isLeftFarming, isRightFarming, isMoving = false, isIdle = false, isRunning = false, comboCount = 0) => {
         if (!vrm || !vrm.humanoid) return;
 
         const uuid = vrm.scene.uuid;
         const inst = getEngineInstance(uuid);
 
         // PRIO 5/6: Consulta estado atual das ações do usuário
-        const actionStates = SixSevenAction.update(delta, isLeftFarming, isRightFarming, uuid);
+        const actionStates = SixSevenAction.update(delta, isLeftFarming, isRightFarming, comboCount, uuid);
         
         // PRIO 2: O Cérebro toma decisões do momento (olhar, respirar fundo, idle animations)
         const brainOffsets = CharacterBrain.update(delta, isIdle);
@@ -62,20 +62,30 @@ export const AnimationEngine = {
             let actionTargetPose = null;
             let actionLerp = lerpOverride || 0.1;
             
-            if (side === 'left') {
+            if (side === 'left' && actionStates.left) {
                 actionTargetPose = actionStates.left.targetPose;
                 actionLerp = actionStates.left.lerpFactor;
-            } else if (side === 'right') {
+            } else if (side === 'right' && actionStates.right) {
                 actionTargetPose = actionStates.right.targetPose;
                 actionLerp = actionStates.right.lerpFactor;
+            } else if (side === 'body' && actionStates.body) {
+                actionTargetPose = actionStates.body.targetPose;
+                actionLerp = actionStates.body.lerpFactor;
             }
             
-            // Se o braço não está em ação, ou é um osso do corpo central, a BasePose assume.
+            // Se o braço não está em ação, ou a ação retornou null para ele, a BasePose assume.
             const targetPoseName = actionTargetPose || inst.currentBasePose;
 
             axes.forEach(axis => {
                 // [PRIO 1] - O valor absoluto intocável da pose
-                const targetValue = getPoseValue(targetPoseName, boneName, axis);
+                let targetValue;
+                if (typeof targetPoseName === 'string') {
+                    targetValue = getPoseValue(targetPoseName, boneName, axis);
+                } else if (targetPoseName && targetPoseName[boneName] && targetPoseName[boneName][axis] !== undefined) {
+                    targetValue = targetPoseName[boneName][axis];
+                } else {
+                    targetValue = getPoseValue(inst.currentBasePose, boneName, axis);
+                }
                 
                 // Interpola para suavizar a transição de qualquer estado para outro
                 inst.smoothedPose[boneName][axis] = THREE.MathUtils.lerp(
@@ -115,14 +125,27 @@ export const AnimationEngine = {
         const hipsBone = vrm.humanoid.getNormalizedBoneNode('hips');
         if (hipsBone) {
             if (hipsBone.userData.baseY === undefined) hipsBone.userData.baseY = hipsBone.position.y;
+            if (hipsBone.userData.baseX === undefined) hipsBone.userData.baseX = hipsBone.position.x;
+            if (hipsBone.userData.baseZ === undefined) hipsBone.userData.baseZ = hipsBone.position.z;
+            
             const brainHipsY = brainOffsets.hipsPosY || 0;
             
             let walkHipsY = 0;
             if (walkData && walkData.offsets && walkData.offsets.hipsPosition && walkData.offsets.hipsPosition.y !== undefined) {
                 walkHipsY = walkData.offsets.hipsPosition.y * walkData.weight;
             }
+
+            // Puxa o hipsPosition do json se a ação body prover
+            let actionHipsX = 0, actionHipsY = 0, actionHipsZ = 0;
+            if (actionStates.body && actionStates.body.targetPose && actionStates.body.targetPose.hipsPosition) {
+                actionHipsX = actionStates.body.targetPose.hipsPosition.x || 0;
+                actionHipsY = actionStates.body.targetPose.hipsPosition.y || 0;
+                actionHipsZ = actionStates.body.targetPose.hipsPosition.z || 0;
+            }
             
-            hipsBone.position.y = hipsBone.userData.baseY + brainHipsY + walkHipsY;
+            hipsBone.position.x = hipsBone.userData.baseX + actionHipsX;
+            hipsBone.position.y = hipsBone.userData.baseY + brainHipsY + walkHipsY + actionHipsY;
+            hipsBone.position.z = hipsBone.userData.baseZ + actionHipsZ;
         }
 
         // CORPO CENTRAL
@@ -154,5 +177,7 @@ export const AnimationEngine = {
         applyBone('rightLowerLeg', ['x', 'y', 'z'], 'body', LEG_LERP);
         applyBone('leftFoot', ['x', 'y', 'z'], 'body', LEG_LERP);
         applyBone('rightFoot', ['x', 'y', 'z'], 'body', LEG_LERP);
+        applyBone('leftToes', ['x', 'y', 'z'], 'body', LEG_LERP);
+        applyBone('rightToes', ['x', 'y', 'z'], 'body', LEG_LERP);
     }
 };

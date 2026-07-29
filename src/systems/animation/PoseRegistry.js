@@ -1,13 +1,16 @@
 export const Poses = {
-    // Pose base (neutra/descanso)
+    // Pose base (neutra/descanso) - Importada do calibrador
     arms_down_pose: {
         hips: { x: 0, y: -0.27, z: 0 },
-        leftShoulder: { z: -0.39 },
-        leftUpperArm: { z: -0.6 },
-        leftLowerArm: { z: -0.24 },
-        rightShoulder: { z: 0.36, y: 0.09 },
-        rightUpperArm: { z: 0.65 },
-        rightLowerArm: { z: 0.33 }
+        chest: { x: 0.0045, y: 0, z: 0 },
+        leftShoulder: { x: 0, y: 0, z: -0.0524 },
+        leftUpperArm: { x: 0, y: 0, z: -1.309 },
+        leftLowerArm: { x: 0, y: 0, z: -0.0698 },
+        leftHand: { x: 0, y: 0, z: -0.0064 },
+        rightShoulder: { x: 0, y: 0, z: 0.0817 },
+        rightUpperArm: { x: 0.087, y: 0, z: 1.2503 },
+        rightLowerArm: { x: 0, y: 0, z: 0.1333 },
+        rightHand: { x: 0, y: 0, z: 0.0294 }
     },
 
     // Six Seven: Frame 01

@@ -15,7 +15,9 @@ export const useUISystem = create((set) => ({
         auracash: 0
     },
 
+    farmMode: 'six_seven', // six_seven ou none
     setScreen: (screen, params = null) => set({ currentScreen: screen, screenParams: params }),
+    setFarmMode: (mode) => set({ farmMode: mode }),
     
     // Modal da Loja de Poções
     isShopModalOpen: false,

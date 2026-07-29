@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useAuraSystem } from '../../systems/useAuraSystem';
 import { useFarmSystem } from '../../systems/useFarmSystem';
 import { usePlayerSystem } from '../../systems/usePlayerSystem';
+import { useUISystem } from '../../systems/useUISystem';
 import { AuraSystem } from '../../systems/rhythm/AuraSystem';
 import { Joystick } from './Joystick';
 
 export function MobileHUD() {
     const { aura, message, lastPoints } = useAuraSystem();
     const { activeModel, setActiveModel, isDancing, advanceDance } = usePlayerSystem();
+    const farmMode = useUISystem(state => state.farmMode);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const characters = ['san.vrm', 'deric.vrm', 'carol.vrm', 'rafa.vrm', 'mary.vrm', 'eric.vrm'];
 
@@ -24,13 +26,13 @@ export function MobileHUD() {
     // Integração de Inputs: Envia apenas o estado puro para o AuraSystem
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === '1' && !e.repeat) AuraSystem.setRawInput('left', true);
-            if (e.key === '2' && !e.repeat) AuraSystem.setRawInput('right', true);
+            if (e.key === '6' && !e.repeat) AuraSystem.setRawInput('left', true);
+            if (e.key === '7' && !e.repeat) AuraSystem.setRawInput('right', true);
         };
 
         const handleKeyUp = (e) => {
-            if (e.key === '1') AuraSystem.setRawInput('left', false);
-            if (e.key === '2') AuraSystem.setRawInput('right', false);
+            if (e.key === '6') AuraSystem.setRawInput('left', false);
+            if (e.key === '7') AuraSystem.setRawInput('right', false);
         };
 
         window.addEventListener('keydown', handleKeyDown);
@@ -135,21 +137,43 @@ export function MobileHUD() {
                 </div>
             </div>
 
-            {/* Farm Zones Livres na Tela */}
-            <div style={{ flex: 1, display: 'flex', pointerEvents: 'none' }}>
-                <div 
-                    style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }}
-                    onPointerDown={handleLeftDown}
-                    onPointerUp={handleLeftUp}
-                    onPointerCancel={handleLeftUp}
-                />
-                <div style={{ width: '40%', pointerEvents: 'none' }}></div>
-                <div 
-                    style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }}
-                    onPointerDown={handleRightDown}
-                    onPointerUp={handleRightUp}
-                    onPointerCancel={handleRightUp}
-                />
+            {/* Zonas de Farm */}
+            <div style={{ flex: 1, display: 'flex', pointerEvents: 'none', position: 'relative' }}>
+                {farmMode === 'six_seven' && (
+                    <>
+                        {/* Botão 6 (Esquerda) */}
+                        <div style={{ 
+                            position: 'absolute', top: '50%', left: '8%', transform: 'translateY(-50%)',
+                            width: '100px', height: '100px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.15)',
+                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            fontSize: '3.5rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
+                            touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
+                            userSelect: 'none'
+                        }}
+                        onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleLeftDown(e); }}
+                        onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
+                        onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
+                        >
+                            6
+                        </div>
+
+                        {/* Botão 7 (Direita) */}
+                        <div style={{ 
+                            position: 'absolute', top: '50%', right: '8%', transform: 'translateY(-50%)',
+                            width: '100px', height: '100px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.15)',
+                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            fontSize: '3.5rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
+                            touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
+                            userSelect: 'none'
+                        }}
+                        onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleRightDown(e); }}
+                        onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
+                        onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
+                        >
+                            7
+                        </div>
+                    </>
+                )}
             </div>
 
             <Joystick />

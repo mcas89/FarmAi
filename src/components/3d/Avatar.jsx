@@ -154,7 +154,7 @@ export function Avatar({ url }) {
     const joystickDist = Math.hypot(joystick.x, joystick.y);
     const isRunning = isMoving && (keys.current.shift || joystickDist > 0.8);
 
-    AnimationEngine.update(vrm, delta, leftFarmActive, rightFarmActive, isMoving, isIdle, isRunning);
+    AnimationEngine.update(vrm, delta, leftFarmActive, rightFarmActive, isMoving, isIdle, isRunning, comboCount);
     // SISTEMA COMPLEMENTAR: PISCAR OLHOS (BLINK)
     // =====================================
     // Arquitetura preservada: O Engine de ossos não é tocado.

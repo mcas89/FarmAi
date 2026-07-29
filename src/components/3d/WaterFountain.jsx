@@ -9,25 +9,24 @@ export function WaterFountain(props) {
     const { scene } = useGLTF('/itens/fonte_agua.glb');
     const waterMaterials = useRef([]);
 
-    useEffect(() => {
-        // Clona a cena para garantir que possamos modificá-la sem afetar cache global
-        const clonedScene = scene.clone();
+    // Usa useMemo para clonar a cena de forma segura uma única vez, antes do primeiro render
+    const clonedScene = React.useMemo(() => {
+        const clone = scene.clone();
+        waterMaterials.current = []; // reseta o array para evitar vazamento se re-renderizar
         
-        clonedScene.traverse((child) => {
+        clone.traverse((child) => {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
                 
                 if (child.material) {
-                    // Tenta identificar qual é o material da água pelo nome
+                    // Clona o material para não afetar cache
+                    child.material = child.material.clone();
+                    
                     const matName = child.material.name.toLowerCase();
                     const isWater = matName.includes('agua') || matName.includes('water') || matName.includes('liquid') || child.material.transparent;
                     
                     if (isWater) {
-                        // Fazemos um clone do material para animar separadamente sem bugar outros objetos
-                        child.material = child.material.clone();
-                        
-                        // Configurações para deixar a água no estilo Anime/Stylized
                         child.material.transparent = true;
                         child.material.opacity = 0.65;
                         child.material.color = new THREE.Color('#38bdf8'); // Azul piscina vivo
@@ -35,7 +34,6 @@ export function WaterFountain(props) {
                         child.material.metalness = 0.1;
                         child.material.envMapIntensity = 2.0;
 
-                        // Se não tiver mapa normal/bump, a gente força os UVs a repetirem para podermos deslizar a cor
                         if (child.material.map) {
                             child.material.map.wrapS = THREE.RepeatWrapping;
                             child.material.map.wrapT = THREE.RepeatWrapping;
@@ -43,16 +41,16 @@ export function WaterFountain(props) {
 
                         waterMaterials.current.push(child.material);
                     } else {
-                        // Para as pedras/concreto da fonte, deixa opaco e projeta sombra normal
+                        // Para as pedras/concreto da fonte
                         child.material.roughness = 0.8;
+                        // Garantir que não fique preta se o mapa falhar
+                        child.material.needsUpdate = true;
                     }
                 }
             }
         });
         
-        // Substituímos a cena carregada pela clonada
-        scene.copy(clonedScene);
-        
+        return clone;
     }, [scene]);
 
     useFrame((state, delta) => {
@@ -73,7 +71,7 @@ export function WaterFountain(props) {
 
     return (
         <group {...props}>
-            <primitive object={scene} />
+            <primitive object={clonedScene} />
             <AmbientMagic count={15} color="#38bdf8" radius={2.5} height={3} speed={0.4} size={0.3} position={[0, 0, 0]} />
         </group>
     );

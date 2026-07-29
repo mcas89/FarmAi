@@ -9,7 +9,7 @@ import { Joystick } from '../Joystick';
 import { 
     Settings, Trophy, Crown, 
     BarChart2, Shield, ScrollText, Gift, Briefcase, ShoppingCart, 
-    Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map, FlaskConical
+    Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map, FlaskConical, Pickaxe
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
@@ -23,7 +23,10 @@ export function GameHUD() {
     const nickname = stats.nickname || 'Marcos';
     const isDancing = useDanceSystem(state => state.isDancing);
     const inventory = useUISystem(state => state.inventory || []);
+    const farmMode = useUISystem(state => state.farmMode);
+    const setFarmMode = useUISystem(state => state.setFarmMode);
     const [showInventoryModal, setShowInventoryModal] = useState(false);
+    const [showFarmModal, setShowFarmModal] = useState(false);
 
 
     const [progression, setProgression] = useState(null);
@@ -118,12 +121,12 @@ export function GameHUD() {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === '1' && !e.repeat) AuraSystem.setRawInput('left', true);
-            if (e.key === '2' && !e.repeat) AuraSystem.setRawInput('right', true);
+            if (e.key === '6' && !e.repeat) AuraSystem.setRawInput('left', true);
+            if (e.key === '7' && !e.repeat) AuraSystem.setRawInput('right', true);
         };
         const handleKeyUp = (e) => {
-            if (e.key === '1') AuraSystem.setRawInput('left', false);
-            if (e.key === '2') AuraSystem.setRawInput('right', false);
+            if (e.key === '6') AuraSystem.setRawInput('left', false);
+            if (e.key === '7') AuraSystem.setRawInput('right', false);
         };
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
@@ -677,11 +680,27 @@ export function GameHUD() {
                 </div>
             </div>
 
-            {/* BOTÕES LADO DIREITO (Inventário e Mapa) */}
+            {/* BOTÕES LADO DIREITO (Inventário, Mapa e Modo Farm) */}
             <div style={{
                 position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, pointerEvents: 'auto',
                 display: 'flex', flexDirection: 'column', gap: '15px'
             }}>
+                {/* Botão Modos de Farm */}
+                <div className="top-btn anim-float" style={{ 
+                    width: '45px', height: '45px', borderRadius: '50%', position: 'relative',
+                    background: showFarmModal ? 'rgba(234, 179, 8, 0.4)' : 'var(--bg-glass)',
+                    border: showFarmModal ? '1px solid #eab308' : '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: showFarmModal ? '0 0 15px rgba(234, 179, 8, 0.5)' : 'none'
+                }} onClick={() => setShowFarmModal(true)}>
+                    <Pickaxe size={22} color={showFarmModal ? "#fff" : "#eab308"} />
+                    {farmMode !== 'none' && (
+                        <div style={{
+                            position: 'absolute', top: '-2px', right: '-2px',
+                            background: '#eab308', borderRadius: '50%',
+                            width: '12px', height: '12px', border: '2px solid #000'
+                        }} />
+                    )}
+                </div>
                 {/* Botão Inventário de Poções */}
                 <div className="top-btn anim-float" style={{ 
                     width: '45px', height: '45px', borderRadius: '50%', position: 'relative',
@@ -785,6 +804,54 @@ export function GameHUD() {
                 </div>
             )}
 
+            {/* MODAL MODOS DE FARM */}
+            {showFarmModal && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 100,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'auto'
+                }} onClick={() => setShowFarmModal(false)}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, #422006, #1e293b)',
+                        border: '2px solid #eab308', borderRadius: '16px',
+                        width: '90%', maxWidth: '400px', padding: '24px',
+                        boxShadow: '0 0 30px rgba(234, 179, 8, 0.4)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Pickaxe color="#eab308" /> Modos de Farm
+                            </h2>
+                            <button onClick={() => setShowFarmModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {/* Card do Six Seven */}
+                            <div style={{
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                background: farmMode === 'six_seven' ? 'rgba(234, 179, 8, 0.15)' : 'rgba(255,255,255,0.05)', 
+                                border: farmMode === 'six_seven' ? '1px solid #eab308' : '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '12px', padding: '16px', cursor: 'pointer', transition: 'all 0.2s'
+                            }} onClick={() => {
+                                setFarmMode(farmMode === 'six_seven' ? 'none' : 'six_seven');
+                                setShowFarmModal(false);
+                            }}>
+                                <div>
+                                    <h3 style={{ margin: 0, color: farmMode === 'six_seven' ? '#eab308' : '#fff', fontSize: '1rem' }}>Modo Six Seven</h3>
+                                    <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>Ritmo de 2 toques (6 e 7) alternados.</p>
+                                </div>
+                                <div style={{ 
+                                    width: '24px', height: '24px', borderRadius: '50%', border: '2px solid #eab308',
+                                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                                    background: farmMode === 'six_seven' ? '#eab308' : 'transparent'
+                                }}>
+                                    {farmMode === 'six_seven' && <div style={{ width: '10px', height: '10px', background: '#000', borderRadius: '50%' }} />}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* BOTTOM STATS HUD (COMPACT PILL) */}
             <div className={comboCount > 50 ? 'anim-footer-fire' : comboCount > 10 ? 'anim-footer-epic' : ''} style={{ 
                 position: 'absolute', bottom: '15px', left: '50%', transform: 'translateX(-50%)',
@@ -851,11 +918,49 @@ export function GameHUD() {
                 </div>
             </div>
 
-            {/* Farm Zones Livres na Tela (MANTIDAS INTACTAS E INVISÍVEIS) */}
+            {/* Zonas de Farm (Six Seven e Livres) */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', pointerEvents: 'none', zIndex: 4 }}>
-                <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={handleLeftDown} onPointerUp={handleLeftUp} onPointerCancel={handleLeftUp} />
-                <div style={{ width: '40%', pointerEvents: 'none' }}></div>
-                <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={handleRightDown} onPointerUp={handleRightUp} onPointerCancel={handleRightUp} />
+                {farmMode === 'six_seven' ? (
+                    <>
+                        {/* Botão 6 (Esquerda) */}
+                        <div style={{ 
+                            position: 'absolute', top: '50%', left: '8%', transform: 'translateY(-50%)',
+                            width: '100px', height: '100px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.15)',
+                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            fontSize: '3.5rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
+                            touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
+                            userSelect: 'none'
+                        }}
+                        onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleLeftDown(e); }}
+                        onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
+                        onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
+                        >
+                            6
+                        </div>
+
+                        {/* Botão 7 (Direita) */}
+                        <div style={{ 
+                            position: 'absolute', top: '50%', right: '8%', transform: 'translateY(-50%)',
+                            width: '100px', height: '100px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.15)',
+                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            fontSize: '3.5rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
+                            touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
+                            userSelect: 'none'
+                        }}
+                        onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleRightDown(e); }}
+                        onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
+                        onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
+                        >
+                            7
+                        </div>
+                    </>
+                ) : farmMode === 'free' ? (
+                    <>
+                        <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={handleLeftDown} onPointerUp={handleLeftUp} onPointerCancel={handleLeftUp} />
+                        <div style={{ width: '40%', pointerEvents: 'none' }}></div>
+                        <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={handleRightDown} onPointerUp={handleRightUp} onPointerCancel={handleRightUp} />
+                    </>
+                ) : null}
             </div>
 
             {/* RANKING MODAL TRANSLÚCIDO */}
