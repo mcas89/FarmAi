@@ -145,7 +145,7 @@ export const useDatabaseSystem = create((set, get) => ({
     } catch (error) {
       console.error('❌ Erro ao salvar no Firebase:', error);
     }
-  }
+  },
   // Incrementa o saldo de AuraCash atomicamente via FieldValue.increment()
   // Isso evita race conditions quando o app carrega e dados do Firebase chegam depois do crédito
   incrementAuracash: async (amount) => {
