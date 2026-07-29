@@ -11,8 +11,8 @@ import { getPlayerLevel, getPlayerTitle } from '../../systems/progressionRules';
 export function RemotePlayer({ playerData }) {
   const [vrm, setVrm] = useState(null);
   
-  const targetPos = useRef(new THREE.Vector3(playerData.x || 0, playerData.y || 0, playerData.z || 0));
-  const currentPos = useRef(new THREE.Vector3(playerData.x || 0, playerData.y || 0, playerData.z || 0));
+  const targetPos = useRef(new THREE.Vector3(playerData.position?.[0] || 0, playerData.position?.[1] || 0, playerData.position?.[2] || 0));
+  const currentPos = useRef(new THREE.Vector3(playerData.position?.[0] || 0, playerData.position?.[1] || 0, playerData.position?.[2] || 0));
   const groupRef = useRef();
   
   // Efeito Visual de ganho de aura (Float UP)
@@ -90,8 +90,8 @@ export function RemotePlayer({ playerData }) {
   }, [playerData.model]);
 
   useEffect(() => {
-    targetPos.current.set(playerData.x || 0, playerData.y || 0, playerData.z || 0);
-  }, [playerData.x, playerData.y, playerData.z]);
+    targetPos.current.set(playerData.position?.[0] || 0, playerData.position?.[1] || 0, playerData.position?.[2] || 0);
+  }, [playerData.position]);
 
   useFrame((state, delta) => {
     if (!vrm) return;
@@ -112,13 +112,13 @@ export function RemotePlayer({ playerData }) {
         vrm.scene.quaternion.slerp(targetQuat, 10 * delta); 
     }
 
-    const isMoving = playerData.anim === 'run' || playerData.anim === 'walk';
-    const isRunning = playerData.anim === 'run';
+    const isMoving = playerData.animation === 'run' || playerData.animation === 'walk';
+    const isRunning = playerData.animation === 'run';
     
     const leftFarmActive = playerData.leftFarm || false;
     const rightFarmActive = playerData.rightFarm || false;
     
-    const isIdle = (playerData.anim === 'idle' || !isMoving) && !leftFarmActive && !rightFarmActive;
+    const isIdle = (playerData.animation === 'idle' || !isMoving) && !leftFarmActive && !rightFarmActive;
     
     AnimationEngine.update(vrm, delta, leftFarmActive, rightFarmActive, isMoving, isIdle, isRunning);
   });

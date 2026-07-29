@@ -11,6 +11,7 @@ type("number")(Player.prototype, "z");
 type("number")(Player.prototype, "rotation");
 type("number")(Player.prototype, "score");
 type("string")(Player.prototype, "animation");
+type("string")(Player.prototype, "model");
 
 class FarmaAiState extends Schema {
     constructor() {
@@ -71,6 +72,7 @@ class FarmaAiRoom extends Room {
         newPlayer.rotation = 0;
         newPlayer.score = 0;
         newPlayer.animation = "Idle";
+        newPlayer.model = options.model || "san.vrm";
 
         this.state.players.set(client.sessionId, newPlayer);
     }

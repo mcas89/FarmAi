@@ -1,0 +1,1 @@
+const Colyseus = require('@colyseus/sdk'); const client = new Colyseus.Client('ws://localhost:2567'); client.joinOrCreate('farma_room').then(room => console.log('State:', Object.keys(room.state), room.state.players)).catch(console.error);
