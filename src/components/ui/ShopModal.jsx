@@ -6,10 +6,9 @@ import { AuracashIcon } from './AuracashIcon';
 export function ShopModal() {
     const isShopModalOpen = useUISystem(state => state.isShopModalOpen);
     const setShopModalOpen = useUISystem(state => state.setShopModalOpen);
-    const spendAuracash = useUISystem(state => state.spendAuracash);
-    // Extraindo auracash do state
-    const playerStats = useUISystem(state => state.playerStats);
-    const auracash = playerStats?.auracash || playerStats?.diamonds || 0;
+    // Usar a Aura ganha no jogo como moeda da loja
+    const auracash = useAuraSystem(state => state.aura);
+    const spendAura = useAuraSystem(state => state.spendAura);
     
     const setMultiplier = useAuraSystem(state => state.setMultiplier);
     const currentMultiplier = useAuraSystem(state => state.auraMultiplier);
@@ -25,7 +24,7 @@ export function ShopModal() {
 
     const handleBuy = (potion) => {
         if (auracash >= potion.price) {
-            spendAuracash(potion.price);
+            spendAura(potion.price);
             setMultiplier(potion.multiplier, 5 * 60 * 1000);
             import('../../systems/useQuestSystem').then(module => {
                 module.useQuestSystem.getState().updateQuestProgress('use_potion', 1);

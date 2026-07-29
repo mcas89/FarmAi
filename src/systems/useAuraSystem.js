@@ -20,6 +20,13 @@ export const useAuraSystem = create((set, get) => ({
         auraMultiplier: val,
         multiplierEndTime: durationMs ? Date.now() + durationMs : null
     }),
+
+    spendAura: (amount) => set((state) => {
+        if (state.aura >= amount) {
+            return { aura: state.aura - amount };
+        }
+        return state;
+    }),
     
     registerHit: (pointsGained, message, comboCount = 0, isMilestone = false, side = 'left') => {
         // PASSO 1: Atualiza o estado do combo IMEDIATAMENTE (sem bloqueio)
