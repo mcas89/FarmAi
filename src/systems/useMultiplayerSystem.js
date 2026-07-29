@@ -48,52 +48,57 @@ export const useMultiplayerSystem = create((set, get) => ({
 
             console.log("Conectado ao Colyseus! ID da Sessão:", room.sessionId);
 
-            // Escutar adições de jogadores
-            room.state.players.onAdd((player, sessionId) => {
-                if (sessionId !== room.sessionId) {
-                    console.log("Novo jogador:", player?.name, sessionId);
-                    set((state) => ({
-                        remotePlayers: {
-                            ...state.remotePlayers,
-                            [sessionId]: {
-                                id: sessionId,
-                                position: player.position ? [player.position.x, player.position.y, player.position.z] : [0,0,0],
-                                rotation: player.rotation ? [player.rotation.x, player.rotation.y, player.rotation.z] : [0,0,0],
-                                animation: player.animation || 'Idle',
-                                name: player?.name,
-                                model: player.model
-                            }
-                        }
-                    }));
-                }
+            // Esperar o estado inicial chegar do servidor
+            room.onStateChange.once((state) => {
+                if (!state.players) return;
 
-                // Escutar mudanças no jogador
-                player.onChange(() => {
+                // Escutar adições de jogadores
+                state.players.onAdd((player, sessionId) => {
                     if (sessionId !== room.sessionId) {
-                        set((state) => ({
+                        console.log("Novo jogador:", player?.name, sessionId);
+                        set((stateObj) => ({
                             remotePlayers: {
-                                ...state.remotePlayers,
+                                ...stateObj.remotePlayers,
                                 [sessionId]: {
-                                    ...state.remotePlayers[sessionId],
-                                    position: player.position ? [player.position.x, player.position.y, player.position.z] : [0,0,0],
-                                    rotation: player.rotation ? [player.rotation.x, player.rotation.y, player.rotation.z] : [0,0,0],
-                                    animation: player.animation,
+                                    id: sessionId,
+                                    position: player.position ? [player.position.x, player.position.y, player.position.z] : [player.x || 0, player.y || 0, player.z || 0],
+                                    rotation: player.rotation ? [player.rotation.x, player.rotation.y, player.rotation.z] : [0, player.rotation || 0, 0],
+                                    animation: player.animation || 'Idle',
                                     name: player?.name,
                                     model: player.model
                                 }
                             }
                         }));
                     }
-                });
-            });
 
-            // Escutar saídas de jogadores
-            room.state.players.onRemove((player, sessionId) => {
-                console.log("Jogador saiu:", player?.name, sessionId);
-                set((state) => {
-                    const newRemotePlayers = { ...state.remotePlayers };
-                    delete newRemotePlayers[sessionId];
-                    return { remotePlayers: newRemotePlayers };
+                    // Escutar mudanças no jogador
+                    player.onChange(() => {
+                        if (sessionId !== room.sessionId) {
+                            set((stateObj) => ({
+                                remotePlayers: {
+                                    ...stateObj.remotePlayers,
+                                    [sessionId]: {
+                                        ...stateObj.remotePlayers[sessionId],
+                                        position: player.position ? [player.position.x, player.position.y, player.position.z] : [player.x || 0, player.y || 0, player.z || 0],
+                                        rotation: player.rotation ? [player.rotation.x, player.rotation.y, player.rotation.z] : [0, player.rotation || 0, 0],
+                                        animation: player.animation,
+                                        name: player?.name,
+                                        model: player.model
+                                    }
+                                }
+                            }));
+                        }
+                    });
+                });
+
+                // Escutar saídas de jogadores
+                state.players.onRemove((player, sessionId) => {
+                    console.log("Jogador saiu:", player?.name, sessionId);
+                    set((stateObj) => {
+                        const newRemotePlayers = { ...stateObj.remotePlayers };
+                        delete newRemotePlayers[sessionId];
+                        return { remotePlayers: newRemotePlayers };
+                    });
                 });
             });
 
