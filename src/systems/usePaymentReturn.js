@@ -186,27 +186,46 @@ export function usePaymentReturn() {
         // Reprocessa pendentes de sessões anteriores
         reprocessPendingPayments(updateStats);
 
-        // Detecta retorno do checkout InfinitePay
+        // Detecta retorno do checkout InfinitePay (eles podem adicionar slug e transaction_nsu, ou manter nossos params)
         const urlParams = new URLSearchParams(window.location.search);
         const isSuccess = urlParams.get('payment_success');
+        const orderNsuUrl = urlParams.get('order_nsu');
+        const slug = urlParams.get('slug');
+        const transactionNsu = urlParams.get('transaction_nsu');
         
-        if (isSuccess !== 'true') {
+        // Consideramos retorno se tiver o nosso payment_success OU se a InfinitePay injetar o slug/order_nsu
+        if (isSuccess !== 'true' && !slug && !transactionNsu) {
             console.log("[InfinitePay] 🛠️ Nenhum pagamento novo detectado na URL.");
             return;
         }
 
-        const orderNsu = urlParams.get('order_nsu');
-        const packId   = urlParams.get('pack_id');
+        console.log(`[InfinitePay] 🛠️ Retorno detectado na URL! NSU: ${orderNsuUrl}, Slug: ${slug}`);
 
-        console.log(`[InfinitePay] 🛠️ Retorno detectado! NSU: ${orderNsu}, Pack: ${packId}`);
-
-        if (!orderNsu || !packId) return;
+        if (!orderNsuUrl) return;
 
         // Limpa a URL imediatamente (sem parâmetros visíveis ao usuário)
         window.history.replaceState({}, document.title, window.location.pathname);
 
+        // Se a InfinitePay apagou nosso pack_id, buscamos dos pendentes
+        let packId = urlParams.get('pack_id');
+        const pending = JSON.parse(localStorage.getItem('pending_payments') || '[]');
+        
+        // Atualiza a transação pendente com os dados extras da InfinitePay (slug, transactionNsu) para ajudar na API
+        const existingIndex = pending.findIndex(p => p.orderNsu === orderNsuUrl);
+        if (existingIndex >= 0) {
+            if (!packId) packId = pending[existingIndex].packId;
+            pending[existingIndex].slug = slug;
+            pending[existingIndex].transactionNsu = transactionNsu;
+            localStorage.setItem('pending_payments', JSON.stringify(pending));
+        }
+
+        if (!packId) {
+            console.error("[InfinitePay] ❌ packId não encontrado na URL nem nos pendentes para NSU:", orderNsuUrl);
+            return;
+        }
+
         // Inicia polling em background — não bloqueia nem alerta o usuário
-        pollPaymentConfirmation(orderNsu, packId, updateStats);
+        pollPaymentConfirmation(orderNsuUrl, packId, updateStats);
 
     }, []);
 }

@@ -99,11 +99,23 @@ export async function initInfinitePayCheckout(packId, priceCents, description, u
  * @returns {Promise<boolean>}
  */
 export async function verifyInfinitePayment(orderNsu) {
+    console.log(`[InfinitePay] 📡 Chamando API de validação: POST ${getApiBase()}/payment_check`);
+
     try {
         const payload = {
             handle: INFINITE_TAG,
             order_nsu: orderNsu
         };
+
+        // Adiciona dados extras injetados pela InfinitePay, se os tivermos no localStorage
+        const pending = JSON.parse(localStorage.getItem('pending_payments') || '[]');
+        const pData = pending.find(p => p.orderNsu === orderNsu);
+        if (pData && pData.slug) {
+            payload.slug = pData.slug;
+        }
+        if (pData && pData.transactionNsu) {
+            payload.transaction_nsu = pData.transactionNsu;
+        }
 
         const endpoint = `${getApiBase()}/payment_check`;
         console.log(`[InfinitePay] 📡 Chamando API de validação: POST ${endpoint}`);
