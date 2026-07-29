@@ -2,7 +2,7 @@ import { AuracashIcon } from '../AuracashIcon';
 import React, { useEffect, useState } from 'react';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { useUISystem } from '../../../systems/useUISystem';
-import { usePlayerSystem } from '../../../systems/usePlayerSystem';
+import { usePlayerSystem, getSafeRandomSpawn } from '../../../systems/usePlayerSystem';
 import { AuraSystem } from '../../../systems/rhythm/AuraSystem';
 import { DanceSystem, useDanceSystem } from '../../../systems/animation/DanceSystem';
 import { Joystick } from '../Joystick';
@@ -18,6 +18,14 @@ export function GameHUD() {
     const { aura, message, lastPoints, comboCount, maxCombo, hitId, isMilestone, hitSide, auraMultiplier, multiplierEndTime } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const setScreen = useUISystem(state => state.setScreen);
+    
+    // Garante que a posição é resetada para a praça toda vez que o jogador SAIR do jogo
+    useEffect(() => {
+        return () => {
+            usePlayerSystem.getState().setPosition(getSafeRandomSpawn());
+        };
+    }, []);
+
     const isMapMode = useUISystem(state => state.isMapMode);
     const toggleMapMode = useUISystem(state => state.toggleMapMode);
     const nickname = stats.nickname || 'Marcos';
@@ -530,6 +538,8 @@ export function GameHUD() {
                                 await dbSys.useDatabaseSystem.getState().saveGameState(
                                     pos, comboCount, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
                                 );
+                                // Reseta a posição instantaneamente para a fonte ao sair do mapa
+                                pSys.usePlayerSystem.getState().setPosition(pSys.getSafeRandomSpawn());
                                 setScreen('MENU');
                             }}
                         >

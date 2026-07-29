@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 // Gera uma posição segura na praça (evitando o centro onde fica a fonte)
 // Raio da fonte = ~4.5m, Raio da praça = ~15m
-const getSafeRandomSpawn = () => {
+export const getSafeRandomSpawn = () => {
     const minRadius = 6.0;
     const maxRadius = 13.0;
     const radius = minRadius + Math.random() * (maxRadius - minRadius);
