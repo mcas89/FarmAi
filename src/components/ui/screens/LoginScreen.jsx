@@ -113,11 +113,10 @@ export function LoginScreen() {
                             m.usePlayerSystem.setState({ unlockedCharacters: data.unlockedCharacters });
                         });
                     }
-                    // Restaura posição e personagem se existirem
-                    if (data.position) {
+                    // Restaura apenas o personagem ativo (ignora a posição salva para nascer na praça)
+                    if (data.activeModel) {
                         import('../../../systems/usePlayerSystem').then(m => {
-                            m.usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
-                            if (data.activeModel) m.usePlayerSystem.setState({ activeModel: data.activeModel });
+                            m.usePlayerSystem.setState({ activeModel: data.activeModel });
                         });
                     }
                 }

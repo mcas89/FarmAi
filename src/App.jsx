@@ -67,8 +67,7 @@ function App() {
               maxCombo: data.maxCombo || 0 
             });
             
-            // Restaura posição e personagem 3D
-            if (data.position) usePlayerSystem.setState({ position: [data.position.x, data.position.y, data.position.z] });
+            // Restaura apenas o personagem 3D (ignora a posição salva para nascer no centro)
             if (data.activeModel) usePlayerSystem.setState({ activeModel: data.activeModel });
             if (data.unlockedCharacters) usePlayerSystem.setState({ unlockedCharacters: data.unlockedCharacters });
             

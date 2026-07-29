@@ -13,6 +13,7 @@ import { AchievementsScreen } from './screens/AchievementsScreen';
 import { QuestsScreen } from './screens/QuestsScreen';
 import { StoreScreen } from './screens/StoreScreen';
 import { GameHUD } from './screens/GameHUD';
+import { GameLoader } from './screens/GameLoader';
 
 export function GameInterface() {
     const currentScreen = useUISystem(state => state.currentScreen);
@@ -51,6 +52,7 @@ export function GameInterface() {
             pointerEvents: 'none', zIndex: 10
         }}>
             {renderScreen()}
+            {currentScreen === 'GAME' && <GameLoader />}
             <div style={{ pointerEvents: 'auto' }}>
                 <ShopModal />
             </div>
