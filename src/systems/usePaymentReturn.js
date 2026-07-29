@@ -8,6 +8,23 @@ const POLL_INTERVAL_MS = 10_000; // 10 segundos
 const POLL_TIMEOUT_MS  = 300_000; // 5 minutos
 
 /**
+ * Aguarda a inicialização do Firebase Auth antes de continuar.
+ * Como o hook roda imediatamente no carregamento da página, auth.currentUser
+ * costuma ser null nos primeiros milissegundos.
+ */
+const waitForAuth = () => new Promise((resolve) => {
+    import('../config/firebase').then(({ auth }) => {
+        if (auth.currentUser) return resolve(auth.currentUser);
+        import('firebase/auth').then(({ onAuthStateChanged }) => {
+            const unsubscribe = onAuthStateChanged(auth, (user) => {
+                unsubscribe();
+                resolve(user);
+            });
+        });
+    });
+});
+
+/**
  * Credita AuraCash atomicamente no Firebase via increment().
  * Isso evita a race condition onde o app carrega os dados do Firebase
  * DEPOIS do crédito, sobrescrevendo o saldo novo com o valor antigo.
@@ -17,6 +34,12 @@ const POLL_TIMEOUT_MS  = 300_000; // 5 minutos
  */
 async function creditAuraCash(pack, updateStats) {
     try {
+        const user = await waitForAuth();
+        if (!user) {
+            console.error('[InfinitePay] ❌ Usuário não autenticado, não foi possível creditar.');
+            return false;
+        }
+
         const dbSys = await import('./useDatabaseSystem');
 
         // 1. Incremento atômico no Firebase — não depende do estado local
