@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as Colyseus from 'colyseus.js';
+import * as Colyseus from '@colyseus/sdk';
 
 // URL do servidor local para desenvolvimento
 // Quando for para o Fly.io, trocaremos para wss://farmaai-server.fly.dev
