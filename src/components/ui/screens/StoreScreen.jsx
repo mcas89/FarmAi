@@ -87,8 +87,8 @@ export function StoreScreen() {
             showAlert("Item Adquirido", `${itemName} adquirido com sucesso!`);
             return;
         }
-        const { diamonds, spendAuracash } = useUISystem.getState();
-        const currentAuracash = diamonds || 0;
+        const { playerStats, spendAuracash } = useUISystem.getState();
+        const currentAuracash = playerStats?.diamonds || 0;
         
         if (currentAuracash >= price) {
             spendAuracash(price);
@@ -97,6 +97,19 @@ export function StoreScreen() {
             // Progressão de missão de poção
             import('../../../systems/useQuestSystem').then(module => {
                 module.useQuestSystem.getState().updateQuestProgress('use_potion', 1);
+            });
+
+            // Salvar novo saldo no banco de dados
+            import('../../../systems/useDatabaseSystem').then(dbSys => {
+                const pSys = import('../../../systems/usePlayerSystem');
+                const aSys = import('../../../systems/useAuraSystem');
+                Promise.all([pSys, aSys]).then(([pModule, aModule]) => {
+                    const pos = pModule.usePlayerSystem.getState().position;
+                    const model = pModule.usePlayerSystem.getState().activeModel;
+                    const { comboCount, maxCombo, aura, weeklyAura } = aModule.useAuraSystem.getState();
+                    const newDiamonds = currentAuracash - price;
+                    dbSys.useDatabaseSystem.getState().saveGameState(pos, comboCount, model, aura, newDiamonds, maxCombo);
+                });
             });
             
             showAlert("Poção Adquirida", `Você comprou a ${itemName}! O multiplicador de ${multiplier}x foi ativado.`);
