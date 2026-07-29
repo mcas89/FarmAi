@@ -8,6 +8,9 @@ export default defineConfig({
       overlay: false
     }
   },
+  build: {
+    chunkSizeWarningLimit: 3000,
+  },
   plugins: [
     react(),
     VitePWA({
