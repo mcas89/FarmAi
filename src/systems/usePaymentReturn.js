@@ -181,15 +181,24 @@ export function usePaymentReturn() {
     const updateStats = useUISystem(state => state.updateStats);
 
     useEffect(() => {
+        console.log("[InfinitePay] 🛠️ Inicializando usePaymentReturn. URL atual:", window.location.search);
+
         // Reprocessa pendentes de sessões anteriores
         reprocessPendingPayments(updateStats);
 
         // Detecta retorno do checkout InfinitePay
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('payment_success') !== 'true') return;
+        const isSuccess = urlParams.get('payment_success');
+        
+        if (isSuccess !== 'true') {
+            console.log("[InfinitePay] 🛠️ Nenhum pagamento novo detectado na URL.");
+            return;
+        }
 
         const orderNsu = urlParams.get('order_nsu');
         const packId   = urlParams.get('pack_id');
+
+        console.log(`[InfinitePay] 🛠️ Retorno detectado! NSU: ${orderNsu}, Pack: ${packId}`);
 
         if (!orderNsu || !packId) return;
 
