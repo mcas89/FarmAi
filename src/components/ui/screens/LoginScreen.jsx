@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { auth, db } from '../../../config/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import splashImg from '../../../assets/splash.png';
+import { AuracashIcon } from '../AuracashIcon';
 import { Mail, Lock, User, Calendar, Loader2 } from 'lucide-react';
 
 export function LoginScreen() {
@@ -30,6 +31,18 @@ export function LoginScreen() {
         try {
             if (isRegistering) {
                 // Cadastro
+                
+                // Verifica se o nome já existe
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('name', '==', name.trim()));
+                const querySnapshot = await getDocs(q);
+                
+                if (!querySnapshot.empty) {
+                    setError('Este nome de usuário já está em uso. Por favor, escolha outro.');
+                    setLoading(false);
+                    return;
+                }
+
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
                 
@@ -139,7 +152,7 @@ export function LoginScreen() {
             <div className="login-modal">
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                     <h1 style={{ margin: 0, color: '#fff', fontSize: '1.8rem', letterSpacing: '2px', textShadow: '0 0 10px #a855f7' }}>
-                        FARMA<span style={{ color: '#a855f7' }}>AI</span>
+                        FARM<span style={{ color: '#a855f7' }}>AI</span>
                     </h1>
                     <p style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '5px' }}>
                         {isRegistering ? 'Crie sua conta no Metaverso' : 'Acesse seu perfil'}
@@ -163,7 +176,7 @@ export function LoginScreen() {
                             <div className="input-group">
                                 <User size={16} color="#a855f7" className="input-icon" />
                                 <input 
-                                    type="text" placeholder="Nome Completo" 
+                                    type="text" placeholder="Nome de Usuário" 
                                     value={name} onChange={e => setName(e.target.value)}
                                     required className="glass-input" 
                                 />
@@ -243,7 +256,7 @@ export function LoginScreen() {
                         `}</style>
                         <div className="terms-content">
                             <p style={{ color: '#fff', fontWeight: 'bold' }}>Termo de Responsabilidade</p>
-                            <p>Ao acessar e utilizar o FarmaAI, você concorda que todas as informações, missões e dados virtuais fornecidos são para uso exclusivo dentro da plataforma, sem garantias de operação contínua.</p>
+                            <p>Ao acessar e utilizar o FarmAi, você concorda que todas as informações, missões e dados virtuais fornecidos são para uso exclusivo dentro da plataforma, sem garantias de operação contínua.</p>
                             
                             <p style={{ color: '#fff', fontWeight: 'bold', marginTop: '15px' }}>Política de Privacidade</p>
                             <p>Respeitamos a sua privacidade. Os dados informados (Nome, E-mail, Data de Nascimento) e seu progresso no jogo são armazenados de forma segura em nossos servidores Firebase apenas para viabilizar sua experiência no Metaverso. Não comercializamos ou compartilhamos seus dados com terceiros.</p>

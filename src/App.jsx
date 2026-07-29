@@ -103,8 +103,8 @@ function App() {
       }
     });
 
-    // 2. Auto-Save a cada 15 segundos
-    const saveInterval = setInterval(() => {
+    // 2. Função de salvamento estratégico
+    const executeGameSave = () => {
       const position = usePlayerSystem.getState().position;
       const activeModel = usePlayerSystem.getState().activeModel;
       const comboCount = useAuraSystem.getState().comboCount;
@@ -113,20 +113,36 @@ function App() {
       const weeklyAura = useAuraSystem.getState().weeklyAura;
       const diamonds = useUISystem.getState().playerStats.diamonds;
       
-      // Missões, Conquistas e Personagens
       const dailyQuests = useQuestSystem.getState().dailyQuests;
       const lastResetDate = useQuestSystem.getState().lastResetDate;
       const achievements = useAchievementSystem.getState().getSavableData();
       const unlockedCharacters = usePlayerSystem.getState().unlockedCharacters;
       
       useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements, unlockedCharacters);
-    }, 15000);
+    };
+
+    // 3. Salvar ao fechar/sair do jogo
+    const handleBeforeUnload = () => {
+      executeGameSave();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Expõe a função globalmente para podermos chamar quando telas mudarem (já que currentScreen não está no array de dep do useEffect principal)
+    window.executeGameSave = executeGameSave;
 
     return () => {
-      clearInterval(saveInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      delete window.executeGameSave;
       unsubscribe();
     };
   }, []);
+
+  // 4. Salvar quando o jogador abrir telas estratégicas
+  useEffect(() => {
+    if (window.executeGameSave && ['STORE', 'RANKING', 'ACHIEVEMENTS', 'CHARACTERS'].includes(currentScreen)) {
+        window.executeGameSave();
+    }
+  }, [currentScreen]);
 
   return (
     <ErrorBoundary>

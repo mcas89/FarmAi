@@ -90,25 +90,22 @@ export const useRankingSystem = create((set, get) => ({
                     const mUI = await import('./useUISystem');
                     mUI.useUISystem.getState().updateStats({ diamonds: currentDiamonds + reward });
                     // O prêmio foi entregue silenciosamente. (O alerta do navegador foi removido a pedido)
+                    
+                    // Salva apenas o prêmio atualizado no Firebase sem resetar a aura atual!
+                    const mPlayer = await import('./usePlayerSystem');
+                    const mQuest = await import('./useQuestSystem');
+                    const mDb = await import('./useDatabaseSystem');
+                    const mAura = await import('./useAuraSystem');
+                    
+                    const position = mPlayer.usePlayerSystem.getState().position;
+                    const activeModel = mPlayer.usePlayerSystem.getState().activeModel;
+                    const { comboCount, maxCombo, aura, weeklyAura } = mAura.useAuraSystem.getState();
+                    const { dailyQuests, lastResetDate } = mQuest.useQuestSystem.getState();
+                    
+                    mDb.useDatabaseSystem.getState().saveGameState(
+                        position, comboCount, activeModel, aura, currentDiamonds + reward, maxCombo, dailyQuests, lastResetDate, weeklyAura, currentWeek
+                    );
                 }
-
-                // Reseta a weeklyAura do jogador para a nova semana
-                const mAura = await import('./useAuraSystem');
-                mAura.useAuraSystem.setState({ weeklyAura: 0 });
-                
-                // Força o salvamento
-                const mPlayer = await import('./usePlayerSystem');
-                const mQuest = await import('./useQuestSystem');
-                const mDb = await import('./useDatabaseSystem');
-                
-                const position = mPlayer.usePlayerSystem.getState().position;
-                const activeModel = mPlayer.usePlayerSystem.getState().activeModel;
-                const { comboCount, maxCombo, aura } = mAura.useAuraSystem.getState();
-                const { dailyQuests, lastResetDate } = mQuest.useQuestSystem.getState();
-                
-                mDb.useDatabaseSystem.getState().saveGameState(
-                    position, comboCount, activeModel, aura, currentDiamonds + reward, maxCombo, dailyQuests, lastResetDate, 0, currentWeek
-                );
 
             } catch (error) {
                 console.error("Erro ao checar prêmios semanais:", error);

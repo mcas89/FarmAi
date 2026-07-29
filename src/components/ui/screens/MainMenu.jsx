@@ -1,10 +1,11 @@
+import { AuracashIcon } from '../AuracashIcon';
 import React, { useState, useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { useRankingSystem } from '../../../systems/useRankingSystem';
 import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 import { 
-    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Diamond, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus
+    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles
 } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
 import { auth } from '../../../config/firebase';
@@ -28,7 +29,7 @@ export function MainMenu() {
     const [showLobbyModal, setShowLobbyModal] = useState(false);
     const [rankingType, setRankingType] = useState('global');
     
-    const { rooms, fetchRooms, joinRoom, createRoom } = useMultiplayerSystem();
+    const { joinRoom } = useMultiplayerSystem();
     const setIsOnlineMode = useUISystem(state => state.setIsOnlineMode);
 
     const [progression, setProgression] = useState(null);
@@ -66,9 +67,6 @@ export function MainMenu() {
                 });
             });
         });
-
-        // Atualiza a lista de salas
-        fetchRooms();
     }, []);
 
     const handleJoinRoom = async (roomId) => {
@@ -392,7 +390,7 @@ export function MainMenu() {
                             <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 'bold' }}>{Math.floor(aura).toLocaleString()}</span>
                         </div>
                         <div className="anim-float" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(52,211,153,0.1)', padding: '2px 6px', borderRadius: '8px', border: '1px solid rgba(52,211,153,0.3)', animationDelay: '0.5s' }}>
-                            <Diamond size={10} color="#34d399" />
+                            <AuracashIcon size={10} color="#34d399" />
                             <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 'bold' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
                         </div>
                         <div onClick={() => setIsMenuOpen(true)} style={{ cursor: 'pointer' }}>
@@ -506,7 +504,7 @@ export function MainMenu() {
                                         {quest.title}
                                     </span>
                                     {!quest.claimed && quest.progress < quest.target && (
-                                        <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#a855f7' }}>+{quest.reward} <Diamond size={10} style={{ display: 'inline', verticalAlign: 'baseline' }} /></span>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: '900', color: '#a855f7' }}>+{quest.reward} <AuracashIcon size={10} style={{ display: 'inline', verticalAlign: 'baseline' }} /></span>
                                     )}
                                     {quest.progress >= quest.target && !quest.claimed && (
                                         <button 
@@ -634,7 +632,7 @@ export function MainMenu() {
                                 <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
                                     <span className="ranking-modal-lbl">TOTAL AURA {rankingType === 'weekly' ? 'SEMANAL' : ''}</span>
                                     <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
-                                        <Diamond size={16} color="#fcd34d" /> 
+                                        <Sparkles size={16} color="#fcd34d" /> 
                                         {rankingType === 'global' ? Math.floor(aura).toLocaleString() : Math.floor(weeklyAura || 0).toLocaleString()}
                                     </span>
                                 </div>
@@ -668,7 +666,7 @@ export function MainMenu() {
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.score.toLocaleString()}</span>
-                                                <Diamond size={10} color="#a855f7" />
+                                                <Sparkles size={10} color="#a855f7" />
                                             </div>
                                         </div>
                                     ))}
@@ -713,65 +711,31 @@ export function MainMenu() {
                                 <div>
                                     <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', letterSpacing: '2px' }}>FARMAVERSO</h2>
                                     <div style={{ color: '#a855f7', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '1px' }}>SERVIDORES ONLINE</div>
-                                </div>
+                                        </div>
                             </div>
                             <X size={24} color="#888" cursor="pointer" onClick={() => setShowLobbyModal(false)} />
                         </div>
 
                         <div className="ranking-modal-scroll" style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '10px' }}>
-                            {rooms.length === 0 ? (
-                                <div style={{ textAlign: 'center', color: '#888', marginTop: '20px', fontStyle: 'italic' }}>
-                                    Nenhuma sala ativa no momento.<br/>Seja o primeiro a criar uma!
-                                </div>
-                            ) : (
-                                rooms.map(room => {
-                                    const isFull = room.playersCount >= room.maxPlayers;
-                                    return (
-                                        <div key={room.id} style={{
-                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                            background: 'rgba(255,255,255,0.03)', padding: '12px 15px', borderRadius: '10px',
-                                            marginBottom: '8px', border: '1px solid rgba(255,255,255,0.05)'
-                                        }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '0.9rem' }}>{room.name}</span>
-                                                <span style={{ color: isFull ? '#ef4444' : '#34d399', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                                    <Users size={10} style={{ display: 'inline', marginRight: '4px' }}/>
-                                                    {room.playersCount} / {room.maxPlayers} Jogadores
-                                                </span>
-                                            </div>
-                                            
-                                            <button 
-                                                onClick={() => !isFull && handleJoinRoom(room.id)}
-                                                disabled={isFull}
-                                                style={{
-                                                    background: isFull ? 'rgba(239,68,68,0.2)' : 'linear-gradient(90deg, #a855f7, #6b21a8)',
-                                                    border: isFull ? '1px solid rgba(239,68,68,0.4)' : 'none',
-                                                    color: isFull ? '#ef4444' : '#fff', padding: '8px 16px', borderRadius: '8px',
-                                                    fontWeight: 'bold', cursor: isFull ? 'not-allowed' : 'pointer', fontSize: '0.8rem',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                {isFull ? 'LOTADA' : 'ENTRAR'}
-                                            </button>
-                                        </div>
-                                    );
-                                })
-                            )}
+                            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                                <Globe size={48} color="#a855f7" style={{ marginBottom: '15px' }} />
+                                <h3 style={{ color: '#fff', margin: '0 0 10px 0' }}>SALA GLOBAL</h3>
+                                <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '25px' }}>
+                                    Junte-se a outros jogadores em tempo real no metaverso.
+                                </p>
+                                <button 
+                                    onClick={() => handleJoinRoom('global_lobby')}
+                                    style={{
+                                        width: '100%', padding: '14px', borderRadius: '12px',
+                                        background: 'linear-gradient(90deg, #a855f7, #6b21a8)',
+                                        border: 'none', color: '#fff', fontWeight: '900',
+                                        cursor: 'pointer', fontSize: '1rem', letterSpacing: '1px'
+                                    }}
+                                >
+                                    ENTRAR AGORA
+                                </button>
+                            </div>
                         </div>
-
-                        <button 
-                            onClick={handleCreateRoom}
-                            style={{
-                                marginTop: '20px', width: '100%', background: 'rgba(52,211,153,0.1)',
-                                border: '1px solid rgba(52,211,153,0.4)', color: '#34d399', padding: '14px', borderRadius: '12px', 
-                                fontWeight: '900', cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '1px',
-                                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(52,211,153,0.2)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(52,211,153,0.1)'}
-                        >
-                            <Plus size={18} /> CRIAR NOVA SALA
-                        </button>
                     </div>
                 </div>
             )}
@@ -801,12 +765,12 @@ export function MainMenu() {
                             <Info size={32} color="#fff" />
                         </div>
                         
-                        <h2 style={{ margin: '0 0 5px 0', color: '#fff', fontSize: '1.8rem', letterSpacing: '2px', textShadow: '0 0 10px #a855f7' }}>FARMA <span style={{ color: '#a855f7' }}>AI</span></h2>
+                        <h2 style={{ margin: '0 0 5px 0', color: '#fff', fontSize: '1.8rem', letterSpacing: '2px', textShadow: '0 0 10px #a855f7' }}>FARM <span style={{ color: '#a855f7' }}>AI</span></h2>
                         <div style={{ color: '#fbbf24', fontSize: '0.8rem', fontWeight: '900', letterSpacing: '2px', marginBottom: '20px' }}>VERSÃO 1.0.0 (BETA)</div>
                         
                         <div style={{ color: '#ccc', fontSize: '0.85rem', lineHeight: '1.6', textAlign: 'left', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px' }}>
                             <p style={{ marginTop: 0 }}>
-                                O <strong>Farma AI</strong> é uma plataforma imersiva no Metaverso, onde a coleta de Aura se transforma em evolução. Através de mecânicas rítmicas e foco, os jogadores acumulam energia vital (Aura) que permite avançar de nível, desbloquear conquistas exclusivas e descobrir novos personagens 3D.
+                                O <strong>FarmAi</strong> é uma plataforma imersiva no Metaverso, onde a coleta de Aura se transforma em evolução. Através de mecânicas rítmicas e foco, os jogadores acumulam energia vital (Aura) que permite avançar de nível, desbloquear conquistas exclusivas e descobrir novos personagens 3D.
                             </p>
                             <p style={{ marginBottom: 0 }}>
                                 Esta é a <strong>Versão 1.0.0</strong> focada na fundação da economia de AuraCash, Ranking Global em tempo real e sistema de farm dinâmico. Novas expansões, lojas de itens e eventos épicos estão em desenvolvimento contínuo para transformar sua experiência.

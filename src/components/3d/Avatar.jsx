@@ -305,16 +305,11 @@ export function Avatar({ url }) {
     setPosition([vrm.scene.position.x, vrm.scene.position.y, vrm.scene.position.z]);
     
     if (useUISystem.getState().isOnlineMode) {
-        useMultiplayerSystem.getState().updatePosition(
-            vrm.scene.position.x, 
-            vrm.scene.position.y, 
-            vrm.scene.position.z, 
-            newState, 
-            usePlayerSystem.getState().activeModel,
-            useAuraSystem.getState().aura,
-            leftFarmActive,
-            rightFarmActive
+        useMultiplayerSystem.getState().sendPosition(
+            { x: vrm.scene.position.x, y: vrm.scene.position.y, z: vrm.scene.position.z }, 
+            vrm.scene.rotation.y
         );
+        useMultiplayerSystem.getState().sendAnimation(newState);
     }
   });
 

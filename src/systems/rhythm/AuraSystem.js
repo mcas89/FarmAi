@@ -34,6 +34,36 @@ let lastHitTime = 0;
 let comboStartTime = 0;
 let timeCooldownUntil = 0;
 
+// ==========================================
+// MULTIPLICADOR DE AURA (para poções compradas)
+// ==========================================
+
+const getBonusForCombo = (comboCount) => {
+    let currentMultiplier = useAuraSystem.getState().auraMultiplier;
+    const endTime = useAuraSystem.getState().multiplierEndTime;
+
+    // Checa expiração do multiplicador
+    if (currentMultiplier > 1 && endTime && Date.now() > endTime) {
+        useAuraSystem.getState().setMultiplier(1, null);
+        currentMultiplier = 1;
+    }
+
+    const baseAura = (comboCount % 10 === 0) ? 10 : 0;
+    const isMilestone = (comboCount > 0 && comboCount % 100 === 0);
+    const bonusAura = isMilestone ? (comboCount * comboCount) / 1000 : 0;
+
+    const baseAuraFinal = Math.round(baseAura * currentMultiplier);
+    const bonusAuraFinal = Math.round(bonusAura * currentMultiplier);
+    const auraReward = baseAuraFinal + bonusAuraFinal;
+
+    const parts = [];
+    if (baseAuraFinal > 0) parts.push(`${baseAuraFinal} aura`);
+    if (bonusAuraFinal > 0) parts.push(`${bonusAuraFinal} bonus`);
+    const message = parts.length > 0 ? `+${parts.join(' + ')}` : '';
+
+    return { isMilestone, auraReward, message };
+};
+
 // DEBUG: Registra o motivo do break no console
 const breakCombo = (reason = 'decay') => {
     console.warn(`[COMBO BREAK] motivo="${reason}" combo_era=${comboCount}`);
@@ -116,26 +146,13 @@ export const AuraSystem = {
             lastValidSide = side;
             comboCount++;
 
-            // FASE 02 e 03: Pontuação e Mensagens
-            let auraReward = 0;
-            let message = '';
-            let isMilestone = false;
-
-            if (comboCount > 0 && comboCount % 50 === 0) {
-                isMilestone = true;
-                const comboMilestone = comboCount;
-                const bonusMultiplier = comboCount / 50;
-                auraReward = comboMilestone + (bonusMultiplier * 10);
-                message = `+${comboMilestone} de aura`; 
-            } else if (comboCount > 0 && comboCount % 15 === 0) {
-                auraReward = 10;
-                message = ' '; // Renderiza apenas o +10
-            }
+            // FASE 02 e 03: Pontuação e Mensagens (usa a fórmula quadrática)
+            const { isMilestone, auraReward, message } = getBonusForCombo(comboCount);
 
             // Reseta decay DEPOIS de computar tudo — e com delay estendido se for milestone
             resetDecayTimer(isMilestone);
 
-            useAuraSystem.getState().registerHit(auraReward, message, comboCount);
+            useAuraSystem.getState().registerHit(auraReward, message, comboCount, isMilestone, side);
         }
     }
 };

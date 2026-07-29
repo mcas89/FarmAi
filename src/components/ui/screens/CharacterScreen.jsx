@@ -1,15 +1,16 @@
 import React from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
-import { Diamond, CheckCircle, ShoppingCart, X } from 'lucide-react';
+import { AuracashIcon } from '../AuracashIcon';
+import { CheckCircle, ShoppingCart, X } from 'lucide-react';
 
 export const CHARACTERS = [
-    { file: 'san.vrm',   name: 'Samy',  image: '/images/characters/Samy.png', price: 0,    level: 1,  desc: 'Jardineira novata cheia de energia e vontade de cultivar a melhor fazenda.' },
-    { file: 'deric.vrm', name: 'Marc',  image: '/images/characters/Marc.png', price: 0,    level: 1,  desc: 'Um rapaz focado e muito ágil. Gosta de planejar bem as plantações.' },
-    { file: 'carol.vrm', name: 'Carol', image: '/images/characters/Carol.png', price: 2000, level: 5,  desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
-    { file: 'rafa.vrm',  name: 'Rafa',  image: '/images/characters/Rafa.png', price: 2000, level: 5,  desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
-    { file: 'mary.vrm',  name: 'Mary',  image: '/images/characters/Mary.png', price: 5000, level: 10, desc: 'Mestre da colheita e lenda entre os jardineiros.' },
-    { file: 'eric.vrm',  name: 'Eric',  image: '/images/characters/Eric.png', price: 5000, level: 10, desc: 'Especialista em magias da terra e solo sagrado.' },
+    { file: 'san.vrm',   name: 'Carol', image: '/images/characters/Samy.png', price: 0,    level: 1,  desc: 'Jardineira novata cheia de energia e vontade de cultivar a melhor fazenda.' },
+    { file: 'deric.vrm', name: 'Rafa',  image: '/images/characters/Marc.png', price: 0,    level: 1,  desc: 'Um rapaz focado e muito ágil. Gosta de planejar bem as plantações.' },
+    { file: 'carol.vrm', name: 'Kelly', image: '/images/characters/Carol.png', price: 1500, level: 5,  desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
+    { file: 'rafa.vrm',  name: 'Dan',   image: '/images/characters/Rafa.png', price: 1700, level: 5,  desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
+    { file: 'mary.vrm',  name: 'Mary',  image: '/images/characters/Mary.png', price: 3500, level: 10, desc: 'Mestre da colheita e lenda entre os jardineiros.' },
+    { file: 'eric.vrm',  name: 'Eric',  image: '/images/characters/Eric.png', price: 3500, level: 10, desc: 'Especialista em magias da terra e solo sagrado.' },
 ];
 
 export function CharacterScreen() {
@@ -151,17 +152,7 @@ export function CharacterScreen() {
                     </div>
                     
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                        <div style={{ 
-                            display: 'flex', alignItems: 'center', gap: '6px', 
-                            background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)',
-                            padding: '10px 16px', borderRadius: '14px',
-                            boxShadow: '0 0 15px rgba(52,211,153,0.15)'
-                        }}>
-                            <Diamond size={18} color="#34d399" />
-                            <span style={{ color: '#34d399', fontWeight: '900', fontSize: '1.1rem', letterSpacing: '1px' }}>
-                                {(stats.diamonds || 0).toLocaleString()}
-                            </span>
-                        </div>
+                        {/* Auracash removido */}
                         
                         <button
                             onClick={() => setScreen('MENU')}
@@ -187,7 +178,7 @@ export function CharacterScreen() {
                         const isEquipped = activeModel === char.file;
 
                         let btnLabel = isEquipped ? 'EM USO' : 'SELECIONAR';
-                        let btnIcon = isEquipped ? <CheckCircle size={18} /> : <ShoppingCart size={18} />;
+                        let btnIcon = isEquipped ? <CheckCircle size={18} /> : null;
                         let btnStyle = isEquipped 
                             ? { background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.5)', cursor: 'default', boxShadow: '0 0 20px rgba(52,211,153,0.2)' }
                             : { background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' };

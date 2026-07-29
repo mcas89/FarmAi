@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { useQuestSystem } from '../../../systems/useQuestSystem';
-import { CheckCircle, Diamond, Target } from 'lucide-react';
+import { AuracashIcon } from '../AuracashIcon';
+import { CheckCircle, Target } from 'lucide-react';
 
 export function QuestsScreen() {
     const setScreen = useUISystem(state => state.setScreen);
@@ -157,7 +158,7 @@ export function QuestsScreen() {
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
                                             <span style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.9rem' }}>{quest.reward}</span>
-                                            <Diamond size={12} color="#fbbf24" />
+                                            <AuracashIcon size={12} color="#fbbf24" />
                                         </div>
                                     </div>
                                     <div style={{ color: '#aaa', fontSize: '0.85rem', lineHeight: '1.4' }}>

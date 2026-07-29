@@ -1,9 +1,12 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { WaterFountain } from './WaterFountain';
-import { useGLTF, useTexture } from '@react-three/drei';
+import { useGLTF, useTexture, Html } from '@react-three/drei';
 import { useCollisionSystem } from '../../systems/useCollisionSystem';
+import { usePlayerSystem } from '../../systems/usePlayerSystem';
+import { useUISystem } from '../../systems/useUISystem';
+import { AmbientMagic } from './AmbientMagic';
 
 // Pre-load para carregar mais rápido
 useGLTF.preload('/itens/arvore1.glb');
@@ -22,6 +25,7 @@ useGLTF.preload('/itens/pipoqueiro.glb');
 useGLTF.preload('/itens/predio1.glb');
 useGLTF.preload('/itens/predio2.glb');
 useGLTF.preload('/itens/predio3.glb');
+useGLTF.preload('/itens/predio4.glb');
 useGLTF.preload('/itens/fonte2.glb');
 useGLTF.preload('/itens/maquinaderefri.glb');
 
@@ -41,6 +45,159 @@ function GLTFModel({ url, position, rotation, scale = 1 }) {
     }, [copiedScene]);
     
     return <primitive object={copiedScene} position={position} rotation={rotation} scale={scale} />;
+}
+
+// Componente específico para a Fonte (para escurecer a pedra e dar detalhes, mantendo a água clara)
+function DarkFountain({ position, rotation, scale = 1 }) {
+    const { scene } = useGLTF('/itens/fonte2.glb');
+    const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
+    const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
+
+    useEffect(() => {
+        // Protege a fonte inteira com um raio proporcional à sua escala
+        registerObstacle('center_fountain', position[0], position[2], scale * 2.2);
+        return () => removeObstacle('center_fountain');
+    }, [position, scale, registerObstacle, removeObstacle]);
+    const copiedScene = useMemo(() => {
+        const clone = scene.clone();
+        clone.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                if (child.material) {
+                    child.material = child.material.clone();
+                    const matName = child.material.name.toLowerCase();
+                    const isWater = matName.includes('agua') || matName.includes('water') || matName.includes('liquid') || child.material.transparent;
+                    
+                    if (!isWater) {
+                        // Escurece a pedra (multiplica a cor original por 0.35)
+                        child.material.color.multiplyScalar(0.35); 
+                        // Aumenta o contraste e textura
+                        child.material.roughness = 0.8;
+                        child.material.metalness = 0.5; // Dá um aspecto de pedra polida mais detalhada
+                    }
+                }
+            }
+        });
+        return clone;
+    }, [scene]);
+    
+    return <primitive object={copiedScene} position={position} rotation={rotation} scale={scale} />;
+}
+
+function SmokeEffect({ position }) {
+    const groupRef = useRef();
+    
+    useFrame((state) => {
+        if (!groupRef.current) return;
+        const time = state.clock.elapsedTime;
+        groupRef.current.children.forEach((mesh, i) => {
+            const t = (time + (i * 0.5)) % 3.0; // ciclo de 3 segundos
+            mesh.position.y = t * 1.2; // sobe devagar
+            mesh.position.x = Math.sin(t * 2 + i) * 0.2; // balanço horizontal
+            mesh.position.z = Math.cos(t * 1.5 + i) * 0.2;
+            mesh.scale.setScalar(0.5 + (t * 0.4)); // cresce enquanto sobe
+            mesh.material.opacity = Math.max(0, 0.4 - (t / 3.0)); // começa em 0.4 e some
+        });
+    });
+
+    return (
+        <group ref={groupRef} position={position}>
+            {Array.from({ length: 6 }).map((_, i) => (
+                <mesh key={i} position={[0, -10, 0]}>
+                    <sphereGeometry args={[0.6, 8, 8]} />
+                    <meshBasicMaterial color="#d1d5db" transparent opacity={0} depthWrite={false} />
+                </mesh>
+            ))}
+        </group>
+    );
+}
+
+// Componente de Loja de Poções (Máquina de Refri com interação)
+function ShopMachine({ position, rotation, scale = 1 }) {
+    const { scene } = useGLTF('/itens/maquinaderefri.glb');
+    const [isNear, setIsNear] = useState(false);
+    const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
+    const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
+    const setShopModalOpen = useUISystem((state) => state.setShopModalOpen);
+    const groupRef = useRef();
+
+    // Registra a colisão da máquina no mapa
+    useEffect(() => {
+        registerObstacle('potion_shop', position[0], position[2], 1.5);
+        return () => removeObstacle('potion_shop');
+    }, [position, registerObstacle, removeObstacle]);
+
+    // Checa a distância do jogador em cada frame e faz a máquina girar
+    useFrame((state, delta) => {
+        if (groupRef.current) {
+            // Gira a máquina em 360 no próprio eixo
+            groupRef.current.rotation.y += delta * 0.5;
+        }
+
+        const playerPos = usePlayerSystem.getState().position;
+        const dist = Math.sqrt(
+            Math.pow(playerPos[0] - position[0], 2) +
+            Math.pow(playerPos[2] - position[2], 2)
+        );
+
+        if (dist < 4.0) {
+            setIsNear(true);
+        } else {
+            setIsNear(false);
+        }
+    });
+
+    const copiedScene = useMemo(() => {
+        const clone = scene.clone();
+        clone.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        return clone;
+    }, [scene]);
+
+    return (
+        <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
+            <primitive object={copiedScene} />
+            
+            {/* Fumaça indicativa na máquina */}
+            <SmokeEffect position={[0, 1.5, 0]} />
+
+            {/* Botão Flutuante (Renderizado via HTML sobre o Canvas) */}
+            {isNear && (
+                <Html position={[0, 2.5, 0]} center zIndexRange={[100, 0]}>
+                    <div 
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            setShopModalOpen(true);
+                        }}
+                        style={{
+                            background: 'rgba(15, 23, 42, 0.9)',
+                            color: 'white',
+                            padding: '10px 20px',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            border: '2px solid #a855f7',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 0 15px rgba(168, 85, 247, 0.6)',
+                            fontFamily: 'Inter, sans-serif',
+                            fontWeight: 'bold',
+                            fontSize: '14px',
+                            pointerEvents: 'auto',
+                            backdropFilter: 'blur(4px)'
+                        }}
+                        className="hover:scale-105 transition-transform"
+                    >
+                        ✨ Poções ✨
+                    </div>
+                </Html>
+            )}
+        </group>
+    );
 }
 
 // Gerador de números pseudo-aleatórios com seed fixa
@@ -272,25 +429,6 @@ function ParkFurniture() {
             });
         }
 
-        // 4. Máquinas de Refrigerante (3 pelo parque)
-        const machineSpots = [
-            { x: -35, z: 0, rot: Math.PI / 2 },      // esquerda entrada
-            { x: 35, z: 0, rot: -Math.PI / 2 },      // direita entrada
-            { x: 0, z: -35, rot: Math.PI },          // fundo
-            { x: 0, z: 35, rot: 0 }                  // frente
-        ];
-
-        machineSpots.forEach((spot, i) => {
-            items.push({
-                id: `vending_machine_${i}`,
-                type: 'maquinaderefri',
-                position: [spot.x, 1.5, spot.z], // Subido em Y para não ficar enterrada
-                rotation: [0, spot.rot, 0],
-                scale: 1.5,
-                colRadius: 1.0 
-            });
-        });
-
         return items;
     }, []);
 
@@ -319,6 +457,47 @@ function ParkFurniture() {
     );
 }
 
+// ---------------------------------------------------------
+// TEXTURAS PROCEDURAIS PARA O CITY SKYLINE (Janelas)
+// ---------------------------------------------------------
+let sharedWindowTexture = null;
+function getWindowTexture() {
+    if (sharedWindowTexture) return sharedWindowTexture;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+
+    // Fundo branco puro (para a cor do material pintar a "parede")
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 64, 64);
+
+    // Janelas (pontos escuros)
+    ctx.fillStyle = '#0a0a0a';
+    
+    // Desenha um padrão de grade (4x4 janelas por bloco de textura)
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            // Algumas janelas amarelas (acesas) aleatoriamente, outras pretas
+            if (Math.random() > 0.9) {
+                ctx.fillStyle = '#fde047'; // amarelo suave
+            } else {
+                ctx.fillStyle = '#0a0a0a'; // preto
+            }
+            ctx.fillRect(c * 16 + 2, r * 16 + 2, 8, 12); // (x, y, width, height)
+        }
+    }
+
+    sharedWindowTexture = new THREE.CanvasTexture(canvas);
+    sharedWindowTexture.wrapS = THREE.RepeatWrapping;
+    sharedWindowTexture.wrapT = THREE.RepeatWrapping;
+    // NearestFilter deixa os pixels duros/retos (ótimo para janelas)
+    sharedWindowTexture.magFilter = THREE.NearestFilter;
+    
+    return sharedWindowTexture;
+}
+
 // Prédios ao redor do Parque (City Skyline)
 function CitySkyline() {
     const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
@@ -328,10 +507,15 @@ function CitySkyline() {
         const glb = [];
         const bg = [];
         const random = mulberry32(88888); // Seed fixa
-        const types = ['predio1', 'predio2', 'predio3'];
+        const pattern = ['predio1', 'predio3', 'predio1', 'predio4', 'predio2', 'predio3'];
         
-        // 1. Prédios Reais 3D (GLB) - Depois da avenida
+        // Cores solicitadas para os prédios procedurais
+        const jsColors = ['#808080', '#333333', '#b3b3b3', '#111111']; // cinza, cinza escuro, cinza claro, quase preto
+        
+        // 1. Prédios Reais 3D (GLB) - Agora bem mais longe, totalmente fora do parque
         const totalGLB = 24; 
+        let buildingIndex = 0; 
+        
         for (let i = 0; i < totalGLB; i++) {
             const angle = (Math.PI * 2 / totalGLB) * i;
             
@@ -339,41 +523,51 @@ function CitySkyline() {
             const isStreet = (angle % (Math.PI / 2)) < 0.25 || (angle % (Math.PI / 2)) > (Math.PI / 2 - 0.25);
             if (isStreet) continue;
 
-            // O gramado é 100x100 (50m do centro pras bordas). 
-            // 75 metros de raio garante que farão um círculo em volta de todo o parque, fora da grama.
-            const r = 75; 
+            // Raio de 85 garante que estão MUITO depois da grama (que termina no 50)
+            const r = 85; 
             const x = Math.sin(angle) * r;
             const z = Math.cos(angle) * r;
             
             glb.push({
                 id: `glb_building_${i}`,
-                type: types[Math.floor(random() * types.length)],
+                type: pattern[buildingIndex % pattern.length],
                 position: [x, 0, z],
                 rotation: [0, angle + Math.PI, 0], // Virado pro centro
-                scale: 3.5 + random() * 2.5, // Bem grandes e altos
-                colRadius: 8.0 
+                scale: (2.0 + random() * 1.5) * 3, // Aumentado em 3x conforme solicitado
+                colRadius: 6.0 
             });
+            buildingIndex++;
         }
-
-        // 2. Prédios de Fundo (Caixas Geométricas) - Para dar densidade
-        const totalBG = 60;
+        
+        // 2. Prédios Geométricos (Caixas JS) - Para dar a silhueta no fundo
+        const totalBG = 60; 
         for (let i = 0; i < totalBG; i++) {
             const angle = (Math.PI * 2 / totalBG) * i;
-            // Espalha entre 95m e 115m de distância (BEM atrás)
-            const r = 95 + random() * 20; 
+            
+            // Um pouco atrás dos GLBs para criar camada de profundidade
+            const r = 90 + random() * 10; 
             const x = Math.sin(angle) * r;
             const z = Math.cos(angle) * r;
             
             const width = 12 + random() * 15;
             const depth = 12 + random() * 15;
-            const height = 30 + random() * 80; // Muito altos
+            
+            // Altura um pouquinho menor ainda (5 a 13 metros)
+            const height = 5 + random() * 8; 
+            
+            // Calculamos a repetição da textura de janela baseada no tamanho do prédio
+            const repeatX = Math.round(width / 4);
+            const repeatY = Math.round(height / 4);
 
             bg.push({
                 id: `bg_building_${i}`,
-                position: [x, height / 2, z], // Y = metade da altura para ficar no chão
+                // Colocando -2 no Y para "enterrar" os prédios no chão, 
+                // e height/2 garante que o meio dele ficaria no 0 se não fosse o -2
+                position: [x, (height / 2) - 2, z],
                 rotation: [0, random() * Math.PI, 0],
                 size: [width, height, depth],
-                color: random() > 0.5 ? '#151522' : '#1a1a2e' // Tons de cidade escura
+                color: jsColors[Math.floor(random() * jsColors.length)],
+                repeat: [repeatX, repeatY]
             });
         }
 
@@ -389,9 +583,12 @@ function CitySkyline() {
         };
     }, [glbBuildings, registerObstacle, removeObstacle]);
 
+    // Aplica a textura de janelas uma única vez (otimização)
+    const windowTex = useMemo(() => getWindowTexture(), []);
+
     return (
         <group>
-            {/* Prédios Detalhados (3D) */}
+            {/* Prédios Detalhados (3D GLB) */}
             {glbBuildings.map(item => (
                 <GLTFModel 
                     key={item.id} 
@@ -401,20 +598,28 @@ function CitySkyline() {
                     scale={item.scale} 
                 />
             ))}
-            
-            {/* Prédios de Fundo Geométricos (Silhuetas) */}
-            {bgBuildings.map(item => (
-                <mesh key={item.id} position={item.position} rotation={item.rotation}>
-                    <boxGeometry args={item.size} />
-                    <meshStandardMaterial color={item.color} roughness={0.9} metalness={0.1} />
-                </mesh>
-            ))}
+
+            {/* Prédios de Fundo Geométricos (Silhuetas em JS) */}
+            {bgBuildings.map(item => {
+                // Clonamos o material/textura apenas para ajustar a repetição sem afetar os outros
+                const tex = windowTex.clone();
+                tex.repeat.set(item.repeat[0], item.repeat[1]);
+                tex.needsUpdate = true;
+                
+                return (
+                    <mesh key={item.id} position={item.position} rotation={item.rotation}>
+                        <boxGeometry args={item.size} />
+                        <meshStandardMaterial map={tex} color={item.color} roughness={0.8} metalness={0.2} />
+                    </mesh>
+                );
+            })}
         </group>
     );
 }
 
 // ---------------------------------------------------------
 // SISTEMA DE TEXTURAS PROCEDURAIS (Estilo Anime/Pintura)
+
 // Gera texturas em memória na hora do load, consumindo 0 bytes
 // ---------------------------------------------------------
 function createSplotchTexture(color1, color2, splotchesCount = 50, size = 512, repeatX = 10, repeatY = 10) {
@@ -487,6 +692,13 @@ export function ParkEnvironment() {
     concreteTexture.repeat.set(8, 8); 
     concreteTexture.colorSpace = THREE.SRGBColorSpace;
 
+    // 2.5. Pedra: Para a praça central
+    const stoneTexture = useTexture('/textures/anime_pedra.jpg');
+    stoneTexture.wrapS = THREE.RepeatWrapping;
+    stoneTexture.wrapT = THREE.RepeatWrapping;
+    stoneTexture.repeat.set(8, 8);
+    stoneTexture.colorSpace = THREE.SRGBColorSpace;
+
     // 3. Asfalto: Anime gerado por IA
     const asphaltTexture = useTexture('/textures/anime_asphalt.jpg');
     asphaltTexture.wrapS = THREE.RepeatWrapping;
@@ -505,13 +717,21 @@ export function ParkEnvironment() {
             <group>
                 {/* Iluminação Anime: Sombras menos agressivas, cor de sol quente, luz ambiente azulada */}
                 <ambientLight intensity={0.7} color="#e0f2fe" />
+                
+                {/* Sol Visual (Mais Brilhante) */}
+                <mesh position={[40, 25, -80]}>
+                    <sphereGeometry args={[5, 32, 32]} />
+                    <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={5} toneMapped={false} />
+                    <pointLight intensity={2} distance={150} color="#ffffff" />
+                </mesh>
+
                 <directionalLight 
                     castShadow 
-                    position={[20, 100, 20]} 
-                    intensity={0.6} 
-                    color="#fffbeb" /* Sol quente amarelado bem fraco */
+                    position={[40, 25, -80]} 
+                    intensity={0.8} 
+                    color="#ffffff" /* Luz branca do sol */
                     shadow-mapSize={[2048, 2048]}
-                    shadow-camera-far={200}
+                    shadow-camera-far={250}
                     shadow-camera-left={-75}
                     shadow-camera-right={75}
                     shadow-camera-top={75}
@@ -535,9 +755,9 @@ export function ParkEnvironment() {
                     <meshStandardMaterial map={grassTexture} roughness={1.0} metalness={0.0} />
                 </mesh>
 
-                {/* 4. Praça Central de Concreto Polido (y = 0.0) */}
+                {/* 4. Praça Central de Pedra (y = 0.0) */}
                 <mesh receiveShadow geometry={plazaGeo} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0, 0]}>
-                    <meshStandardMaterial map={concreteTexture} roughness={0.7} metalness={0.1} />
+                    <meshStandardMaterial map={stoneTexture} roughness={0.9} metalness={0.0} />
                 </mesh>
 
                 {/* 5. Ruas Principais em Cruz (N, S, L, O) (y = 0.0) */}
@@ -572,8 +792,25 @@ export function ParkEnvironment() {
                 {/* 6.5 Parquinho Infantil (Gramado Nordeste) */}
                 <Playground />
 
+                {/* 6.6 Máquina de Refri (Loja de Poções) no Gramado Noroeste */}
+                <ShopMachine position={[-8, 1.5, -10]} rotation={[0, Math.PI / 4, 0]} scale={1.5} />
+
                 {/* 7. Fonte de Água (Centro da Praça) */}
-                <GLTFModel url="/itens/fonte2.glb" position={[0, 0.0, 0]} rotation={[0, 0, 0]} scale={2} />
+                <DarkFountain position={[0, 0.0, 0]} rotation={[0, 0, 0]} scale={2} />
+                
+                {/* 8. Partículas Mágicas e Fumaça (Decoração) */}
+                {/* Fonte - Partículas Azuis mais delicadas */}
+                <AmbientMagic count={50} color="#38bdf8" radius={3.0} height={4.0} speed={0.5} size={0.5} position={[0, 0, 0]} /> 
+                {/* Fonte - Fumaça/Névoa da água (reduzida) */}
+                <AmbientMagic count={15} color="#e0f2fe" radius={3.5} height={4.0} speed={0.2} size={2.0} position={[0, 0, 0]} /> 
+
+                {/* Fumaças pelo mapa (reduzidas pela metade para não poluir a tela) */}
+                <AmbientMagic count={20} color="#a855f7" radius={6} height={6} speed={0.25} size={2.0} position={[18, 0, 18]} /> {/* Gramado NE */}
+                <AmbientMagic count={20} color="#4ade80" radius={6} height={6} speed={0.25} size={2.0} position={[-20, 0, 15]} /> {/* Gramado NO */}
+                <AmbientMagic count={20} color="#fbbf24" radius={6} height={6} speed={0.25} size={2.0} position={[15, 0, -20]} /> {/* Gramado SE */}
+
+                {/* 9. Paredão de Prédios e Borda (Skyline) */}
+                <CitySkyline />
             </group>
         </>
     );

@@ -1,3 +1,4 @@
+import { AuracashIcon } from '../AuracashIcon';
 import React, { useEffect, useState } from 'react';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { useUISystem } from '../../../systems/useUISystem';
@@ -8,14 +9,13 @@ import { Joystick } from '../Joystick';
 import { 
     Settings, Trophy, Crown, 
     BarChart2, Shield, ScrollText, Gift, Briefcase, ShoppingCart, 
-    Flame, Zap, Sparkles, Diamond,
-    Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map
+    Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 
 export function GameHUD() {
-    const { aura, message, lastPoints, comboCount, maxCombo, hitId } = useAuraSystem();
+    const { aura, message, lastPoints, comboCount, maxCombo, hitId, isMilestone, hitSide, auraMultiplier, multiplierEndTime } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const setScreen = useUISystem(state => state.setScreen);
     const isMapMode = useUISystem(state => state.isMapMode);
@@ -36,6 +36,27 @@ export function GameHUD() {
 
     const [auraGlow, setAuraGlow] = useState(false);
     const [autoHide, setAutoHide] = useState(false);
+    const [multiplierTimeLeft, setMultiplierTimeLeft] = useState(0);
+
+    useEffect(() => {
+        if (auraMultiplier > 1 && multiplierEndTime) {
+            // Atualiza de imediato
+            setMultiplierTimeLeft(Math.max(0, Math.floor((multiplierEndTime - Date.now()) / 1000)));
+            const interval = setInterval(() => {
+                const now = Date.now();
+                const diff = Math.floor((multiplierEndTime - now) / 1000);
+                if (diff <= 0) {
+                    setMultiplierTimeLeft(0);
+                    clearInterval(interval);
+                } else {
+                    setMultiplierTimeLeft(diff);
+                }
+            }, 1000);
+            return () => clearInterval(interval);
+        } else {
+            setMultiplierTimeLeft(0);
+        }
+    }, [auraMultiplier, multiplierEndTime]);
     
     const [showLeftMenu, setShowLeftMenu] = useState(false);
     
@@ -128,10 +149,11 @@ export function GameHUD() {
     const progressAura = aura % 500;
 
     return (
-        <div style={{
+        <div key={isMilestone && message ? hitId : 'hud'} style={{
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
             pointerEvents: 'none', display: 'flex', flexDirection: 'column',
-            fontFamily: 'sans-serif', overflow: 'hidden'
+            fontFamily: 'sans-serif', overflow: 'hidden',
+            animation: (message && isMilestone) ? 'screenShake 0.35s ease-in-out' : 'none'
         }}>
             <style>{`
                 :root {
@@ -265,6 +287,20 @@ export function GameHUD() {
                     40% { transform: scale(1) translateY(0); text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
                     80% { opacity: 1; transform: scale(1) translateY(-10px); }
                     100% { opacity: 0; transform: scale(0.8) translateY(-30px); filter: blur(2px); }
+                }
+                @keyframes floatUp {
+                    0% { opacity: 0; transform: translateY(0); }
+                    20% { opacity: 1; transform: translateY(-10px); }
+                    80% { opacity: 1; transform: translateY(-30px); }
+                    100% { opacity: 0; transform: translateY(-40px); }
+                }
+                @keyframes screenShake {
+                    0% { transform: translate(0, 0); }
+                    20% { transform: translate(-3px, 2px); }
+                    40% { transform: translate(3px, -2px); }
+                    60% { transform: translate(-3px, -2px); }
+                    80% { transform: translate(2px, 3px); }
+                    100% { transform: translate(0, 0); }
                 }
 
                 .anim-float { animation: floatAnim 3s ease-in-out infinite; }
@@ -430,19 +466,6 @@ export function GameHUD() {
                             </span>
                         </div>
 
-                        {/* +pontos flutuando — fora do card */}
-                        {auraGlow && (
-                            <div style={{
-                                position: 'absolute', top: '-18px', left: '50%',
-                                transform: 'translateX(-50%)',
-                                color: '#ffd700', fontSize: '0.72rem', fontWeight: '900',
-                                whiteSpace: 'nowrap', pointerEvents: 'none',
-                                textShadow: '0 0 10px rgba(255,215,0,0.8)',
-                                animation: 'epicPopup 0.8s ease forwards'
-                            }}>
-                                +{lastPoints}
-                            </div>
-                        )}
                     </div>
 
                     {/* ── COLUNA DIREITA: Diamantes + Home ── */}
@@ -458,7 +481,7 @@ export function GameHUD() {
                             borderRadius: '10px', padding: '5px 9px',
                             pointerEvents: 'auto', minWidth: 0
                         }}>
-                            <Diamond size={11} color="#34d399" style={{ flexShrink: 0 }} />
+                            <AuracashIcon size={11} color="#34d399" style={{ flexShrink: 0 }} />
                             <span style={{
                                 color: '#34d399', fontSize: '0.78rem', fontWeight: '900',
                                 whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
@@ -552,13 +575,34 @@ export function GameHUD() {
             </div>
 
             {/* Popups de Acerto */}
-            <div style={{ position: 'absolute', top: '25%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 6 }}>
-                {message && (
-                    <div key={hitId} style={{ animation: 'epicPopup 1s ease forwards', display: 'flex', gap: '6px', alignItems: 'baseline' }}>
-                        <span style={{ color: lastPoints >= 50 ? '#a855f7' : lastPoints > 0 ? '#4ade80' : '#f87171', fontWeight: '900', fontSize: '1.8rem', fontStyle: 'italic', letterSpacing: '2px' }}>{message}</span>
-                    </div>
-                )}
-            </div>
+            {message && !isMilestone && (
+                <div key={`small-${hitId}`} style={{
+                    position: 'absolute',
+                    top: '40%',
+                    left: hitSide === 'left' ? '30%' : '70%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 6,
+                    animation: 'floatUp 0.6s ease forwards',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    pointerEvents: 'none',
+                    textShadow: '0 2px 5px rgba(0,0,0,0.5)'
+                }}>
+                    {message}
+                </div>
+            )}
+
+            {message && isMilestone && (
+                <div key={`mile-${hitId}`} style={{
+                    position: 'absolute', top: '25%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 6, pointerEvents: 'none',
+                    animation: 'epicPopup 1.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards', display: 'flex', gap: '6px', alignItems: 'baseline'
+                }}>
+                    <span style={{ color: lastPoints >= 50 ? '#a855f7' : '#fcd34d', fontWeight: '900', fontSize: '2.2rem', fontStyle: 'italic', letterSpacing: '2px', textShadow: '0 0 15px rgba(252,211,77,0.8)' }}>
+                        {message}
+                    </span>
+                </div>
+            )}
 
             {/* MIDDLE LAYOUT */}
             <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: '0', zIndex: 5, pointerEvents: 'none' }}>
@@ -687,10 +731,15 @@ export function GameHUD() {
                 {/* STATS CARD (RIGHT) */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 0 }}>
+                        {multiplierTimeLeft > 0 && (
+                            <span style={{ color: '#fcd34d', fontSize: '0.45rem', fontWeight: 'bold', marginBottom: '2px', letterSpacing: '1px' }}>
+                                ⏱ {Math.floor(multiplierTimeLeft / 60)}:{String(multiplierTimeLeft % 60).padStart(2, '0')}
+                            </span>
+                        )}
                         <span style={{ color: '#888', fontSize: '0.5rem', fontWeight: 'bold', letterSpacing: '1px', whiteSpace: 'nowrap' }}>MULT.</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Sparkles size={12} color="#4ade80" className={comboCount > 50 ? "anim-float" : ""} />
-                            <span style={{ color: '#4ade80', fontSize: '1rem', fontWeight: '900', whiteSpace: 'nowrap' }}>x{Math.max(1, Math.floor(comboCount / 50))}</span>
+                            <Sparkles size={12} color="#4ade80" className={auraMultiplier > 1 ? "anim-float" : ""} />
+                            <span style={{ color: '#4ade80', fontSize: '1rem', fontWeight: '900', whiteSpace: 'nowrap' }}>x{auraMultiplier}</span>
                         </div>
                     </div>
                     
@@ -699,8 +748,8 @@ export function GameHUD() {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
                         <span style={{ color: '#888', fontSize: '0.5rem', fontWeight: 'bold', letterSpacing: '1px', whiteSpace: 'nowrap' }}>BÔNUS</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Diamond size={12} color="#a855f7" className={comboCount > 10 ? "anim-pulse" : ""} />
-                            <span style={{ color: '#a855f7', fontSize: '1rem', fontWeight: '900', whiteSpace: 'nowrap' }}>+{Math.floor(comboCount / 50 * 10)}%</span>
+                            <Sparkles size={12} color="#a855f7" className={comboCount >= 100 ? "anim-pulse" : ""} />
+                            <span style={{ color: '#a855f7', fontSize: '1rem', fontWeight: '900', whiteSpace: 'nowrap' }}>+{Math.floor(comboCount / 100) * 10}%</span>
                         </div>
                     </div>
                 </div>
@@ -736,7 +785,7 @@ export function GameHUD() {
                                 <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
                                     <span className="ranking-modal-lbl">TOTAL AURA</span>
                                     <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
-                                        <Diamond size={16} color="#fcd34d" className="anim-pulse" /> {Math.floor(aura).toLocaleString()}
+                                        <Sparkles size={16} color="#fcd34d" className="anim-pulse" /> {Math.floor(aura).toLocaleString()}
                                     </span>
                                 </div>
                             </div>
@@ -769,7 +818,7 @@ export function GameHUD() {
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                     <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{Math.floor(player.aura).toLocaleString()}</span>
-                                                    <Diamond size={10} color="#a855f7" />
+                                                    <AuracashIcon size={10} color="#a855f7" />
                                                 </div>
                                             </div>
                                         ))

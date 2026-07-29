@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUISystem } from '../../systems/useUISystem';
+import { ShopModal } from './ShopModal';
 
 // Import Screens
 import { SplashScreen } from './screens/SplashScreen';
@@ -50,6 +51,9 @@ export function GameInterface() {
             pointerEvents: 'none', zIndex: 10
         }}>
             {renderScreen()}
+            <div style={{ pointerEvents: 'auto' }}>
+                <ShopModal />
+            </div>
         </div>
     );
 }

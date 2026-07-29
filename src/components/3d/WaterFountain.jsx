@@ -3,6 +3,8 @@ import { useGLTF, Center } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+import { AmbientMagic } from './AmbientMagic';
+
 export function WaterFountain(props) {
     const { scene } = useGLTF('/itens/fonte_agua.glb');
     const waterMaterials = useRef([]);
@@ -72,6 +74,7 @@ export function WaterFountain(props) {
     return (
         <group {...props}>
             <primitive object={scene} />
+            <AmbientMagic count={15} color="#38bdf8" radius={2.5} height={3} speed={0.4} size={0.3} position={[0, 0, 0]} />
         </group>
     );
 }

@@ -151,7 +151,7 @@ const MemoizedPostProcessing = React.memo(PostProcessingEffects);
 export function Scene() {
     const activeModel = usePlayerSystem(state => state.activeModel);
     const isOnlineMode = useUISystem(state => state.isOnlineMode);
-    const playersInRoom = useMultiplayerSystem(state => state.playersInRoom);
+    const remotePlayers = useMultiplayerSystem(state => state.remotePlayers);
     const myUid = auth?.currentUser?.uid;
 
     return (
@@ -162,9 +162,9 @@ export function Scene() {
             <Avatar key={activeModel} url={`/models/${activeModel}`} />
             
             {/* Renderiza os outros jogadores se estiver online */}
-            {isOnlineMode && Object.entries(playersInRoom).map(([uid, data]) => {
-                if (uid === myUid) return null; // Não renderizar a si mesmo
-                return <RemotePlayer key={uid} playerData={data} />;
+            {isOnlineMode && Object.entries(remotePlayers).map(([sessionId, data]) => {
+                if (sessionId === useMultiplayerSystem.getState().currentRoomId) return null; // Não renderizar a si mesmo
+                return <RemotePlayer key={sessionId} playerData={data} />;
             })}
             
             <AuraEffects />

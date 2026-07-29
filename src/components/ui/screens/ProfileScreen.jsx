@@ -1,10 +1,11 @@
+import { AuracashIcon } from '../AuracashIcon';
 import React from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { 
     User, ChevronLeft, Shield, Zap, Target, 
-    Clock, Trophy, Sparkles, Diamond, Flame, Star, BarChart2
+    Clock, Trophy, Sparkles, Flame, Star, BarChart2
 } from 'lucide-react';
 
 export function ProfileScreen() {
@@ -133,7 +134,7 @@ export function ProfileScreen() {
                         <div style={{ marginTop: '20px' }}>
                             <div style={{ color: '#888', fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '3px', marginBottom: '15px' }}>AURA ACUMULADA</div>
                             <div className="glow-text" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <Diamond size={40} color="#a855f7" style={{ opacity: 0.8 }} />
+                                <AuracashIcon size={40} color="#a855f7" style={{ opacity: 0.8 }} />
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     {/* Usa compact notation (1.5B, 2T) para números grandes para não quebrar layout */}
                                     <span className="aura-compact-text">{compactAura}</span>

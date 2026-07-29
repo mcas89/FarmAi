@@ -1,108 +1,160 @@
 import { create } from 'zustand';
-import { ref, onValue, set, remove, onDisconnect, update } from 'firebase/database';
-import { rtdb, auth } from '../config/firebase';
+import * as Colyseus from 'colyseus.js';
 
-let updateTimeout = null;
+// URL do servidor local para desenvolvimento
+// Quando for para o Fly.io, trocaremos para wss://farmaai-server.fly.dev
+const COLYSEUS_SERVER = "wss://farmai-server.onrender.com";
+const ROOM_NAME = "farma_room";
 
-export const useMultiplayerSystem = create((setStore, getStore) => ({
-    rooms: [],
-    playersInRoom: {}, // { uid: { name, model, x, y, z, anim, timestamp } }
+let colyseusClient = null;
+let currentRoom = null;
+
+export const useMultiplayerSystem = create((set, get) => ({
+    isConnected: false,
+    isTryingToJoin: false,
     currentRoomId: null,
+    remotePlayers: {},
+    localPlayerInfo: null,
+    latency: 0,
+    chatMessages: [],
 
-    fetchRooms: () => {
-        if (!rtdb) return;
-        const roomsRef = ref(rtdb, 'rooms');
-        onValue(roomsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const roomsArray = Object.keys(data).map(key => ({
-                    id: key,
-                    name: data[key].name || key,
-                    playersCount: data[key].players ? Object.keys(data[key].players).length : 0,
-                    maxPlayers: data[key].maxPlayers || 10
-                }));
-                setStore({ rooms: roomsArray });
-            } else {
-                setStore({ rooms: [] });
-            }
-        });
-    },
-
-    createRoom: async (roomName) => {
-        if (!rtdb) return null;
-        const roomId = 'room_' + Date.now();
-        const roomRef = ref(rtdb, `rooms/${roomId}`);
-        await set(roomRef, {
-            name: roomName,
-            maxPlayers: 10
-        });
-        return roomId;
-    },
-
-    joinRoom: async (roomId, playerInfo) => {
-        if (!rtdb || !auth.currentUser) return false;
-        const uid = auth.currentUser.uid;
-        
-        // Sair da sala atual se tiver
-        const current = getStore().currentRoomId;
-        if (current) {
-            getStore().leaveRoom();
+    // Instancia o cliente Colyseus apenas uma vez
+    initColyseusClient: () => {
+        if (!colyseusClient) {
+            colyseusClient = new Colyseus.Client(COLYSEUS_SERVER);
         }
+        return colyseusClient;
+    },
 
-        const playerRef = ref(rtdb, `rooms/${roomId}/players/${uid}`);
+    joinRoom: async (roomId, playerInfo = {}) => {
+        const { initColyseusClient } = get();
+        const client = initColyseusClient();
         
-        // Remove do banco ao desconectar o navegador
-        onDisconnect(playerRef).remove();
-        
-        // Entra na sala
-        await set(playerRef, {
-            name: playerInfo.name || 'Jogador',
-            model: playerInfo.model || 'san.vrm',
-            x: 0, y: 0.1, z: 0,
-            anim: 'idle',
-            timestamp: Date.now()
-        });
+        set({ localPlayerInfo: playerInfo, isTryingToJoin: true });
 
-        setStore({ currentRoomId: roomId });
+        try {
+            // joinOrCreate vai conectar à sala ou criá-la se não existir
+            const room = await client.joinOrCreate(ROOM_NAME, {
+                name: playerInfo?.name || 'Jogador'
+            });
 
-        // Escuta os outros jogadores
-        const roomPlayersRef = ref(rtdb, `rooms/${roomId}/players`);
-        onValue(roomPlayersRef, (snapshot) => {
-            const players = snapshot.val() || {};
-            setStore({ playersInRoom: players });
-        });
+            currentRoom = room;
+
+            set({
+                isConnected: true,
+                isTryingToJoin: false,
+                currentRoomId: room.id,
+            });
+
+            console.log("Conectado ao Colyseus! ID da Sessão:", room.sessionId);
+
+            // Escutar adições de jogadores
+            room.state.players.onAdd((player, sessionId) => {
+                if (sessionId !== room.sessionId) {
+                    console.log("Novo jogador:", player?.name, sessionId);
+                    set((state) => ({
+                        remotePlayers: {
+                            ...state.remotePlayers,
+                            [sessionId]: {
+                                id: sessionId,
+                                position: player.position ? [player.position.x, player.position.y, player.position.z] : [0,0,0],
+                                rotation: player.rotation ? [player.rotation.x, player.rotation.y, player.rotation.z] : [0,0,0],
+                                animation: player.animation || 'Idle',
+                                name: player?.name,
+                                model: player.model
+                            }
+                        }
+                    }));
+                }
+
+                // Escutar mudanças no jogador
+                player.onChange(() => {
+                    if (sessionId !== room.sessionId) {
+                        set((state) => ({
+                            remotePlayers: {
+                                ...state.remotePlayers,
+                                [sessionId]: {
+                                    ...state.remotePlayers[sessionId],
+                                    position: player.position ? [player.position.x, player.position.y, player.position.z] : [0,0,0],
+                                    rotation: player.rotation ? [player.rotation.x, player.rotation.y, player.rotation.z] : [0,0,0],
+                                    animation: player.animation,
+                                    name: player?.name,
+                                    model: player.model
+                                }
+                            }
+                        }));
+                    }
+                });
+            });
+
+            // Escutar saídas de jogadores
+            room.state.players.onRemove((player, sessionId) => {
+                console.log("Jogador saiu:", player?.name, sessionId);
+                set((state) => {
+                    const newRemotePlayers = { ...state.remotePlayers };
+                    delete newRemotePlayers[sessionId];
+                    return { remotePlayers: newRemotePlayers };
+                });
+            });
+
+            // Lidar com mensagens de chat (se formos usar room.onMessage)
+            room.onMessage("chat", (message) => {
+                set((state) => ({
+                    chatMessages: [...state.chatMessages, message]
+                }));
+            });
+
+            room.onLeave((code) => {
+                console.log("Você saiu da sala Colyseus.", code);
+                set({ isConnected: false, currentRoomId: null, remotePlayers: {} });
+            });
+
+            room.onError((code, message) => {
+                console.error("Colyseus Error:", code, message);
+            });
+
+        } catch (e) {
+            console.error("Erro ao conectar no Colyseus:", e);
+            set({ isTryingToJoin: false, isConnected: false });
+        }
 
         return true;
     },
 
-    leaveRoom: () => {
-        if (!rtdb || !auth.currentUser) return;
-        const uid = auth.currentUser.uid;
-        const currentRoomId = getStore().currentRoomId;
-        
-        if (currentRoomId) {
-            const playerRef = ref(rtdb, `rooms/${currentRoomId}/players/${uid}`);
-            remove(playerRef);
-            setStore({ currentRoomId: null, playersInRoom: {} });
-        }
+    sendPosition: (position, rotation) => {
+        if (!currentRoom) return;
+        currentRoom.send("position", {
+            x: position.x,
+            y: position.y,
+            z: position.z,
+            rotation: rotation
+        });
     },
 
-    updatePosition: (x, y, z, anim, model, aura, leftFarm = false, rightFarm = false) => {
-        const { currentRoomId } = getStore();
-        if (!rtdb || !auth.currentUser || !currentRoomId) return;
-        
-        if (updateTimeout) return;
+    updateAuraValue: (score) => {
+        if (!currentRoom) return;
+        currentRoom.send("updateScore", { score });
+    },
 
-        updateTimeout = setTimeout(() => {
-            updateTimeout = null;
-            const uid = auth.currentUser.uid;
-            const playerRef = ref(rtdb, `rooms/${currentRoomId}/players/${uid}`);
-            
-            const updates = { x, y, z, anim, timestamp: Date.now(), leftFarm, rightFarm };
-            if (model) updates.model = model;
-            if (aura !== undefined) updates.aura = aura;
-            
-            update(playerRef, updates);
-        }, 300);
+    sendAnimation: (animationName) => {
+        if (!currentRoom) return;
+        currentRoom.send("animation", { animation: animationName });
+    },
+
+    sendMessage: (text) => {
+        if (!currentRoom) return;
+        const { localPlayerInfo } = get();
+        currentRoom.send("chat", {
+            sender: localPlayerInfo?.name || "Jogador",
+            text: text
+        });
+    },
+
+    leaveRoom: () => {
+        if (currentRoom) {
+            currentRoom.leave();
+            currentRoom = null;
+        }
+        set({ isConnected: false, currentRoomId: null, remotePlayers: {} });
     }
 }));

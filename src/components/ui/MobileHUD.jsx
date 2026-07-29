@@ -9,7 +9,7 @@ export function MobileHUD() {
     const { aura, message, lastPoints } = useAuraSystem();
     const { activeModel, setActiveModel, isDancing, advanceDance } = usePlayerSystem();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const characters = ['san.vrm', 'deric.vrm', 'carol.vrm', 'rafa.vrm'];
+    const characters = ['san.vrm', 'deric.vrm', 'carol.vrm', 'rafa.vrm', 'mary.vrm', 'eric.vrm'];
 
     const [progression, setProgression] = useState(null);
     useEffect(() => {
@@ -169,10 +169,12 @@ export function MobileHUD() {
                     <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '400px' }}>
                         {characters.map((char) => {
                             const CHAR_NAMES = {
-                                'san.vrm': 'Samy',
-                                'deric.vrm': 'Marc',
-                                'carol.vrm': 'Carol',
-                                'rafa.vrm': 'Rafa'
+                                'san.vrm': 'Carol',
+                                'deric.vrm': 'Rafa',
+                                'carol.vrm': 'Kelly',
+                                'rafa.vrm': 'Dan',
+                                'mary.vrm': 'Mary',
+                                'eric.vrm': 'Eric'
                             };
                             return (
                             <button

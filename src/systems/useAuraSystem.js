@@ -11,8 +11,17 @@ export const useAuraSystem = create((set, get) => ({
     comboCount: 0,
     maxCombo: 0,
     hitId: 0,
+    isMilestone: false,
+    hitSide: 'left',
+    auraMultiplier: 1,
+    multiplierEndTime: null,
+
+    setMultiplier: (val, durationMs) => set({ 
+        auraMultiplier: val,
+        multiplierEndTime: durationMs ? Date.now() + durationMs : null
+    }),
     
-    registerHit: (pointsGained, message, comboCount = 0) => {
+    registerHit: (pointsGained, message, comboCount = 0, isMilestone = false, side = 'left') => {
         // PASSO 1: Atualiza o estado do combo IMEDIATAMENTE (sem bloqueio)
         // Nenhum processamento secundário aqui — só os números que o jogo precisa
         set((state) => {
@@ -25,6 +34,7 @@ export const useAuraSystem = create((set, get) => ({
             setTimeout(() => {
                 if (pointsGained > 0) {
                     useQuestSystem.getState().updateQuestProgress('gain_aura', pointsGained);
+                    useQuestSystem.getState().updateQuestProgress('make_touches', 1);
                 }
                 if (comboCount > 0) {
                     useQuestSystem.getState().updateQuestProgress('reach_combo', comboCount);
@@ -41,7 +51,9 @@ export const useAuraSystem = create((set, get) => ({
                 message: message,
                 comboCount: comboCount,
                 maxCombo: newMaxCombo,
-                hitId: Date.now() + Math.random()
+                hitId: Date.now() + Math.random(),
+                isMilestone: isMilestone,
+                hitSide: side
             };
         });
     }

@@ -4,7 +4,8 @@ import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { getPlayerLevel } from '../../../systems/progressionRules';
 import { CHARACTERS } from './CharacterScreen';
-import { ShoppingCart, Diamond, UserPlus, Gift, Star, Zap, Package, Lock, AlertCircle } from 'lucide-react';
+import { AuracashIcon } from '../AuracashIcon';
+import { ShoppingCart, UserPlus, Gift, Star, Zap, Package, Lock, AlertCircle } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
 
 function CustomModal({ modal, onClose }) {
@@ -81,8 +82,27 @@ export function StoreScreen() {
         showAlert("AuraCash Adquirido", `Sucesso! Você adquiriu ${amount.toLocaleString()} AuraCash!`);
     };
 
-    const handlePurchaseItem = (itemName) => {
-        showAlert("Item Adquirido", `${itemName} adquirido com sucesso!`);
+    const handlePurchaseItem = (itemName, price, multiplier) => {
+        if (!price || !multiplier) {
+            showAlert("Item Adquirido", `${itemName} adquirido com sucesso!`);
+            return;
+        }
+        const { diamonds, spendAuracash } = useUISystem.getState();
+        const currentAuracash = diamonds || 0;
+        
+        if (currentAuracash >= price) {
+            spendAuracash(price);
+            useAuraSystem.getState().setMultiplier(multiplier, 5 * 60 * 1000);
+            
+            // Progressão de missão de poção
+            import('../../../systems/useQuestSystem').then(module => {
+                module.useQuestSystem.getState().updateQuestProgress('use_potion', 1);
+            });
+            
+            showAlert("Poção Adquirida", `Você comprou a ${itemName}! O multiplicador de ${multiplier}x foi ativado.`);
+        } else {
+            showAlert("Saldo Insuficiente", "Você não tem Auracash suficiente.");
+        }
     };
 
     const handleCharacterPurchase = (charConfig) => {
@@ -328,7 +348,7 @@ export function StoreScreen() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(52,211,153,0.2)', padding: '4px 8px', borderRadius: '8px', border: '1px solid rgba(52,211,153,0.4)' }}>
-                            <Diamond size={12} color="#34d399" />
+                            <AuracashIcon size={12} color="#34d399" />
                             <span style={{ color: '#34d399', fontSize: '0.8rem', fontWeight: '900' }}>{stats.diamonds ? stats.diamonds.toLocaleString() : 0}</span>
                         </div>
                         <button 
@@ -343,7 +363,7 @@ export function StoreScreen() {
                 {/* TABS */}
                 <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                     <button className="tab-btn" onClick={() => setActiveTab('PACKS')} style={{ background: activeTab === 'PACKS' ? '#ec4899' : 'rgba(255,255,255,0.1)', color: activeTab === 'PACKS' ? '#fff' : '#aaa' }}>
-                        <Diamond size={12} /> AURACASH
+                        <AuracashIcon size={12} /> AURACASH
                     </button>
                     <button className="tab-btn" onClick={() => setActiveTab('CHARACTERS')} style={{ background: activeTab === 'CHARACTERS' ? '#a855f7' : 'rgba(255,255,255,0.1)', color: activeTab === 'CHARACTERS' ? '#fff' : '#aaa' }}>
                         <UserPlus size={12} /> PERSONAGENS
@@ -365,24 +385,37 @@ export function StoreScreen() {
                         {activeTab === 'PACKS' && (
                             <>
                                 <div className="store-card">
-                                    <Diamond size={32} color="#34d399" style={{ marginBottom: '8px' }} />
+                                    <AuracashIcon size={32} color="#94a3b8" style={{ marginBottom: '8px' }} />
                                     <div style={{ color: '#fff', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>1.000</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.6rem', marginBottom: '8px' }}>Inicial</div>
                                     <button className="buy-btn" onClick={() => handlePurchaseAuraCash(1000)}>R$ 4,90</button>
                                 </div>
-                                <div className="store-card premium-card">
-                                    <div className="badge">POPULAR</div>
-                                    <Gift size={36} color="#ec4899" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#ec4899', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>5.000</div>
-                                    <div style={{ color: '#f472b6', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
-                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(5000)}>R$ 9,90</button>
-                                </div>
                                 <div className="store-card">
-                                    <div className="badge" style={{ background: '#a855f7', color: '#fff' }}>MELHOR</div>
-                                    <Diamond size={32} color="#a855f7" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#a855f7', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>15.000</div>
-                                    <div style={{ color: '#d8b4fe', fontSize: '0.6rem', marginBottom: '8px' }}>AuraCash</div>
-                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(15000)}>R$ 24,90</button>
+                                    <AuracashIcon size={32} color="#34d399" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#34d399', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>2.500</div>
+                                    <div style={{ color: '#6ee7b7', fontSize: '0.6rem', marginBottom: '8px' }}>Pequeno</div>
+                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(2500)}>R$ 9,90</button>
+                                </div>
+                                <div className="store-card premium-card">
+                                    <div className="badge" style={{ background: '#3b82f6', color: '#fff' }}>POPULAR</div>
+                                    <Gift size={36} color="#60a5fa" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#60a5fa', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>7.000</div>
+                                    <div style={{ color: '#93c5fd', fontSize: '0.6rem', marginBottom: '8px' }}>Médio</div>
+                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(7000)}>R$ 19,90</button>
+                                </div>
+                                <div className="store-card premium-card" style={{ border: '1px solid #ec4899', background: 'rgba(236, 72, 153, 0.05)' }}>
+                                    <div className="badge" style={{ background: '#ec4899', color: '#fff' }}>MELHOR</div>
+                                    <Gift size={36} color="#ec4899" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#ec4899', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>18.000</div>
+                                    <div style={{ color: '#f472b6', fontSize: '0.6rem', marginBottom: '8px' }}>Grande</div>
+                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(18000)}>R$ 39,90</button>
+                                </div>
+                                <div className="store-card" style={{ border: '2px solid #fbbf24', background: 'rgba(251, 191, 36, 0.1)' }}>
+                                    <div className="badge" style={{ background: '#fbbf24', color: '#000' }}>ÉPICO</div>
+                                    <AuracashIcon size={32} color="#fbbf24" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#fbbf24', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>50.000</div>
+                                    <div style={{ color: '#fde68a', fontSize: '0.6rem', marginBottom: '8px' }}>Supremo</div>
+                                    <button className="buy-btn" onClick={() => handlePurchaseAuraCash(50000)} style={{ background: 'linear-gradient(90deg, #d97706, #fbbf24)' }}>R$ 89,90</button>
                                 </div>
                             </>
                         )}
@@ -391,19 +424,35 @@ export function StoreScreen() {
                         {activeTab === 'ITEMS' && (
                             <>
                                 <div className="store-card">
-                                    <Package size={32} color="#3b82f6" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: '900', marginBottom: '4px' }}>POÇÃO AURA</div>
+                                    <Package size={32} color="#38bdf8" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: '900', marginBottom: '4px' }}>Energética (2x)</div>
                                     <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>2x Aura por 5 min</div>
-                                    <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchaseItem('Poção Aura')}>
-                                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>500 <Diamond size={10} /></span>
+                                    <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchaseItem('Poção Energética', 100, 2)}>
+                                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>100 <AuracashIcon size={10} /></span>
                                     </button>
                                 </div>
                                 <div className="store-card">
-                                    <Zap size={32} color="#eab308" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: '900', marginBottom: '4px' }}>VELOCIDADE</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>Corra 50% + rápido</div>
-                                    <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchaseItem('Bota Velocidade')}>
-                                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>800 <Diamond size={10} /></span>
+                                    <Package size={32} color="#a855f7" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: '900', marginBottom: '4px' }}>Mística (3x)</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>3x Aura por 5 min</div>
+                                    <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchaseItem('Poção Mística', 500, 3)}>
+                                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>500 <AuracashIcon size={10} /></span>
+                                    </button>
+                                </div>
+                                <div className="store-card">
+                                    <Package size={32} color="#ec4899" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: '900', marginBottom: '4px' }}>Épica (5x)</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>5x Aura por 5 min</div>
+                                    <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchaseItem('Poção Épica', 1000, 5)}>
+                                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>1000 <AuracashIcon size={10} /></span>
+                                    </button>
+                                </div>
+                                <div className="store-card">
+                                    <Package size={32} color="#fbbf24" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: '900', marginBottom: '4px' }}>Suprema (10x)</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.55rem', marginBottom: '8px' }}>10x Aura por 5 min</div>
+                                    <button className="buy-btn buy-btn-diamonds" onClick={() => handlePurchaseItem('Poção Suprema', 1500, 10)}>
+                                        <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>1500 <AuracashIcon size={10} /></span>
                                     </button>
                                 </div>
                             </>
@@ -419,7 +468,7 @@ export function StoreScreen() {
                         ) : (
                             lockedCharacters.map((char, index) => {
                                 let btnLabel = char.price > 0 ? `COMPRAR (${char.price})` : `LIBERA NO LV ${char.level}`;
-                                let btnIcon = char.price > 0 ? <Diamond size={18} /> : <Lock size={18} />;
+                                let btnIcon = char.price > 0 ? <AuracashIcon size={18} /> : <Lock size={18} />;
                                 let btnStyle = { 
                                     background: 'linear-gradient(90deg, #c026d3, #9333ea)', 
                                     color: '#fff', border: 'none', 

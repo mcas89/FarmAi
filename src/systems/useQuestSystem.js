@@ -2,13 +2,48 @@ import { create } from 'zustand';
 
 // Template de possíveis missões diárias
 const QUEST_TEMPLATES = [
-    { type: 'gain_aura', title: 'Farmar 1000 de Aura', target: 1000, reward: 50 },
-    { type: 'gain_aura', title: 'Farmar 5000 de Aura', target: 5000, reward: 250 },
-    { type: 'gain_aura', title: 'Farmar 10000 de Aura', target: 10000, reward: 600 },
-    { type: 'reach_combo', title: 'Alcançar Combo de 100', target: 100, reward: 100 },
-    { type: 'reach_combo', title: 'Alcançar Combo de 300', target: 300, reward: 300 },
-    { type: 'reach_combo', title: 'Alcançar Combo de 500', target: 500, reward: 600 },
-    { type: 'play_time', title: 'Jogar por 5 Minutos', target: 5, reward: 50 },
+    // ✨ Foco em Aura (gain_aura)
+    { type: 'gain_aura', title: 'Primeira Farmada', target: 500, reward: 5 },
+    { type: 'gain_aura', title: 'Farmando Aura', target: 1000, reward: 10 },
+    { type: 'gain_aura', title: 'Aura em Alta', target: 2500, reward: 15 },
+    { type: 'gain_aura', title: 'Aura Explosiva', target: 5000, reward: 20 },
+    { type: 'gain_aura', title: 'Dia de Farm', target: 10000, reward: 30 },
+    { type: 'gain_aura', title: 'Aura Insana', target: 25000, reward: 40 },
+    { type: 'gain_aura', title: 'Aura Dominante', target: 50000, reward: 60 },
+    { type: 'gain_aura', title: 'Rei da Farmada', target: 100000, reward: 100 },
+    
+    // 🔥 Foco em Combo (reach_combo)
+    { type: 'reach_combo', title: 'Começando o Combo', target: 25, reward: 5 },
+    { type: 'reach_combo', title: 'Combo Ativo', target: 50, reward: 5 },
+    { type: 'reach_combo', title: 'Combo Quente', target: 100, reward: 10 },
+    { type: 'reach_combo', title: 'Não Quebre!', target: 150, reward: 20 }, // Simula o manter combo > 100
+    { type: 'reach_combo', title: 'Combo Insano', target: 250, reward: 15 },
+    { type: 'reach_combo', title: 'Combo Monstro', target: 500, reward: 25 },
+    { type: 'reach_combo', title: 'Combo Perfeito', target: 500, reward: 40 }, // Duplicado intencionalmente para simular 'sem perder' (que é mecânica padrão do combo)
+    { type: 'reach_combo', title: 'Combo Lendário', target: 1000, reward: 50 },
+
+    // 👆 Foco em toques (make_touches)
+    { type: 'make_touches', title: 'Aquecimento', target: 100, reward: 5 },
+    { type: 'make_touches', title: 'Mão na Massa', target: 250, reward: 5 },
+    { type: 'make_touches', title: 'Farmador', target: 500, reward: 10 },
+    { type: 'make_touches', title: 'Dedo de Aço', target: 1000, reward: 20 },
+    { type: 'make_touches', title: 'Máquina de Farmar', target: 2500, reward: 30 },
+    { type: 'make_touches', title: 'Incansável', target: 5000, reward: 50 },
+    { type: 'make_touches', title: 'Sem Parar', target: 10000, reward: 75 },
+
+    // 🕐 Foco em tempo de jogo (play_time) (minutos)
+    { type: 'play_time', title: 'Só Começando', target: 2, reward: 5 },
+    { type: 'play_time', title: 'Aquecendo', target: 5, reward: 10 },
+    { type: 'play_time', title: 'Farmador Dedicado', target: 10, reward: 15 },
+    { type: 'play_time', title: 'Hora da Farmada', target: 20, reward: 25 },
+    { type: 'play_time', title: 'Não Para', target: 30, reward: 40 },
+
+    // 🧪 Foco em poções (use_potion)
+    { type: 'use_potion', title: 'Potencializado', target: 1, reward: 10 },
+    { type: 'use_potion', title: 'Aura Turbinada', target: 2, reward: 15 }, // Simula 'Use uma poção e ganhe aura' para manter a simplicidade do tracker
+    { type: 'use_potion', title: 'Farm Potencializado', target: 3, reward: 20 },
+    { type: 'use_potion', title: 'Poder da Poção', target: 4, reward: 30 },
+    { type: 'use_potion', title: 'Alquimista da Aura', target: 5, reward: 40 },
 ];
 
 // Função auxiliar para gerar missões aleatórias
@@ -78,7 +113,7 @@ export const useQuestSystem = create((set, get) => ({
                 if (quest.type === type && !quest.claimed && quest.progress < quest.target) {
                     let newProgress = quest.progress;
                     
-                    if (type === 'gain_aura' || type === 'play_time') {
+                    if (type === 'gain_aura' || type === 'play_time' || type === 'make_touches' || type === 'use_potion') {
                         newProgress = Math.min(quest.progress + value, quest.target);
                     } else if (type === 'reach_combo') {
                         newProgress = Math.min(Math.max(quest.progress, value), quest.target);
