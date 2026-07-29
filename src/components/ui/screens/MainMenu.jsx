@@ -32,7 +32,10 @@ export function MainMenu() {
     const [rankingType, setRankingType] = useState('global');
     
     const { joinRoom } = useMultiplayerSystem();
+    const onlinePlayers = useMultiplayerSystem(state => state.players ? Object.keys(state.players).length : 0);
+    const MAX_PLAYERS = 30;
     const setIsOnlineMode = useUISystem(state => state.setIsOnlineMode);
+    const [isJoining, setIsJoining] = useState(false);
 
     const [progression, setProgression] = useState(null);
 
@@ -72,6 +75,7 @@ export function MainMenu() {
     }, []);
 
     const handleJoinRoom = async (roomId) => {
+        setIsJoining(true);
         const aura = useAuraSystem.getState().aura || 0;
         const success = await joinRoom(roomId, { 
             name: nickname, 
@@ -82,6 +86,7 @@ export function MainMenu() {
             setIsOnlineMode(true);
             setScreen('GAME');
         }
+        setIsJoining(false);
     };
 
     const handleCreateRoom = async () => {
@@ -723,23 +728,92 @@ export function MainMenu() {
                             <X size={24} color="#888" cursor="pointer" onClick={() => setShowLobbyModal(false)} />
                         </div>
 
-                        <div className="ranking-modal-scroll" style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '10px' }}>
-                            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                                <Globe size={48} color="#a855f7" style={{ marginBottom: '15px' }} />
-                                <h3 style={{ color: '#fff', margin: '0 0 10px 0' }}>SALA GLOBAL</h3>
-                                <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '25px' }}>
-                                    Junte-se a outros jogadores em tempo real no metaverso.
+                        <div className="ranking-modal-scroll" style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '20px' }}>
+                            {/* Card da Sala Global */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.15))',
+                                border: '1px solid rgba(168,85,247,0.3)',
+                                borderRadius: '16px', padding: '20px', marginBottom: '16px'
+                            }}>
+                                {/* Header do card */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{
+                                            width: '44px', height: '44px', borderRadius: '12px',
+                                            background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: '0 0 16px rgba(168,85,247,0.5)'
+                                        }}>
+                                            <Globe size={22} color="#fff" />
+                                        </div>
+                                        <div>
+                                            <div style={{ color: '#fff', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px' }}>SALA GLOBAL</div>
+                                            <div style={{ color: '#a855f7', fontSize: '0.65rem', fontWeight: 'bold', letterSpacing: '1px' }}>FARMAVERSO</div>
+                                        </div>
+                                    </div>
+                                    {/* Badge ao vivo */}
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: '5px',
+                                        background: 'rgba(34, 197, 94, 0.15)',
+                                        border: '1px solid rgba(34, 197, 94, 0.4)',
+                                        borderRadius: '20px', padding: '4px 10px'
+                                    }}>
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} className="anim-pulse" />
+                                        <span style={{ color: '#22c55e', fontSize: '0.65rem', fontWeight: 'bold' }}>AO VIVO</span>
+                                    </div>
+                                </div>
+
+                                {/* Contador de jogadores */}
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Users size={14} color="#a855f7" />
+                                            <span style={{ color: '#ccc', fontSize: '0.8rem', fontWeight: 'bold' }}>Jogadores online</span>
+                                        </div>
+                                        <span style={{ color: '#fff', fontSize: '1rem', fontWeight: '900' }}>
+                                            <span style={{ color: onlinePlayers >= MAX_PLAYERS ? '#ef4444' : '#a855f7' }}>{onlinePlayers}</span>
+                                            <span style={{ color: '#666' }}>/{MAX_PLAYERS}</span>
+                                        </span>
+                                    </div>
+                                    {/* Barra de capacidade */}
+                                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                                        <div style={{
+                                            height: '100%', borderRadius: '3px',
+                                            width: `${Math.min(100, (onlinePlayers / MAX_PLAYERS) * 100)}%`,
+                                            background: onlinePlayers >= MAX_PLAYERS
+                                                ? '#ef4444'
+                                                : onlinePlayers >= MAX_PLAYERS * 0.7
+                                                ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
+                                                : 'linear-gradient(90deg, #a855f7, #ec4899)',
+                                            transition: 'width 0.5s ease'
+                                        }} />
+                                    </div>
+                                </div>
+
+                                <p style={{ color: '#888', fontSize: '0.82rem', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                                    Junte-se a outros jogadores em tempo real no Farmaverso. Faça farm, suba de nível e mostre sua aura! 🌿
                                 </p>
-                                <button 
-                                    onClick={() => handleJoinRoom('global_lobby')}
+
+                                <button
+                                    onClick={() => !isJoining && onlinePlayers < MAX_PLAYERS && handleJoinRoom('global_lobby')}
+                                    disabled={isJoining || onlinePlayers >= MAX_PLAYERS}
                                     style={{
                                         width: '100%', padding: '14px', borderRadius: '12px',
-                                        background: 'linear-gradient(90deg, #a855f7, #6b21a8)',
+                                        background: isJoining || onlinePlayers >= MAX_PLAYERS
+                                            ? 'rgba(100,100,100,0.5)'
+                                            : 'linear-gradient(90deg, #a855f7, #6b21a8)',
                                         border: 'none', color: '#fff', fontWeight: '900',
-                                        cursor: 'pointer', fontSize: '1rem', letterSpacing: '1px'
+                                        cursor: isJoining || onlinePlayers >= MAX_PLAYERS ? 'not-allowed' : 'pointer',
+                                        fontSize: '1rem', letterSpacing: '1px',
+                                        transition: 'all 0.2s ease',
+                                        opacity: isJoining ? 0.7 : 1
                                     }}
                                 >
-                                    ENTRAR AGORA
+                                    {isJoining
+                                        ? '⏳ Conectando...'
+                                        : onlinePlayers >= MAX_PLAYERS
+                                        ? '🔒 SALA CHEIA'
+                                        : '🌿 ENTRAR AGORA'}
                                 </button>
                             </div>
                         </div>
