@@ -60,13 +60,24 @@ export async function initInfinitePayCheckout(packId, priceCents, description, u
 
         const data = await res.json();
 
-        // A InfinitePay pode retornar o link em campos diferentes dependendo da versão
-        const paymentUrl = data.url
-            || data.payment_url
-            || (data.metadata && data.metadata.url)
-            || data.link;
+        // A InfinitePay pode retornar o link em diferentes campos
+        let paymentUrl = data.url || data.payment_url || (data.metadata && data.metadata.url) || data.link;
 
         if (paymentUrl) {
+            // SALVA A TRANSAÇÃO COMO PENDENTE ANTES DE SAIR!
+            // Isso garante que se o usuário clicar em "Voltar" no navegador
+            // em vez do botão da InfinitePay (perdendo os parâmetros da URL),
+            // o jogo ainda validará a compra no reprocessPendingPayments!
+            try {
+                const pending = JSON.parse(localStorage.getItem('pending_payments') || '[]');
+                if (!pending.find(p => p.orderNsu === orderNsu)) {
+                    pending.push({ orderNsu, packId, ts: Date.now() });
+                    localStorage.setItem('pending_payments', JSON.stringify(pending));
+                }
+            } catch (e) {
+                console.error("[InfinitePay] Erro ao salvar pendente local:", e);
+            }
+
             window.location.href = paymentUrl;
         } else {
             console.error("InfinitePay resposta sem URL:", data);
