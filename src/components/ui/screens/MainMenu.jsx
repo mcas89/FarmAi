@@ -26,9 +26,9 @@ export function MainMenu() {
     // Hooks devem sempre ser chamados no topo do componente
     const isMuted = useAudioSystem(state => state.isMuted);
     const isInstallable = usePWASystem(state => state.isInstallable);
+    const { globalRanking, comboRanking, weeklyRanking, isLoading: isRankingLoading } = useRankingSystem();
 
     const [dailyQuests, setDailyQuests] = useState([]);
-    const [rankings, setRankings] = useState({ global: [], combo: [], weekly: [], isLoading: true });
     const [hasUnclaimedAchievements, setHasUnclaimedAchievements] = useState(false);
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -82,14 +82,6 @@ export function MainMenu() {
 
         import('../../../systems/useRankingSystem').then(m => {
             m.useRankingSystem.getState().fetchRankings();
-            const unsub = m.useRankingSystem.subscribe((state) => {
-                setRankings({ 
-                    global: state.globalRanking, 
-                    combo: state.comboRanking, 
-                    weekly: state.weeklyRanking, 
-                    isLoading: state.isLoading 
-                });
-            });
         });
     }, []);
 
@@ -590,9 +582,9 @@ export function MainMenu() {
                     </div>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {rankings.isLoading && <div style={{ textAlign: 'center', color: '#888', fontSize: '0.8rem' }}>Carregando dados...</div>}
-                        {!rankings.isLoading && rankings.combo.length === 0 && <div style={{ textAlign: 'center', color: '#888', fontSize: '0.8rem' }}>Nenhum recorde ainda.</div>}
-                        {!rankings.isLoading && rankings.combo.slice(0, 5).map(player => (
+                        {isRankingLoading && <div style={{ textAlign: 'center', color: '#888', fontSize: '0.85rem' }}>CARREGANDO RANKING...</div>}
+                        {!isRankingLoading && comboRanking.length === 0 && <div style={{ textAlign: 'center', color: '#888', fontSize: '0.85rem' }}>Nenhum dado encontrado.</div>}
+                        {!isRankingLoading && comboRanking.slice(0, 5).map(player => (
                             <div key={player.rank} style={{ 
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
                                 background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: '10px',
@@ -632,28 +624,28 @@ export function MainMenu() {
                 <div className="footer-btn btn-global" onClick={() => { 
                     setRankingType('global'); 
                     setShowRankingModal(true);
-                    import('../../../systems/useRankingSystem').then(m => m.useRankingSystem.getState().fetchRankings());
+                    useRankingSystem.getState().fetchRankings();
                 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Globe size={14} /> RANKING GLOBAL
                         </div>
                         <div style={{ fontSize: '0.55rem', color: '#fff', opacity: 0.8, marginTop: '2px' }}>
-                            {rankings.isLoading ? 'CARREGANDO...' : `VOCÊ É O TOP #${useRankingSystem.getState().getMyPosition(rankings.global) || '?'}`}
+                            {isRankingLoading ? 'CARREGANDO...' : `VOCÊ É O TOP #${useRankingSystem.getState().getMyPosition(globalRanking) || '?'}`}
                         </div>
                     </div>
                 </div>
                 <div className="footer-btn btn-weekly" onClick={() => { 
                     setRankingType('weekly'); 
                     setShowRankingModal(true);
-                    import('../../../systems/useRankingSystem').then(m => m.useRankingSystem.getState().fetchRankings());
+                    useRankingSystem.getState().fetchRankings();
                 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Trophy size={14} /> RANKING SEMANAL
                         </div>
                         <div style={{ fontSize: '0.55rem', color: '#fff', opacity: 0.8, marginTop: '2px' }}>
-                            {rankings.isLoading ? 'CARREGANDO...' : `VOCÊ É O TOP #${useRankingSystem.getState().getMyPosition(rankings.weekly) || '?'}`}
+                            {isRankingLoading ? 'CARREGANDO...' : `VOCÊ É O TOP #${useRankingSystem.getState().getMyPosition(weeklyRanking) || '?'}`}
                         </div>
                     </div>
                 </div>
@@ -678,7 +670,7 @@ export function MainMenu() {
                                 <div className="ranking-modal-row">
                                     <span className="ranking-modal-lbl">MINHA POSIÇÃO</span>
                                     <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>
-                                        {rankings.isLoading ? '...' : `#${useRankingSystem.getState().getMyPosition(rankingType === 'global' ? rankings.global : rankings.weekly)}`}
+                                        {isRankingLoading ? '...' : `#${useRankingSystem.getState().getMyPosition(rankingType === 'global' ? globalRanking : weeklyRanking)}`}
                                     </span>
                                 </div>
                                 <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
@@ -696,8 +688,8 @@ export function MainMenu() {
                                 </div>
                                 
                                 <div className="ranking-modal-scroll">
-                                    {rankings.isLoading && <div style={{ textAlign: 'center', color: '#888' }}>Carregando...</div>}
-                                    {!rankings.isLoading && (rankingType === 'global' ? rankings.global : rankings.weekly).map(player => (
+                                    {isRankingLoading && <div style={{ textAlign: 'center', color: '#888', marginTop: '20px' }}>CARREGANDO DADOS...</div>}
+                                    {!isRankingLoading && (rankingType === 'global' ? globalRanking : weeklyRanking).map(player => (
                                         <div key={player.rank} style={{
                                             display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
                                             background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
