@@ -1,11 +1,69 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDuelSystem } from '../../../systems/useDuelSystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, Text } from '@react-three/drei';
-import { Avatar } from '../../3d/Avatar';
-import { OrbitControls } from '@react-three/drei'; // Somente se quiser, mas deixaremos fixa
+import { OrbitControls } from '@react-three/drei';
 import { Trophy, Timer, X } from 'lucide-react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin } from '@pixiv/three-vrm';
+
+// Componente leve exclusivo para a arena (sem depender dos sistemas do jogo local)
+function SimpleAvatar({ modelFile, animation }) {
+    const [vrm, setVrm] = useState(null);
+
+    useEffect(() => {
+        if (!modelFile) return;
+        let isMounted = true;
+        const loader = new GLTFLoader();
+        loader.register((parser) => new VRMLoaderPlugin(parser));
+        
+        loader.load(`/models/${modelFile}`, (gltf) => {
+            if (!isMounted) return;
+            const loadedVrm = gltf.userData.vrm;
+            
+            // Corrige shaders pra ficar no padrão "Anime" flat
+            loadedVrm.scene.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(m => { m.needsUpdate = true; });
+                    } else {
+                        child.material.needsUpdate = true;
+                    }
+                    child.frustumCulled = false;
+                }
+            });
+            
+            // Posiciona os braços para baixo se for idle
+            if (loadedVrm.humanoid) {
+                loadedVrm.humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = Math.PI / 3;
+                loadedVrm.humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -Math.PI / 3;
+            }
+            
+            setVrm(loadedVrm);
+        });
+
+        return () => { isMounted = false; };
+    }, [modelFile]);
+
+    useFrame((state, delta) => {
+        if (vrm) {
+            vrm.update(delta);
+            // Animação super simples de respiração/pulo dependendo do status
+            if (animation === 'dance') {
+                vrm.scene.position.y = Math.sin(state.clock.elapsedTime * 15) * 0.1;
+                if (vrm.humanoid) {
+                    vrm.humanoid.getNormalizedBoneNode('spine').rotation.y = Math.sin(state.clock.elapsedTime * 20) * 0.1;
+                }
+            } else {
+                vrm.scene.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.02;
+            }
+        }
+    });
+
+    return vrm ? <primitive object={vrm.scene} /> : null;
+}
 
 export function DuelScreen() {
     const { activeDuelRoom, duelState, leaveDuel, sendDuelHit } = useDuelSystem();
@@ -92,14 +150,14 @@ export function DuelScreen() {
                 {/* Left Player (P1 ou Você) */}
                 {LeftPlayer?.model && (
                     <group position={[-1.5, 0, 0]} rotation={[0, Math.PI/2, 0]}>
-                        <Avatar modelPath={`/models/${LeftPlayer.model}`} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
+                        <SimpleAvatar modelFile={LeftPlayer.model} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
                     </group>
                 )}
 
                 {/* Right Player (Oponente) */}
                 {RightPlayer?.model && (
                     <group position={[1.5, 0, 0]} rotation={[0, -Math.PI/2, 0]}>
-                        <Avatar modelPath={`/models/${RightPlayer.model}`} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
+                        <SimpleAvatar modelFile={RightPlayer.model} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
                     </group>
                 )}
             </Canvas>
