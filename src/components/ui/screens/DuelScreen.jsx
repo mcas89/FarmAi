@@ -611,94 +611,36 @@ export function DuelScreen() {
                 ))}
             </Canvas>
 
-            <div style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 10,
-                pointerEvents: 'none',
-            }}>
-                <div style={{
-                    padding: '18px clamp(14px, 4vw, 48px)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                }}>
-                    <div style={{
-                        color: '#fff',
-                        fontWeight: 950,
-                        fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
-                        lineHeight: 1,
-                        textShadow: duelState.timeLeft <= 10
-                            ? '0 0 18px #ef4444, 0 0 35px #ef4444'
-                            : '0 0 16px rgba(255,255,255,0.45)',
-                    }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' }}>
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ color: '#fff', fontWeight: '900', fontSize: '2rem', textShadow: '0 0 10px #ef4444' }}>
                         {duelState.timeLeft}s
                     </div>
-
-                    <div style={{
-                        marginTop: 7,
-                        color: 'rgba(255,255,255,0.68)',
-                        fontWeight: 900,
-                        fontSize: '0.72rem',
-                        letterSpacing: '0.16em',
+                    
+                    {/* BARRA DE DOMÍNIO (CABO DE GUERRA) */}
+                    <div style={{ 
+                        width: '80%', height: '20px', background: '#000', border: '2px solid #333', 
+                        borderRadius: '10px', marginTop: '10px', position: 'relative', overflow: 'hidden',
+                        display: 'flex', boxShadow: '0 0 15px rgba(255,255,255,0.1)'
                     }}>
-                        {dominanceLabel}
-                    </div>
-
-                    <div style={{
-                        width: 'min(86%, 980px)',
-                        height: 26,
-                        background: '#020617',
-                        border: '2px solid rgba(255,255,255,0.22)',
-                        borderRadius: 999,
-                        marginTop: 12,
-                        position: 'relative',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        boxShadow: '0 0 26px rgba(59,130,246,0.2), 0 0 26px rgba(239,68,68,0.2)',
-                    }}>
-                        <div style={{
-                            width: `${p1Progress}%`,
-                            height: '100%',
+                        <div style={{ 
+                            width: `${p1Progress}%`, height: '100%', 
                             background: `linear-gradient(90deg, #172554, ${BLUE}, ${BLUE_LIGHT})`,
-                            transition: 'width 100ms linear',
+                            transition: 'width 0.1s linear' 
                         }} />
-
-                        <div style={{
-                            width: `${100 - p1Progress}%`,
-                            height: '100%',
+                        
+                        <div style={{ 
+                            width: `${100 - p1Progress}%`, height: '100%', 
                             background: `linear-gradient(90deg, ${RED_LIGHT}, ${RED}, #450a0a)`,
-                            transition: 'width 100ms linear',
+                            transition: 'width 0.1s linear'
                         }} />
-
-                        <div style={{
-                            position: 'absolute',
-                            inset: '0 auto 0 50%',
-                            width: 5,
-                            background: '#fff',
-                            transform: 'translateX(-50%)',
-                            boxShadow: '0 0 16px #fff',
-                        }} />
+                        
+                        <div style={{ position: 'absolute', top: 0, left: '50%', width: '4px', height: '100%', background: '#fff', transform: 'translateX(-50%)', boxShadow: '0 0 10px #fff' }} />
                     </div>
 
-                    <div style={{
-                        width: 'min(86%, 980px)',
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: 30,
-                        marginTop: 9,
-                    }}>
-                        <div>
-                            <div style={{ color: BLUE_LIGHT, fontWeight: 950, fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>
-                                VOCÊ · {LeftPlayer?.score || 0}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                            <div style={{ color: RED_LIGHT, fontWeight: 950, fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>
-                                {RightPlayer?.name || 'ADVERSÁRIO'} · {RightPlayer?.score || 0}
-                            </div>
-                        </div>
+                    <div style={{ width: '80%', display: 'flex', justifyContent: 'space-between', marginTop: '5px', color: '#fff', fontWeight: 'bold' }}>
+                        <span style={{ color: BLUE_LIGHT }}>VOCÊ ({LeftPlayer?.score || 0})</span>
+                        <span style={{ color: RED_LIGHT }}>{RightPlayer?.name || 'ADVERSÁRIO'} ({RightPlayer?.score || 0})</span>
                     </div>
                 </div>
 
@@ -789,76 +731,32 @@ export function DuelScreen() {
             </div>
 
             {duelState.status === 'countdown' && (
-                <div style={{
-                    position: 'absolute',
-                    bottom: '17%',
-                    width: '100%',
-                    zIndex: 50,
-                    color: '#fff',
-                    textAlign: 'center',
-                    fontWeight: 950,
-                    letterSpacing: '0.12em',
-                    textShadow: '0 0 16px #000',
-                }}>
-                    PREPARE-SE · 3 · 2 · 1 · FARMEM!
+                <div style={{ position: 'absolute', bottom: '20%', left: '0', width: '100%', textAlign: 'center', color: '#fff', fontSize: '1.2rem', animation: 'pulse 1s infinite', zIndex: 50 }}>
+                    PREPARE-SE PARA CLICAR NOS BOTÕES!
                 </div>
             )}
 
+            {/* BOTÕES DE JOGO (Aparecem apenas quando a partida começar) */}
             {duelState.status === 'playing' && (
-                <div style={{
-                    position: 'absolute',
-                    bottom: '7%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'clamp(18px, 5vw, 70px)',
-                    zIndex: 100,
-                    pointerEvents: 'auto',
-                }}>
-                    <button
-                        type="button"
-                        aria-label="Farmar com o botão 6"
-                        onPointerDown={(event) => {
-                            event.stopPropagation();
-                            handleScreenClick(event);
-                        }}
+                <div style={{ position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '80px', zIndex: 100, pointerEvents: 'auto' }}>
+                    <button 
+                        onTouchStart={(e) => { e.stopPropagation(); handleScreenClick(e); }}
+                        onClick={(e) => { e.stopPropagation(); handleScreenClick(e); }}
                         style={{
-                            width: 'clamp(82px, 18vw, 112px)',
-                            height: 'clamp(82px, 18vw, 112px)',
-                            borderRadius: '50%',
-                            background: 'radial-gradient(circle, rgba(59,130,246,0.25), rgba(0,0,0,0.92))',
-                            border: `4px solid ${BLUE}`,
-                            color: BLUE_LIGHT,
-                            fontSize: '3rem',
-                            fontWeight: 1000,
-                            cursor: 'pointer',
-                            outline: 'none',
-                            boxShadow: '0 0 25px rgba(59,130,246,0.7), inset 0 0 22px rgba(59,130,246,0.3)',
+                            width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #3b82f6',
+                            color: '#3b82f6', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
+                            boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)'
                         }}
                     >
                         6
                     </button>
-
-                    <button
-                        type="button"
-                        aria-label="Farmar com o botão 7"
-                        onPointerDown={(event) => {
-                            event.stopPropagation();
-                            handleScreenClick(event);
-                        }}
+                    <button 
+                        onTouchStart={(e) => { e.stopPropagation(); handleScreenClick(e); }}
+                        onClick={(e) => { e.stopPropagation(); handleScreenClick(e); }}
                         style={{
-                            width: 'clamp(82px, 18vw, 112px)',
-                            height: 'clamp(82px, 18vw, 112px)',
-                            borderRadius: '50%',
-                            background: 'radial-gradient(circle, rgba(239,68,68,0.25), rgba(0,0,0,0.92))',
-                            border: `4px solid ${RED}`,
-                            color: RED_LIGHT,
-                            fontSize: '3rem',
-                            fontWeight: 1000,
-                            cursor: 'pointer',
-                            outline: 'none',
-                            boxShadow: '0 0 25px rgba(239,68,68,0.7), inset 0 0 22px rgba(239,68,68,0.3)',
+                            width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #ef4444',
+                            color: '#ef4444', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
+                            boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)'
                         }}
                     >
                         7
