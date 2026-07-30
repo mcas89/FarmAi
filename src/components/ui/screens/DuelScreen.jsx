@@ -8,7 +8,42 @@ import { Trophy, Timer, X } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
-import { sixSevenFrames } from '../../3d/avatar/animations/farmSixSeven';
+import { sixSevenFrames } from '../../../3d/avatar/animations/farmSixSeven';
+
+// Efeito de projétil de energia atirado pelas mãos
+function EnergyProjectile({ startX, endX, color, onComplete }) {
+    const meshRef = useRef();
+    const [progress, setProgress] = useState(0);
+
+    useFrame((state, delta) => {
+        setProgress(p => {
+            const np = p + delta * 2; // Velocidade da bola de energia
+            if (np >= 1) {
+                onComplete();
+                return 1;
+            }
+            return np;
+        });
+        
+        if (meshRef.current) {
+            // Interpola entre a mão do atirador e o corpo do adversário
+            meshRef.current.position.x = THREE.MathUtils.lerp(startX, endX, progress);
+            // Um pequeno arco na trajetória (y=0.8 é altura do peito/mão)
+            // Não precisa de arco se é direto na cara, mas um pequeno arco dá estilo.
+            meshRef.current.position.y = 0.8;
+            
+            // Faz a bola girar para efeito visual
+            meshRef.current.rotation.z += delta * 10;
+        }
+    });
+
+    return (
+        <mesh ref={meshRef} position={[startX, 0.8, 0]}>
+            <sphereGeometry args={[0.2, 16, 16]} />
+            <meshBasicMaterial color={color} transparent opacity={1 - progress} />
+        </mesh>
+    );
+}
 
 // Componente leve exclusivo para a arena (sem depender dos sistemas do jogo local)
 function SimpleAvatar({ modelFile, score }) {
@@ -84,10 +119,8 @@ function SimpleAvatar({ modelFile, score }) {
             const chest = getBone('chest');
             if (chest) { chest.rotation.z = 0; }
             
-            // Movimentos de vida somados à pose (pescoço e respiração suave)
+            // Movimentos de vida somados à pose (apenas respiração suave, sem virar a cabeça)
             if (chest) chest.rotation.x += Math.sin(state.clock.elapsedTime * 2) * 0.02;
-            const neck = getBone('neck');
-            if (neck) neck.rotation.y += Math.sin(state.clock.elapsedTime * 1) * 0.05;
             
             // Garante que o corpo e as pernas fiquem 100% imóveis no eixo Y (sem pulos)
             vrm.scene.position.y = 0;
@@ -103,6 +136,11 @@ export function DuelScreen() {
     const [p1Progress, setP1Progress] = useState(50);
     const [clickCount, setClickCount] = useState(0);
     const lastClickTimeRef = useRef(0);
+    
+    // Gerenciador de Projéteis
+    const [projectiles, setProjectiles] = useState([]);
+    const prevScore1 = useRef(0);
+    const prevScore2 = useRef(0);
 
     // Quando o jogador clica em qualquer lugar da tela
     const handleScreenClick = (e) => {
@@ -146,6 +184,17 @@ export function DuelScreen() {
             
             setP1Progress(50 + pct);
         }
+        
+        // Spawn de Projéteis baseado no score
+        if (s1 > prevScore1.current) {
+            setProjectiles(p => [...p, { id: Date.now() + Math.random(), startX: -1.0, endX: 1.0, color: '#3b82f6' }]);
+            prevScore1.current = s1;
+        }
+        if (s2 > prevScore2.current) {
+            setProjectiles(p => [...p, { id: Date.now() + Math.random(), startX: 1.0, endX: -1.0, color: '#ef4444' }]);
+            prevScore2.current = s2;
+        }
+        
     }, [duelState]);
 
     if (!duelState || !duelState.player1 || !duelState.player2) return <div style={{background: '#000', width: '100%', height: '100%', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>Carregando Arena...</div>;
@@ -196,6 +245,19 @@ export function DuelScreen() {
                         <SimpleAvatar modelFile={RightPlayer.model} score={RightPlayer.score} />
                     </group>
                 )}
+
+                {/* Renderização das Bolhas de Poder */}
+                {projectiles.map(proj => (
+                    <EnergyProjectile 
+                        key={proj.id} 
+                        startX={proj.startX} 
+                        endX={proj.endX} 
+                        color={proj.color} 
+                        onComplete={() => {
+                            setProjectiles(current => current.filter(p => p.id !== proj.id));
+                        }} 
+                    />
+                ))}
             </Canvas>
 
             {/* HUD 2D SOBREPOSTA */}
@@ -284,7 +346,7 @@ export function DuelScreen() {
             
             {/* BOTÕES DE JOGO (Aparecem apenas quando a partida começar) */}
             {duelState.status === 'playing' && (
-                <div style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '20px', zIndex: 100, pointerEvents: 'auto' }}>
+                <div style={{ position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '80px', zIndex: 100, pointerEvents: 'auto' }}>
                     <button 
                         onTouchStart={handleScreenClick}
                         onClick={handleScreenClick}
