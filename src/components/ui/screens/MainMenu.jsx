@@ -31,8 +31,21 @@ export function MainMenu() {
     const [showLobbyModal, setShowLobbyModal] = useState(false);
     const [rankingType, setRankingType] = useState('global');
     
-    const { joinRoom } = useMultiplayerSystem();
-    const onlinePlayers = useMultiplayerSystem(state => state.players ? Object.keys(state.players).length : 0);
+    const { joinRoom, getGlobalOnlineCount } = useMultiplayerSystem();
+    const [onlinePlayers, setOnlinePlayers] = useState(0);
+
+    // Busca contador de jogadores online a cada 5s enquanto o modal estiver aberto (ou periodicamente)
+    useEffect(() => {
+        let interval;
+        const fetchCount = async () => {
+            const count = await getGlobalOnlineCount();
+            setOnlinePlayers(count);
+        };
+        fetchCount();
+        interval = setInterval(fetchCount, 5000);
+        return () => clearInterval(interval);
+    }, [getGlobalOnlineCount]);
+
     const MAX_PLAYERS = 30;
     const setIsOnlineMode = useUISystem(state => state.setIsOnlineMode);
     const [isJoining, setIsJoining] = useState(false);

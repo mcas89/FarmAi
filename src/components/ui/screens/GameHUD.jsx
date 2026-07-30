@@ -491,22 +491,6 @@ export function GameHUD() {
                         display: 'flex', alignItems: 'center',
                         justifyContent: 'flex-end', gap: '7px', minWidth: 0
                     }}>
-                        {/* Contador de Jogadores Online (aparece se estiver online) */}
-                        {isOnlineMode && (
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                background: 'rgba(56, 189, 248, 0.15)',
-                                border: '1px solid rgba(56, 189, 248, 0.3)',
-                                borderRadius: '10px', padding: '5px 9px',
-                                pointerEvents: 'auto', minWidth: 0,
-                                boxShadow: '0 0 10px rgba(56, 189, 248, 0.2)'
-                            }}>
-                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', boxShadow: '0 0 5px #38bdf8' }} className="anim-pulse" />
-                                <span style={{ color: '#38bdf8', fontSize: '0.78rem', fontWeight: '900', fontVariantNumeric: 'tabular-nums' }}>
-                                    {onlinePlayersCount}/30
-                                </span>
-                            </div>
-                        )}
 
                         {/* Contador de AuraCash adaptável */}
                         <div style={{
