@@ -8,12 +8,14 @@ import { Trophy, Timer, X } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
+import { sixSevenFrames } from '../../../3d/avatar/animations/farmSixSeven';
 
 // Componente leve exclusivo para a arena (sem depender dos sistemas do jogo local)
 function SimpleAvatar({ modelFile, score }) {
     const [vrm, setVrm] = useState(null);
     const lastScoreRef = useRef(score || 0);
-    const farmPulseRef = useRef(0);
+    const animFrameRef = useRef(0);
+    const isAnimatingRef = useRef(false);
 
     useEffect(() => {
         if (!modelFile) return;
@@ -37,36 +39,6 @@ function SimpleAvatar({ modelFile, score }) {
                 }
             });
             
-            // Posiciona na pose SIX_SEVEN
-            if (loadedVrm.humanoid) {
-                const getBone = (name) => loadedVrm.humanoid.getNormalizedBoneNode(name);
-                
-                const hips = getBone('hips');
-                // Hips retas (sem inclinação no x), mantém a virada de 180 graus (y=3.14)
-                if (hips) { hips.rotation.x = 0; hips.rotation.y = Math.PI; }
-                
-                const lShoulder = getBone('leftShoulder');
-                if (lShoulder) lShoulder.rotation.x = -1.59;
-                
-                const rShoulder = getBone('rightShoulder');
-                if (rShoulder) rShoulder.rotation.x = -1.85;
-                
-                const lUpper = getBone('leftUpperArm');
-                if (lUpper) lUpper.rotation.y = 1.25;
-                
-                const rUpper = getBone('rightUpperArm');
-                if (rUpper) { rUpper.rotation.y = -1.32; rUpper.rotation.z = 0.3; }
-                
-                const lLower = getBone('leftLowerArm');
-                if (lLower) { lLower.rotation.x = 0.39; lLower.rotation.z = -1.82; }
-                
-                const rLower = getBone('rightLowerArm');
-                if (rLower) rLower.rotation.z = 0.12;
-                
-                const chest = getBone('chest');
-                if (chest) chest.rotation.z = 0;
-            }
-            
             setVrm(loadedVrm);
         });
 
@@ -77,32 +49,47 @@ function SimpleAvatar({ modelFile, score }) {
         if (vrm && vrm.humanoid) {
             vrm.update(delta);
             
-            // Toda vez que a prop de pontuação sobe, ativamos o "Pulso" da marretada
             if (score > lastScoreRef.current) {
-                farmPulseRef.current = 1.0;
+                isAnimatingRef.current = true;
+                animFrameRef.current = 0;
                 lastScoreRef.current = score;
             }
             
-            // Decaimento rápido do pulso
-            farmPulseRef.current = Math.max(0, farmPulseRef.current - delta * 6);
-            
-            // Animação reativa dos braços apenas (Modo Six Seven)
             const getBone = (name) => vrm.humanoid.getNormalizedBoneNode(name);
             
-            // Movimentos de vida
+            let currentFrameIndex = 0;
+            if (isAnimatingRef.current) {
+                animFrameRef.current += (delta * 60); // Toca a ~60fps
+                currentFrameIndex = Math.floor(animFrameRef.current);
+                if (currentFrameIndex >= sixSevenFrames.length) {
+                    currentFrameIndex = sixSevenFrames.length - 1;
+                    isAnimatingRef.current = false;
+                }
+            }
+            
+            // Aplica os keyframes originais do Six Seven
+            const framePose = sixSevenFrames[currentFrameIndex].pose;
+            Object.keys(framePose).forEach(boneName => {
+                const bone = getBone(boneName);
+                if (bone && framePose[boneName]) {
+                    if (framePose[boneName].x !== undefined) bone.rotation.x = framePose[boneName].x;
+                    if (framePose[boneName].y !== undefined) bone.rotation.y = framePose[boneName].y;
+                    if (framePose[boneName].z !== undefined) bone.rotation.z = framePose[boneName].z;
+                }
+            });
+            
+            // Corrige o quadril para ficar reto (remover inclinação indesejada) e virado frente a frente
+            const hips = getBone('hips');
+            if (hips) { hips.rotation.x = 0; hips.rotation.y = Math.PI; }
             const chest = getBone('chest');
-            if (chest) chest.rotation.x = Math.sin(state.clock.elapsedTime * 2) * 0.02;
+            if (chest) { chest.rotation.z = 0; }
             
+            // Movimentos de vida somados à pose (pescoço e respiração suave)
+            if (chest) chest.rotation.x += Math.sin(state.clock.elapsedTime * 2) * 0.02;
             const neck = getBone('neck');
-            if (neck) neck.rotation.y = Math.sin(state.clock.elapsedTime * 1) * 0.05;
+            if (neck) neck.rotation.y += Math.sin(state.clock.elapsedTime * 1) * 0.05;
             
-            const lLower = getBone('leftLowerArm');
-            if (lLower) lLower.rotation.z = -1.82 + (farmPulseRef.current * 1.5);
-            
-            const rLower = getBone('rightLowerArm');
-            if (rLower) rLower.rotation.z = 0.12 - (farmPulseRef.current * 1.5);
-            
-            // Garante que o corpo e as pernas fiquem 100% imóveis (sem pulos)
+            // Garante que o corpo e as pernas fiquem 100% imóveis no eixo Y (sem pulos)
             vrm.scene.position.y = 0;
         }
     });
@@ -112,12 +99,17 @@ function SimpleAvatar({ modelFile, score }) {
 
 export function DuelScreen() {
     const { activeDuelRoom, duelState, leaveDuel, sendDuelHit } = useDuelSystem();
-    const { addAura } = useAuraSystem(); // Usamos o hook nativo para capturar cliques!
-    const [p1Progress, setP1Progress] = useState(50); // 50% = empate no meio
+    const { addAura } = useAuraSystem();
+    const [p1Progress, setP1Progress] = useState(50);
     const [clickCount, setClickCount] = useState(0);
+    const lastClickTimeRef = useRef(0);
 
     // Quando o jogador clica em qualquer lugar da tela
-    const handleScreenClick = () => {
+    const handleScreenClick = (e) => {
+        const now = Date.now();
+        if (now - lastClickTimeRef.current < 50) return; // Debounce de 50ms para evitar duplo clique no mobile (onTouch + onClick)
+        lastClickTimeRef.current = now;
+        
         if (duelState?.status !== 'playing') return;
         
         const newCount = clickCount + 1;
@@ -294,7 +286,7 @@ export function DuelScreen() {
             {duelState.status === 'playing' && (
                 <div style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '20px', zIndex: 100, pointerEvents: 'auto' }}>
                     <button 
-                        onTouchStart={(e) => { e.preventDefault(); handleScreenClick(); }}
+                        onTouchStart={handleScreenClick}
                         onClick={handleScreenClick}
                         style={{
                             width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #3b82f6',
@@ -305,7 +297,7 @@ export function DuelScreen() {
                         6
                     </button>
                     <button 
-                        onTouchStart={(e) => { e.preventDefault(); handleScreenClick(); }}
+                        onTouchStart={handleScreenClick}
                         onClick={handleScreenClick}
                         style={{
                             width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #ef4444',

@@ -1,133 +1,602 @@
-import * as THREE from 'three';
-import calibrationData from './sixSeven_pose_01_full_body.json';
-
-/**
- * FARM SIX SEVEN CONTROLLER
- * 
- * Responsável EXCLUSIVAMENTE pela animação de farm (puxar energia).
- * 
- * Bones controlados pelo Farm:
- *   - leftLowerArm, rightLowerArm  (PRIORIDADE - movimento principal)
- *   - leftHand, rightHand           (PRIORIDADE - finalização do gesto)
- *   - leftUpperArm, rightUpperArm   (acompanhamento leve)
- *   - leftShoulder, rightShoulder   (acompanhamento mínimo)
- * 
- * Bones que o Farm NÃO mexe (reservados para o IdleController):
- *   - head, neck, chest, spine, hips, legs
- * 
- * O movimento é: mãos afastam (posição A) -> mãos puxam para o corpo (posição B) -> loop
- */
-
-let leftPhase = 0;
-let rightPhase = 0;
-
-// Base values from calibration
-const BASE = {
-  leftShoulder:  { x: calibrationData.leftShoulder?.x || 0 },
-  rightShoulder: { x: calibrationData.rightShoulder?.x || 0 },
-  leftUpperArm:  { x: calibrationData.leftUpperArm?.x || 0, y: calibrationData.leftUpperArm?.y || 0, z: calibrationData.leftUpperArm?.z || 0 },
-  rightUpperArm: { y: calibrationData.rightUpperArm?.y || 0, z: calibrationData.rightUpperArm?.z || 0 },
-  leftLowerArm:  { x: calibrationData.leftLowerArm?.x || 0, y: calibrationData.leftLowerArm?.y || 0, z: calibrationData.leftLowerArm?.z || 0 },
-  rightLowerArm: { z: calibrationData.rightLowerArm?.z || 0 },
-  leftHand:      { z: calibrationData.leftHand?.z || 0 },
-  rightHand:     { z: calibrationData.rightHand?.z || 0 },
-};
-
-export function updateFarm(vrm, isLeft, isRight, level, delta) {
-  if (!vrm || !vrm.humanoid) return;
-
-  const get = (name) => vrm.humanoid.getNormalizedBoneNode(name);
-
-  // Intensidade baseada no nível de aura
-  const speedMul = level >= 5 ? 1.8 : (level >= 3 ? 1.4 : 1.0);
-  const ampMul   = level >= 5 ? 1.3 : (level >= 3 ? 1.15 : 1.0);
-  const farmSpeed = 12 * speedMul;
-
-  // Atualizar fases
-  if (isLeft)  leftPhase  += delta * farmSpeed;
-  else         leftPhase  = THREE.MathUtils.lerp(leftPhase, 0, 0.12);
-
-  if (isRight) rightPhase += delta * farmSpeed;
-  else         rightPhase = THREE.MathUtils.lerp(rightPhase, 0, 0.12);
-
-  const pullL = Math.sin(leftPhase);   // -1 (afastado) a 1 (puxado pro corpo)
-  const pullR = Math.sin(rightPhase);
-
-  const leftShoulder  = get('leftShoulder');
-  const rightShoulder = get('rightShoulder');
-  const leftUpperArm  = get('leftUpperArm');
-  const rightUpperArm = get('rightUpperArm');
-  const leftLowerArm  = get('leftLowerArm');
-  const rightLowerArm = get('rightLowerArm');
-  const leftHand      = get('leftHand');
-  const rightHand     = get('rightHand');
-
-  // =============================================
-  // BRAÇO ESQUERDO
-  // =============================================
-  if (isLeft || leftPhase > 0.1) {
-    const delayL = Math.sin(leftPhase - 0.4); // atraso orgânico pra antebraço/mão
-
-    // 1. leftLowerArm – PRIORIDADE (puxada principal)
-    if (leftLowerArm) {
-      leftLowerArm.rotation.z = THREE.MathUtils.lerp(leftLowerArm.rotation.z, BASE.leftLowerArm.z + (delayL * 0.5 * ampMul), 0.15);
-      leftLowerArm.rotation.x = THREE.MathUtils.lerp(leftLowerArm.rotation.x, BASE.leftLowerArm.x + (pullL * 0.3 * ampMul), 0.15);
+export const sixSevenFrames = [
+    {
+      "name": "Six Seven 1",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2267, "y": 0.1568, "z": -1.0076 },
+        "leftHand": { "x": 0.0404, "y": -0.0128, "z": -0.0883 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2719, "y": -0.0801, "z": 1.5653 },
+        "rightHand": { "x": 0.0655, "y": 0.0254, "z": 0.2127 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 2",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.1907, "y": 0.1823, "z": -0.7326 },
+        "leftHand": { "x": 0.0276, "y": -0.0079, "z": -0.0277 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2769, "y": -0.0368, "z": 1.8344 },
+        "rightHand": { "x": 0.0771, "y": 0.0326, "z": 0.2732 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 3",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.155, "y": 0.1959, "z": -0.4942 },
+        "leftHand": { "x": 0.0164, "y": -0.0042, "z": 0.0247 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2719, "y": 0.0006, "z": 2.066 },
+        "rightHand": { "x": 0.0868, "y": 0.0394, "z": 0.3252 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 4",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.1257, "y": 0.2004, "z": -0.3097 },
+        "leftHand": { "x": 0.0077, "y": -0.0018, "z": 0.0651 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2622, "y": 0.028, "z": 2.245 },
+        "rightHand": { "x": 0.094, "y": 0.045, "z": 0.3653 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 5",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.1068, "y": 0.2005, "z": -0.1922 },
+        "leftHand": { "x": 0.002, "y": -0.0004, "z": 0.0908 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2536, "y": 0.0444, "z": 2.3589 },
+        "rightHand": { "x": 0.0984, "y": 0.0486, "z": 0.3908 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 6",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.1, "y": 0.2, "z": -0.1501 },
+        "leftHand": { "x": 0, "y": 0, "z": 0.1 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.25, "y": 0.05, "z": 2.3999 },
+        "rightHand": { "x": 0.1, "y": 0.05, "z": 0.4 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 7",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.1058, "y": 0.2004, "z": -0.186 },
+        "leftHand": { "x": 0.0017, "y": -0.0004, "z": 0.0921 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2531, "y": 0.0452, "z": 2.365 },
+        "rightHand": { "x": 0.0987, "y": 0.0488, "z": 0.3922 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 8",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.1237, "y": 0.2005, "z": -0.2977 },
+        "leftHand": { "x": 0.0071, "y": -0.0017, "z": 0.0677 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2614, "y": 0.0297, "z": 2.2566 },
+        "rightHand": { "x": 0.0944, "y": 0.0453, "z": 0.3679 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 9",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.1523, "y": 0.1965, "z": -0.4773 },
+        "leftHand": { "x": 0.0156, "y": -0.004, "z": 0.0284 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2712, "y": 0.0032, "z": 2.0825 },
+        "rightHand": { "x": 0.0874, "y": 0.0399, "z": 0.3289 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 10",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.1878, "y": 0.1838, "z": -0.712 },
+        "leftHand": { "x": 0.0267, "y": -0.0075, "z": -0.0231 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2768, "y": -0.0335, "z": 1.8546 },
+        "rightHand": { "x": 0.078, "y": 0.0332, "z": 0.2777 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 11",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.224, "y": 0.1593, "z": -0.9847 },
+        "leftHand": { "x": 0.0393, "y": -0.0124, "z": -0.0833 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2727, "y": -0.0766, "z": 1.5878 },
+        "rightHand": { "x": 0.0665, "y": 0.026, "z": 0.2178 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 12",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2538, "y": 0.1232, "z": -1.2758 },
+        "leftHand": { "x": 0.0526, "y": -0.0185, "z": -0.1479 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2557, "y": -0.1199, "z": 1.2992 },
+        "rightHand": { "x": 0.0537, "y": 0.019, "z": 0.1532 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 13",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2719, "y": 0.0801, "z": -1.5653 },
+        "leftHand": { "x": 0.0655, "y": -0.0254, "z": -0.2127 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2267, "y": -0.1568, "z": 1.0076 },
+        "rightHand": { "x": 0.0404, "y": 0.0128, "z": 0.0883 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 14",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2769, "y": 0.0368, "z": -1.8344 },
+        "leftHand": { "x": 0.0771, "y": -0.0326, "z": -0.2732 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.1907, "y": -0.1823, "z": 0.7326 },
+        "rightHand": { "x": 0.0276, "y": 0.0079, "z": 0.0277 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 15",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2719, "y": -0.0006, "z": -2.066 },
+        "leftHand": { "x": 0.0868, "y": -0.0394, "z": -0.3252 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.155, "y": -0.1959, "z": 0.4942 },
+        "rightHand": { "x": 0.0164, "y": 0.0042, "z": -0.0247 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 16",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2622, "y": -0.028, "z": -2.245 },
+        "leftHand": { "x": 0.094, "y": -0.045, "z": -0.3653 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.1257, "y": -0.2004, "z": 0.3097 },
+        "rightHand": { "x": 0.0077, "y": 0.0018, "z": -0.0651 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 17",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2536, "y": -0.0444, "z": -2.3589 },
+        "leftHand": { "x": 0.0984, "y": -0.0486, "z": -0.3908 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.1068, "y": -0.2005, "z": 0.1922 },
+        "rightHand": { "x": 0.002, "y": 0.0004, "z": -0.0908 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 18",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.25, "y": -0.05, "z": -2.3999 },
+        "leftHand": { "x": 0.1, "y": -0.05, "z": -0.4 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.1, "y": -0.2, "z": 0.1501 },
+        "rightHand": { "x": 0, "y": 0, "z": -0.1 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 19",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2531, "y": -0.0452, "z": -2.365 },
+        "leftHand": { "x": 0.0987, "y": -0.0488, "z": -0.3922 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.1058, "y": -0.2004, "z": 0.186 },
+        "rightHand": { "x": 0.0017, "y": 0.0004, "z": -0.0921 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 20",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2614, "y": -0.0297, "z": -2.2566 },
+        "leftHand": { "x": 0.0944, "y": -0.0453, "z": -0.3679 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.1237, "y": -0.2005, "z": 0.2977 },
+        "rightHand": { "x": 0.0071, "y": 0.0017, "z": -0.0677 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 21",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2712, "y": -0.0032, "z": -2.0825 },
+        "leftHand": { "x": 0.0874, "y": -0.0399, "z": -0.3289 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.1523, "y": -0.1965, "z": 0.4773 },
+        "rightHand": { "x": 0.0156, "y": 0.004, "z": -0.0284 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 22",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2768, "y": 0.0335, "z": -1.8546 },
+        "leftHand": { "x": 0.078, "y": -0.0332, "z": -0.2777 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.1878, "y": -0.1838, "z": 0.712 },
+        "rightHand": { "x": 0.0267, "y": 0.0075, "z": 0.0231 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 23",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2727, "y": 0.0766, "z": -1.5878 },
+        "leftHand": { "x": 0.0665, "y": -0.026, "z": -0.2178 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.224, "y": -0.1593, "z": 0.9847 },
+        "rightHand": { "x": 0.0393, "y": 0.0124, "z": 0.0833 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
+    },
+    {
+      "name": "Six Seven 24",
+      "duration": 0.016,
+      "pose": {
+        "hips": { "x": 0.18, "y": -0.27, "z": 0 },
+        "chest": { "x": 0, "y": 0, "z": -0.0168 },
+        "leftShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "leftUpperArm": { "x": -0.1745, "y": 1.3614, "z": -0.2793 },
+        "leftLowerArm": { "x": 0.2557, "y": 0.1199, "z": -1.2992 },
+        "leftHand": { "x": 0.0537, "y": -0.019, "z": -0.1532 },
+        "rightShoulder": { "x": -1.85, "y": 0, "z": 0 },
+        "rightUpperArm": { "x": 0, "y": -1.32, "z": 0.3 },
+        "rightLowerArm": { "x": 0.2538, "y": -0.1232, "z": 1.2758 },
+        "rightHand": { "x": 0.0526, "y": 0.0185, "z": 0.1479 },
+        "leftUpperLeg": { "x": 0.013, "y": 0, "z": -0.0349 },
+        "leftLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "leftFoot": { "x": -0.1348, "y": 0, "z": 0 },
+        "leftToes": { "x": 0.0519, "y": 0, "z": 0 },
+        "rightUpperLeg": { "x": 0.013, "y": 0, "z": 0.0415 },
+        "rightLowerLeg": { "x": 0.0391, "y": 0, "z": 0 },
+        "rightFoot": { "x": -0.1715, "y": 0, "z": 0 },
+        "rightToes": { "x": 0.066, "y": 0, "z": 0 },
+        "hipsPosition": { "x": 0.0003, "y": 0.0025, "z": 0.0036 }
+      }
     }
-
-    // 2. leftHand – PRIORIDADE (finalização do gesto)
-    if (leftHand) {
-      leftHand.rotation.z = THREE.MathUtils.lerp(leftHand.rotation.z, BASE.leftHand.z + (pullL * 0.35 * ampMul), 0.12);
-    }
-
-    // 3. leftUpperArm – acompanhamento leve
-    if (leftUpperArm) {
-      leftUpperArm.rotation.y = THREE.MathUtils.lerp(leftUpperArm.rotation.y, BASE.leftUpperArm.y - (pullL * 0.15 * ampMul), 0.1);
-    }
-
-    // 4. leftShoulder – acompanhamento mínimo
-    if (leftShoulder) {
-      leftShoulder.rotation.x = THREE.MathUtils.lerp(leftShoulder.rotation.x, BASE.leftShoulder.x + (pullL * 0.05 * ampMul), 0.08);
-    }
-  } else {
-    // Retorno à pose calibrada
-    if (leftLowerArm) {
-      leftLowerArm.rotation.z = THREE.MathUtils.lerp(leftLowerArm.rotation.z, BASE.leftLowerArm.z, 0.08);
-      leftLowerArm.rotation.x = THREE.MathUtils.lerp(leftLowerArm.rotation.x, BASE.leftLowerArm.x, 0.08);
-    }
-    if (leftHand)     leftHand.rotation.z     = THREE.MathUtils.lerp(leftHand.rotation.z, BASE.leftHand.z, 0.08);
-    if (leftUpperArm) leftUpperArm.rotation.y = THREE.MathUtils.lerp(leftUpperArm.rotation.y, BASE.leftUpperArm.y, 0.08);
-    if (leftShoulder) leftShoulder.rotation.x = THREE.MathUtils.lerp(leftShoulder.rotation.x, BASE.leftShoulder.x, 0.08);
-  }
-
-  // =============================================
-  // BRAÇO DIREITO
-  // =============================================
-  if (isRight || rightPhase > 0.1) {
-    const delayR = Math.sin(rightPhase - 0.4);
-
-    // 1. rightLowerArm – PRIORIDADE
-    if (rightLowerArm) {
-      rightLowerArm.rotation.z = THREE.MathUtils.lerp(rightLowerArm.rotation.z, BASE.rightLowerArm.z - (delayR * 0.5 * ampMul), 0.15);
-    }
-
-    // 2. rightHand – PRIORIDADE
-    if (rightHand) {
-      rightHand.rotation.z = THREE.MathUtils.lerp(rightHand.rotation.z, BASE.rightHand.z - (pullR * 0.35 * ampMul), 0.12);
-    }
-
-    // 3. rightUpperArm – acompanhamento leve
-    if (rightUpperArm) {
-      rightUpperArm.rotation.y = THREE.MathUtils.lerp(rightUpperArm.rotation.y, BASE.rightUpperArm.y + (pullR * 0.15 * ampMul), 0.1);
-    }
-
-    // 4. rightShoulder – acompanhamento mínimo
-    if (rightShoulder) {
-      rightShoulder.rotation.x = THREE.MathUtils.lerp(rightShoulder.rotation.x, BASE.rightShoulder.x + (pullR * 0.05 * ampMul), 0.08);
-    }
-  } else {
-    if (rightLowerArm) rightLowerArm.rotation.z = THREE.MathUtils.lerp(rightLowerArm.rotation.z, BASE.rightLowerArm.z, 0.08);
-    if (rightHand)     rightHand.rotation.z     = THREE.MathUtils.lerp(rightHand.rotation.z, BASE.rightHand.z, 0.08);
-    if (rightUpperArm) rightUpperArm.rotation.y = THREE.MathUtils.lerp(rightUpperArm.rotation.y, BASE.rightUpperArm.y, 0.08);
-    if (rightShoulder) rightShoulder.rotation.x = THREE.MathUtils.lerp(rightShoulder.rotation.x, BASE.rightShoulder.x, 0.08);
-  }
-}
+];
