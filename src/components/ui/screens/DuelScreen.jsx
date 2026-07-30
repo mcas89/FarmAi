@@ -21,6 +21,28 @@ function createEffectId(prefix) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function useGlowTexture() {
+    return useMemo(() => {
+        if (typeof document === 'undefined') return null;
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+        gradient.addColorStop(0, 'rgba(255,255,255,1)');
+        gradient.addColorStop(0.16, 'rgba(255,255,255,0.96)');
+        gradient.addColorStop(0.42, 'rgba(255,255,255,0.42)');
+        gradient.addColorStop(0.72, 'rgba(255,255,255,0.10)');
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 128, 128);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.needsUpdate = true;
+        return texture;
+    }, []);
+}
+
 // 1. Efeitos Visuais Refeitos do Zero
 function CameraRig({ shakeSignal }) {
     const { camera } = useThree();
@@ -190,17 +212,32 @@ function ArenaPulse({ color, side }) {
 
 function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnregisterRef }) {
     const group = useRef();
-    const beam = useRef();
-    const innerBeam = useRef();
-    const handRing = useRef();
-    const waveFront = useRef();
+    const coreBeam = useRef();
+    const handGlow = useRef();
+    const frontGlow = useRef();
+    const mistGlow = useRef();
+    const particles = useRef();
     const progressRef = useRef(0);
+    const glowTexture = useGlowTexture();
 
     const { startX, endX, color, power = 1, type = 'normal', id } = effect;
     const direction = Math.sign(endX - startX) || 1;
-    const distance = Math.abs(endX - startX);
-    const speed = type === 'combo' ? 2.25 : 3.1;
-    const beamRadius = type === 'combo' ? 0.16 : 0.095;
+    const speed = type === 'combo' ? 1.75 : 2.45;
+    const particleCount = type === 'combo' ? 54 : 34;
+
+    const particleData = useMemo(() => {
+        const positions = new Float32Array(particleCount * 3);
+        const seeds = [];
+        for (let i = 0; i < particleCount; i += 1) {
+            seeds.push({
+                offset: Math.random(),
+                radius: 0.025 + Math.random() * (type === 'combo' ? 0.22 : 0.13),
+                speed: 0.65 + Math.random() * 1.6,
+                phase: Math.random() * Math.PI * 2,
+            });
+        }
+        return { positions, seeds };
+    }, [particleCount, type]);
 
     useEffect(() => {
         onRegisterRef?.(id, { id, progressRef, startX, endX, color });
@@ -211,31 +248,59 @@ function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnreg
         progressRef.current += delta * speed;
         const p = Math.min(progressRef.current, 1);
         const currentX = THREE.MathUtils.lerp(startX, endX, p);
-        const currentLength = Math.max(0.04, Math.abs(currentX - startX));
+        const currentLength = Math.max(0.03, Math.abs(currentX - startX));
         const centerX = startX + direction * currentLength * 0.5;
-        const pulse = 1 + Math.sin(state.clock.elapsedTime * 28) * 0.12;
+        const time = state.clock.elapsedTime;
+        const pulse = 1 + Math.sin(time * 18) * 0.09;
 
         if (group.current) group.current.position.set(0, 0.9, 0);
 
-        if (beam.current) {
-            beam.current.position.x = centerX;
-            beam.current.scale.set(1, currentLength, pulse * power);
+        if (coreBeam.current) {
+            coreBeam.current.position.x = centerX;
+            coreBeam.current.scale.set(
+                type === 'combo' ? 0.14 : 0.075,
+                currentLength,
+                (type === 'combo' ? 0.14 : 0.075) * pulse * power,
+            );
+            coreBeam.current.material.opacity = 0.28 + Math.sin(time * 24) * 0.07;
         }
-        if (innerBeam.current) {
-            innerBeam.current.position.x = centerX;
-            innerBeam.current.scale.set(1, currentLength, pulse * power);
+
+        if (handGlow.current) {
+            handGlow.current.position.x = startX;
+            const handPulse = (type === 'combo' ? 0.72 : 0.46) * (1 + Math.sin(time * 16) * 0.16) * power;
+            handGlow.current.scale.setScalar(handPulse);
+            handGlow.current.material.opacity = 0.72 + Math.sin(time * 19) * 0.12;
         }
-        if (waveFront.current) {
-            waveFront.current.position.x = currentX;
-            waveFront.current.rotation.x += delta * 8;
-            waveFront.current.rotation.y += delta * 5;
-            waveFront.current.scale.setScalar((type === 'combo' ? 1.25 : 0.85) * pulse);
+
+        if (frontGlow.current) {
+            frontGlow.current.position.x = currentX;
+            const frontPulse = (type === 'combo' ? 0.82 : 0.50) * pulse * power;
+            frontGlow.current.scale.set(frontPulse * 1.35, frontPulse, 1);
+            frontGlow.current.material.opacity = 0.78;
         }
-        if (handRing.current) {
-            handRing.current.position.x = startX;
-            handRing.current.rotation.x += delta * 5;
-            handRing.current.rotation.y += delta * 7;
-            handRing.current.scale.setScalar((0.8 + Math.sin(state.clock.elapsedTime * 20) * 0.12) * power);
+
+        if (mistGlow.current) {
+            mistGlow.current.position.x = centerX;
+            mistGlow.current.scale.set(currentLength * 1.15, type === 'combo' ? 0.58 : 0.34, 1);
+            mistGlow.current.material.opacity = type === 'combo' ? 0.20 : 0.13;
+        }
+
+        if (particles.current) {
+            const array = particles.current.geometry.attributes.position.array;
+            particleData.seeds.forEach((seed, index) => {
+                const flow = (seed.offset + time * seed.speed * 0.23) % 1;
+                const usableLength = Math.max(currentLength, 0.04);
+                const x = startX + direction * usableLength * flow;
+                const turbulence = seed.radius * (0.35 + Math.sin(flow * Math.PI) * 0.9);
+                const y = Math.sin(time * seed.speed * 4 + seed.phase + flow * 8) * turbulence;
+                const z = Math.cos(time * seed.speed * 3.2 + seed.phase + flow * 7) * turbulence;
+                const i3 = index * 3;
+                array[i3] = x;
+                array[i3 + 1] = y;
+                array[i3 + 2] = z;
+            });
+            particles.current.geometry.attributes.position.needsUpdate = true;
+            particles.current.material.opacity = type === 'combo' ? 0.82 : 0.68;
         }
 
         if (p >= 1) {
@@ -246,47 +311,87 @@ function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnreg
 
     return (
         <group ref={group}>
-            {/* Energia concentrada nas mãos */}
-            <group ref={handRing} position={[startX, 0.9, 0]}>
-                <mesh rotation={[0, Math.PI / 2, 0]}>
-                    <torusGeometry args={[type === 'combo' ? 0.26 : 0.17, 0.025, 8, 40]} />
-                    <meshBasicMaterial color={color} transparent opacity={0.95} depthWrite={false} toneMapped={false} />
-                </mesh>
-                <mesh rotation={[Math.PI / 2, 0, 0]}>
-                    <ringGeometry args={[type === 'combo' ? 0.08 : 0.05, type === 'combo' ? 0.22 : 0.14, 32]} />
-                    <meshBasicMaterial color="#ffffff" transparent opacity={0.7} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
-                </mesh>
-                <pointLight color={color} intensity={type === 'combo' ? 10 : 6} distance={4} />
-            </group>
+            {/* Aura concentrada e difusa nas mãos */}
+            <sprite ref={handGlow} position={[startX, 0, 0]}>
+                <spriteMaterial
+                    map={glowTexture}
+                    color={color}
+                    transparent
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                    toneMapped={false}
+                />
+            </sprite>
 
-            {/* Feixe externo: nasce nas mãos e cresce até o alvo */}
-            <mesh ref={beam} rotation={[0, 0, -direction * Math.PI / 2]}>
-                <cylinderGeometry args={[beamRadius * 0.45, beamRadius * 1.15, 1, 16, 1, true]} />
-                <meshBasicMaterial color={color} transparent opacity={type === 'combo' ? 0.52 : 0.38} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            {/* Névoa luminosa orgânica envolvendo o fluxo */}
+            <sprite ref={mistGlow} position={[startX, 0, -0.05]}>
+                <spriteMaterial
+                    map={glowTexture}
+                    color={color}
+                    transparent
+                    opacity={0.16}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                    toneMapped={false}
+                />
+            </sprite>
+
+            {/* Núcleo quase invisível, apenas para dar força ao Ki */}
+            <mesh ref={coreBeam} rotation={[0, 0, -direction * Math.PI / 2]}>
+                <cylinderGeometry args={[1, 1, 1, 10, 1, true]} />
+                <meshBasicMaterial
+                    color="#ffffff"
+                    transparent
+                    opacity={0.3}
+                    blending={THREE.AdditiveBlending}
+                    side={THREE.DoubleSide}
+                    depthWrite={false}
+                    toneMapped={false}
+                />
             </mesh>
 
-            {/* Núcleo branco do feixe */}
-            <mesh ref={innerBeam} rotation={[0, 0, -direction * Math.PI / 2]}>
-                <cylinderGeometry args={[beamRadius * 0.16, beamRadius * 0.45, 1, 12, 1, true]} />
-                <meshBasicMaterial color="#ffffff" transparent opacity={0.9} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
-            </mesh>
+            {/* Corrente de partículas de Aura/Ki, com turbulência */}
+            <points ref={particles}>
+                <bufferGeometry>
+                    <bufferAttribute
+                        attach="attributes-position"
+                        args={[particleData.positions, 3]}
+                    />
+                </bufferGeometry>
+                <pointsMaterial
+                    map={glowTexture}
+                    color={color}
+                    size={type === 'combo' ? 0.16 : 0.095}
+                    transparent
+                    opacity={0.72}
+                    alphaTest={0.02}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                    sizeAttenuation
+                    toneMapped={false}
+                />
+            </points>
 
-            {/* Frente cortante da onda, sem formato de bola */}
-            <group ref={waveFront} position={[startX, 0.9, 0]}>
-                <mesh rotation={[0, Math.PI / 2, 0]}>
-                    <torusGeometry args={[type === 'combo' ? 0.31 : 0.2, type === 'combo' ? 0.045 : 0.026, 8, 36]} />
-                    <meshBasicMaterial color={color} transparent opacity={0.95} depthWrite={false} toneMapped={false} />
-                </mesh>
-                <mesh rotation={[0, 0, Math.PI / 4]}>
-                    <planeGeometry args={[type === 'combo' ? 0.75 : 0.48, 0.04]} />
-                    <meshBasicMaterial color="#ffffff" transparent opacity={0.85} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
-                </mesh>
-                <mesh rotation={[0, 0, -Math.PI / 4]}>
-                    <planeGeometry args={[type === 'combo' ? 0.75 : 0.48, 0.04]} />
-                    <meshBasicMaterial color={color} transparent opacity={0.8} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
-                </mesh>
-                <pointLight color={color} intensity={type === 'combo' ? 10 : 6} distance={5} />
-            </group>
+            {/* Cabeça do poder como massa de luz, sem borda geométrica */}
+            <sprite ref={frontGlow} position={[startX, 0, 0.02]}>
+                <spriteMaterial
+                    map={glowTexture}
+                    color={color}
+                    transparent
+                    opacity={0.8}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                    toneMapped={false}
+                />
+            </sprite>
+
+            <pointLight
+                position={[startX, 0, 0.2]}
+                color={color}
+                intensity={type === 'combo' ? 9 : 5}
+                distance={5}
+                decay={2}
+            />
         </group>
     );
 }
@@ -411,6 +516,7 @@ export function DuelScreen() {
     } = useDuelSystem();
 
     const [p1Progress, setP1Progress] = useState(50);
+    const [targetP1Progress, setTargetP1Progress] = useState(50);
     const [clickCount, setClickCount] = useState(0);
     const [effects, setEffects] = useState([]);
     const [impacts, setImpacts] = useState([]);
@@ -425,6 +531,31 @@ export function DuelScreen() {
     const lastShotAt = useRef({ p1: 0, p2: 0 });
     const previousDuelStatus = useRef(null);
     const activeProjectilesRef = useRef({});
+
+    // Movimento uniforme da barra: o estado real define o alvo,
+    // enquanto o valor exibido percorre a distância a velocidade constante.
+    useEffect(() => {
+        let animationFrame;
+        let previousTime = performance.now();
+        const BAR_SPEED_PER_SECOND = 18;
+
+        const animate = (now) => {
+            const deltaSeconds = Math.min((now - previousTime) / 1000, 0.05);
+            previousTime = now;
+
+            setP1Progress((current) => {
+                const distance = targetP1Progress - current;
+                const maximumStep = BAR_SPEED_PER_SECOND * deltaSeconds;
+                if (Math.abs(distance) <= maximumStep) return targetP1Progress;
+                return current + Math.sign(distance) * maximumStep;
+            });
+
+            animationFrame = requestAnimationFrame(animate);
+        };
+
+        animationFrame = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(animationFrame);
+    }, [targetP1Progress]);
 
     const addEffect = useCallback((effect) => {
         setEffects((current) => [...current.slice(-(MAX_VISIBLE_EFFECTS - 1)), { ...effect, id: createEffectId(effect.type || 'effect') }]);
@@ -543,7 +674,7 @@ export function DuelScreen() {
             progress = 50 + scoreDifference * 1.25;
         }
 
-        setP1Progress(clamp(progress, 0, 100));
+        setTargetP1Progress(clamp(progress, 0, 100));
 
         const now = Date.now();
         const delta1 = Math.max(0, score1 - prevScore1.current);
@@ -712,13 +843,13 @@ export function DuelScreen() {
                         <div style={{ 
                             width: `${blueProgress}%`, height: '100%', 
                             background: `linear-gradient(90deg, #172554, ${BLUE}, ${BLUE_LIGHT})`,
-                            transition: 'width 0.12s cubic-bezier(0.22, 1, 0.36, 1)' 
+                            transition: 'none' 
                         }} />
                         
                         <div style={{ 
                             width: `${100 - blueProgress}%`, height: '100%', 
                             background: `linear-gradient(90deg, ${RED_LIGHT}, ${RED}, #450a0a)`,
-                            transition: 'width 0.12s cubic-bezier(0.22, 1, 0.36, 1)'
+                            transition: 'none'
                         }} />
                         
                         <div style={{ position: 'absolute', top: 0, left: '50%', width: '4px', height: '100%', background: '#fff', transform: 'translateX(-50%)', boxShadow: '0 0 10px #fff' }} />
