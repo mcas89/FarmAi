@@ -979,7 +979,7 @@ export function GameHUD() {
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                     <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{Math.floor(player.aura).toLocaleString()}</span>
-                                                    <AuracashIcon size={10} color="#a855f7" />
+                                                    <Sparkles size={10} color="#a855f7" />
                                                 </div>
                                             </div>
                                         ))

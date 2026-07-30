@@ -6,7 +6,7 @@ import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { AnimationEngine } from '../../systems/animation/AnimationEngine';
 import { AuraEffects } from './AuraEffects';
 import { Html } from '@react-three/drei';
-import { Diamond } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { getPlayerLevel, getPlayerTitle } from '../../systems/progressionRules';
 
 export function RemotePlayer({ playerData }) {
@@ -213,7 +213,7 @@ export function RemotePlayer({ playerData }) {
                     {title}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                    <Diamond size={10} color="#a855f7" />
+                    <Sparkles size={10} color="#a855f7" />
                     <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{Math.floor(aura).toLocaleString()}</span>
                 </div>
             </div>
