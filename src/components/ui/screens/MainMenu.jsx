@@ -8,7 +8,7 @@ import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { useAudioSystem } from '../../../systems/useAudioSystem';
 import { usePWASystem } from '../../../systems/usePWASystem';
 import { 
-    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles, Volume2, VolumeX, Download
+    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles, Volume2, VolumeX, Download, Flame
 } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
 import { auth } from '../../../config/firebase';
@@ -598,7 +598,7 @@ export function MainMenu() {
                                     <span style={{ color: '#ccc', fontSize: '0.8rem', fontWeight: 'bold' }}>{player.name}</span>
                                 </div>
                                 <span style={{ color: '#fbbf24', fontSize: '0.85rem', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    {(player.score || 0).toLocaleString()} <span style={{ fontSize: '0.5rem', color: '#888' }}>HITS</span>
+                                    {(player.score || 0).toLocaleString()} <Flame size={14} color="#fbbf24" style={{ marginBottom: '2px' }} />
                                 </span>
                             </div>
                         ))}
