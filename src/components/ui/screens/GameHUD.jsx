@@ -628,52 +628,7 @@ export function GameHUD() {
             {/* MIDDLE LAYOUT */}
             <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: '0', zIndex: 5, pointerEvents: 'none' }}>
                 
-                {/* LEFT RETRACTABLE MENU */}
-                <div style={{ 
-                    position: 'relative',
-                    transform: showLeftMenu ? 'translateX(0)' : 'translateX(-100%)',
-                    opacity: menuOpacity,
-                    transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s',
-                    display: 'flex', alignItems: 'center',
-                    pointerEvents: 'auto'
-                }}>
-                    <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', padding: '10px 5px', borderLeft: 'none', borderRadius: '0 12px 12px 0' }}>
-                        <div className="left-menu-btn" onClick={async () => {
-                            const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
-                                import('../../../systems/usePlayerSystem'),
-                                import('../../../systems/useAuraSystem'),
-                                import('../../../systems/useDatabaseSystem'),
-                                import('../../../systems/useQuestSystem'),
-                                import('../../../systems/useAchievementSystem')
-                            ]);
-                            const pos = pSys.usePlayerSystem.getState().position;
-                            const model = pSys.usePlayerSystem.getState().activeModel;
-                            const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
-                            const diamonds = useUISystem.getState().playerStats.diamonds || 0;
-                            const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
-                            const achievements = achSys.useAchievementSystem.getState().getSavableData();
 
-                            await dbSys.useDatabaseSystem.getState().saveGameState(
-                                pos, comboCount, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements
-                            );
-                            
-                            setShowRankingModal(true);
-                        }}><BarChart2 className="anim-float" size={16} /><span>Ranking</span></div>
-                        <div className="left-menu-btn" onClick={() => setScreen('ACHIEVEMENTS')}><Shield className="anim-wobble" size={16} /><span>Conquistas</span></div>
-                        <div className="left-menu-btn" style={{ position: 'relative' }} onClick={() => setScreen('QUESTS')}>
-                            <ScrollText size={16} color="#fff" />
-                            <div className="anim-pulse" style={{ position: 'absolute', top: '6px', right: '6px', width: '4px', height: '4px', background: '#ef4444', borderRadius: '50%' }} />
-                            <span>Missões</span>
-                        </div>
-                        <div className="left-menu-btn"><Gift className="anim-pulse" size={16} color="#fcd34d" /><span>Eventos</span></div>
-                        <div className="left-menu-btn"><Briefcase size={16} color="#fff" /><span>Inventário</span></div>
-                        <div className="left-menu-btn" onClick={() => setScreen('STORE')}><ShoppingCart size={16} color="#fff" /><span>Loja</span></div>
-                    </div>
-                    
-                    <div className="collapse-btn" style={{ position: 'absolute', right: '-24px', borderRadius: '0 10px 10px 0', borderLeft: 'none', width: '24px' }} onClick={() => setShowLeftMenu(!showLeftMenu)}>
-                        {showLeftMenu ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-                    </div>
-                </div>
 
             </div>
 
@@ -682,23 +637,12 @@ export function GameHUD() {
                 <div style={{ position: 'relative', width: '45px', height: '45px', transform: 'scale(1.1)', transformOrigin: 'bottom left', pointerEvents: 'auto' }}>
                     <Joystick />
                 </div>
-                
-                <div className="glass-panel" style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                    <div style={{ color: '#fcd34d', fontSize: '0.45rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                        <Sparkles size={8} /> SISTEMAS
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'space-between', width: '100%' }}>
-                        <span style={{ color: '#aaa', fontSize: '0.45rem', fontWeight: 'bold' }}>AUTO HIDE</span>
-                        <div className={`toggle-switch ${autoHide ? 'active' : ''}`} onClick={() => setAutoHide(!autoHide)}>
-                            <div className="toggle-knob" />
-                        </div>
-                    </div>
-                </div>
+
             </div>
 
-            {/* BOTÕES LADO DIREITO (Inventário, Mapa e Modo Farm) */}
+            {/* BOTÕES LADO ESQUERDO (Mapa e Modo Farm) */}
             <div style={{
-                position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, pointerEvents: 'auto',
+                position: 'absolute', left: '15px', top: '40%', transform: 'translateY(-50%)', zIndex: 10, pointerEvents: 'auto',
                 display: 'flex', flexDirection: 'column', gap: '15px'
             }}>
                 {/* Botão Modos de Farm */}

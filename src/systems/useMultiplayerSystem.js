@@ -30,7 +30,7 @@ export const useMultiplayerSystem = create((set, get) => ({
     getGlobalOnlineCount: async () => {
         try {
             // Converte wss://... para https://... ou ws://... para http://...
-            const httpUrl = WS_URL.replace('ws', 'http');
+            const httpUrl = COLYSEUS_SERVER.replace('ws', 'http');
             const response = await fetch(`${httpUrl}/api/online`);
             const data = await response.json();
             return data.online || 0;
