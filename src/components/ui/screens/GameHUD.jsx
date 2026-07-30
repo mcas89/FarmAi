@@ -7,13 +7,15 @@ import { AuraSystem } from '../../../systems/rhythm/AuraSystem';
 import { DanceSystem, useDanceSystem } from '../../../systems/animation/DanceSystem';
 import { Joystick } from '../Joystick';
 import { 
-    Settings, Trophy, Crown, 
+    Settings, Trophy, Crown, Swords,
     BarChart2, Shield, ScrollText, Gift, Briefcase, ShoppingCart, 
     Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map, FlaskConical, Pickaxe
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { MultiplayerChat } from '../MultiplayerChat';
+import { DuelModal } from './DuelModal';
+import { DuelInvitePopup } from './DuelInvitePopup';
 import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 
 export function GameHUD() {
@@ -39,6 +41,7 @@ export function GameHUD() {
     const setFarmMode = useUISystem(state => state.setFarmMode);
     const [showInventoryModal, setShowInventoryModal] = useState(false);
     const [showFarmModal, setShowFarmModal] = useState(false);
+    const [showDuelModal, setShowDuelModal] = useState(false);
 
 
     const [progression, setProgression] = useState(null);
@@ -709,6 +712,19 @@ export function GameHUD() {
                 }} onClick={toggleMapMode}>
                     <Map size={22} color={isMapMode ? "#fff" : "#a855f7"} />
                 </div>
+
+                {/* Botão Duelo (Farma VS) */}
+                {isOnlineMode && (
+                    <div className="top-btn anim-float" style={{ 
+                        width: '45px', height: '45px', borderRadius: '50%', 
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        boxShadow: '0 0 15px rgba(239, 68, 68, 0.3)',
+                        animationDelay: '0.2s'
+                    }} onClick={() => setShowDuelModal(true)}>
+                        <Swords size={22} color="#ef4444" />
+                    </div>
+                )}
             </div>
 
             {/* MODAL INVENTÁRIO DE POÇÕES */}
@@ -1028,8 +1044,19 @@ export function GameHUD() {
                 </div>
             )}
 
-            {/* Chat multiplayer (só aparece no modo online) */}
+            {/* Chat Multiplayer */}
+            {isOnlineMode && (
+                <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}>
+                    <button onClick={() => setShowDuelModal(true)} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid #a855f7', color: '#fff', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer' }}>
+                        <Swords size={20} />
+                    </button>
+                </div>
+            )}
             {isOnlineMode && <MultiplayerChat />}
+
+            {/* Modais de Duelo */}
+            {showDuelModal && <DuelModal onClose={() => setShowDuelModal(false)} />}
+            {isOnlineMode && <DuelInvitePopup />}
         </div>
     );
 }

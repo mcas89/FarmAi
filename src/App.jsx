@@ -207,8 +207,8 @@ function App() {
       <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#15151e' }}>
         <GameInterface />
         
-        {/* Renderiza o mapa 3D apenas APÓS o login (no Splash em diante) */}
-        {currentScreen !== 'LOGIN' && (
+        {/* Renderiza o mapa 3D apenas APÓS o login (no Splash em diante) e NÃO no Duelo */}
+        {(currentScreen !== 'LOGIN' && currentScreen !== 'DUEL') && (
           <Suspense fallback={null}>
             <Scene />
           </Suspense>

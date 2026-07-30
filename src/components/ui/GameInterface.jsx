@@ -14,6 +14,7 @@ import { QuestsScreen } from './screens/QuestsScreen';
 import { StoreScreen } from './screens/StoreScreen';
 import { GameHUD } from './screens/GameHUD';
 import { GameLoader } from './screens/GameLoader';
+import { DuelScreen } from './screens/DuelScreen';
 
 export function GameInterface() {
     const currentScreen = useUISystem(state => state.currentScreen);
@@ -41,6 +42,8 @@ export function GameInterface() {
                 return <StoreScreen />;
             case 'GAME':
                 return <GameHUD />;
+            case 'DUEL':
+                return <DuelScreen />;
             default:
                 return <MainMenu />;
         }
