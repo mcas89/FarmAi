@@ -131,16 +131,19 @@ export function GameHUD() {
         }
     }, [aura]);
 
+    // ==========================================
+    // CONTROLES DE FARM (MOUSE / TOUCH / KEYBOARD)
+    // ==========================================
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (useUISystem.getState().farmMode !== 'six_seven') return;
-            if (e.key === '6' && !e.repeat) AuraSystem.setRawInput('left', true);
-            if (e.key === '7' && !e.repeat) AuraSystem.setRawInput('right', true);
+            if (e.key === '6' && !e.repeat) AuraSystem.setRawInput('left', true, e.isTrusted);
+            if (e.key === '7' && !e.repeat) AuraSystem.setRawInput('right', true, e.isTrusted);
         };
         const handleKeyUp = (e) => {
             if (useUISystem.getState().farmMode !== 'six_seven') return;
-            if (e.key === '6') AuraSystem.setRawInput('left', false);
-            if (e.key === '7') AuraSystem.setRawInput('right', false);
+            if (e.key === '6') AuraSystem.setRawInput('left', false, e.isTrusted);
+            if (e.key === '7') AuraSystem.setRawInput('right', false, e.isTrusted);
         };
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
@@ -150,10 +153,26 @@ export function GameHUD() {
         };
     }, []);
 
-    const handleLeftDown = (e) => { e.target.setPointerCapture(e.pointerId); AuraSystem.setRawInput('left', true); };
-    const handleLeftUp = (e) => { e.target.releasePointerCapture(e.pointerId); AuraSystem.setRawInput('left', false); };
-    const handleRightDown = (e) => { e.target.setPointerCapture(e.pointerId); AuraSystem.setRawInput('right', true); };
-    const handleRightUp = (e) => { e.target.releasePointerCapture(e.pointerId); AuraSystem.setRawInput('right', false); };
+    const handleLeftDown = (e) => {
+        if (useUISystem.getState().farmMode !== 'six_seven') return;
+        e.target.setPointerCapture(e.pointerId);
+        AuraSystem.setRawInput('left', true, e.isTrusted);
+    };
+    const handleLeftUp = (e) => {
+        if (useUISystem.getState().farmMode !== 'six_seven') return;
+        e.target.releasePointerCapture(e.pointerId);
+        AuraSystem.setRawInput('left', false, e.isTrusted);
+    };
+    const handleRightDown = (e) => {
+        if (useUISystem.getState().farmMode !== 'six_seven') return;
+        e.target.setPointerCapture(e.pointerId);
+        AuraSystem.setRawInput('right', true, e.isTrusted);
+    };
+    const handleRightUp = (e) => {
+        if (useUISystem.getState().farmMode !== 'six_seven') return;
+        e.target.releasePointerCapture(e.pointerId);
+        AuraSystem.setRawInput('right', false, e.isTrusted);
+    };
 
     let menuOpacity = 1;
     if (autoHide) {
@@ -792,6 +811,10 @@ export function GameHUD() {
                                 border: farmMode === 'six_seven' ? '1px solid #eab308' : '1px solid rgba(255,255,255,0.1)',
                                 borderRadius: '12px', padding: '16px', cursor: 'pointer', transition: 'all 0.2s'
                             }} onClick={() => {
+                                const { isFarmBlocked, unblockFarmMode } = useAuraSystem.getState();
+                                if (isFarmBlocked) {
+                                    unblockFarmMode();
+                                }
                                 setFarmMode(farmMode === 'six_seven' ? 'none' : 'six_seven');
                                 setShowFarmModal(false);
                             }}>
