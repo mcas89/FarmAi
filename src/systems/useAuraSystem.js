@@ -129,7 +129,16 @@ export const useAuraSystem = create((set, get) => ({
                 if (actualPoints > 0) {
                     useQuestSystem.getState().updateQuestProgress('gain_aura', actualPoints);
                     useQuestSystem.getState().updateQuestProgress('make_touches', 1);
-                    import('./useAudioSystem').then(m => m.useAudioSystem.getState().playSFX('farm'));
+                    import('./useAudioSystem').then(m => {
+                        if (comboCount === 101) {
+                            m.useAudioSystem.getState().playSFX('powerStart');
+                            m.useAudioSystem.getState().playSFX('power'); // Pode tocar junto ou deixar só o power depois
+                        } else if (comboCount > 101) {
+                            m.useAudioSystem.getState().playSFX('power');
+                        } else {
+                            m.useAudioSystem.getState().playSFX('farm');
+                        }
+                    });
                 }
                 if (comboCount > 0) {
                     useQuestSystem.getState().updateQuestProgress('reach_combo', comboCount);
