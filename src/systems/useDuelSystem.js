@@ -3,6 +3,7 @@ import { db, auth } from '../config/firebase';
 import { collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { useMultiplayerSystem } from './useMultiplayerSystem';
 import { useUISystem } from './useUISystem';
+import { usePlayerSystem } from './usePlayerSystem';
 import * as Colyseus from '@colyseus/sdk';
 
 const COLYSEUS_SERVER = "wss://farmai-server.onrender.com";
@@ -92,7 +93,7 @@ export const useDuelSystem = create((set, get) => ({
                     deleteDoc(inviteRef).catch(e => console.log(e));
                 } else if (data.status === 'declined') {
                     set({ isSearching: false });
-                    alert(`${data.toName} recusou o duelo.`);
+                    console.log(`${data.toName} recusou o duelo.`);
                     deleteDoc(inviteRef).catch(e => console.log(e));
                 }
             }
@@ -107,9 +108,12 @@ export const useDuelSystem = create((set, get) => ({
 
         try {
             const myName = useUISystem.getState().playerStats.nickname || 'Jogador';
+            const myModel = usePlayerSystem.getState().activeModel || 'san.vrm';
+            
             const room = await colyseusClient.joinOrCreate("duel_room", {
                 duelId: duelId,
                 name: myName,
+                model: myModel,
                 betAmount: betAmount
             });
 
@@ -128,7 +132,6 @@ export const useDuelSystem = create((set, get) => ({
             room.onMessage("game_over", (data) => {
                 console.log("FIM DO DUELO!", data);
                 // processar recompensas (Fase 4)
-                alert(`FIM DO DUELO! Vencedor: ${data.winnerSessionId}`);
             });
 
         } catch (e) {

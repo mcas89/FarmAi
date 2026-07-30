@@ -172,14 +172,14 @@ export function DuelScreen() {
 
                 {/* Left Player (P1 ou Você) */}
                 {LeftPlayer?.model && (
-                    <group position={[-1.5, 0, 0]} rotation={[0, Math.PI/2, 0]}>
+                    <group position={[-1.5, 0, 0]} rotation={[0, -Math.PI/2, 0]} scale={0.7}>
                         <SimpleAvatar modelFile={LeftPlayer.model} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
                     </group>
                 )}
 
                 {/* Right Player (Oponente) */}
                 {RightPlayer?.model && (
-                    <group position={[1.5, 0, 0]} rotation={[0, -Math.PI/2, 0]}>
+                    <group position={[1.5, 0, 0]} rotation={[0, Math.PI/2, 0]} scale={0.7}>
                         <SimpleAvatar modelFile={RightPlayer.model} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
                     </group>
                 )}
