@@ -35,10 +35,33 @@ function SimpleAvatar({ modelFile, animation }) {
                 }
             });
             
-            // Posiciona os braços para baixo se for idle
+            // Posiciona na pose SIX_SEVEN
             if (loadedVrm.humanoid) {
-                loadedVrm.humanoid.getNormalizedBoneNode('leftUpperArm').rotation.z = Math.PI / 3;
-                loadedVrm.humanoid.getNormalizedBoneNode('rightUpperArm').rotation.z = -Math.PI / 3;
+                const getBone = (name) => loadedVrm.humanoid.getNormalizedBoneNode(name);
+                
+                const hips = getBone('hips');
+                if (hips) { hips.rotation.x = 0.18; hips.rotation.y = 3.14; }
+                
+                const lShoulder = getBone('leftShoulder');
+                if (lShoulder) lShoulder.rotation.x = -1.59;
+                
+                const rShoulder = getBone('rightShoulder');
+                if (rShoulder) rShoulder.rotation.x = -1.85;
+                
+                const lUpper = getBone('leftUpperArm');
+                if (lUpper) lUpper.rotation.y = 1.25;
+                
+                const rUpper = getBone('rightUpperArm');
+                if (rUpper) { rUpper.rotation.y = -1.32; rUpper.rotation.z = 0.3; }
+                
+                const lLower = getBone('leftLowerArm');
+                if (lLower) { lLower.rotation.x = 0.39; lLower.rotation.z = -1.82; }
+                
+                const rLower = getBone('rightLowerArm');
+                if (rLower) rLower.rotation.z = 0.12;
+                
+                const chest = getBone('chest');
+                if (chest) chest.rotation.z = -0.12;
             }
             
             setVrm(loadedVrm);
@@ -133,8 +156,8 @@ export function DuelScreen() {
                 cursor: duelState.status === 'playing' ? 'crosshair' : 'default'
             }}
         >
-            {/* 3D Scene - Câmera Fixa Side-View */}
-            <Canvas camera={{ position: [0, 1.2, 5], fov: 45 }} style={{ position: 'absolute', zIndex: 1 }}>
+            {/* 3D Scene - Câmera Fixa Side-View (Afastada) */}
+            <Canvas camera={{ position: [0, 1.2, 7], fov: 65 }} style={{ position: 'absolute', zIndex: 1 }}>
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[0, 5, 5]} intensity={1} color="#a855f7" />
                 <directionalLight position={[0, -5, -5]} intensity={0.5} color="#ec4899" />
