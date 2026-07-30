@@ -3,6 +3,7 @@ const { createServer } = require("http");
 const express = require("express");
 const cors = require("cors");
 const { FarmaAiRoom } = require("./rooms/FarmaAiRoom");
+const { DuelRoom } = require("./rooms/DuelRoom");
 
 const port = Number(process.env.PORT || 2567);
 const app = express();
@@ -29,8 +30,9 @@ const gameServer = new Server({
     server: createServer(app)
 });
 
-gameServer.define('farma_room', FarmaAiRoom);
+gameServer.define("farma_room", FarmaAiRoom);
+gameServer.define("duel_room", DuelRoom);
 
 gameServer.listen(port).then(() => {
-    console.log(`[Colyseus] Servidor rodando em ws://localhost:${port}`);
+    console.log(`[GameServer] O servidor está rodando na porta ${port}`);
 });
