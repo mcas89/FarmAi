@@ -795,7 +795,7 @@ export function DuelScreen() {
             {duelState.status === 'playing' && (
                 <div style={{ position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '80px', zIndex: 100, pointerEvents: 'auto' }}>
                     <button 
-                        onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); handleScreenClick(e, '6'); }}
+                        onTouchStart={(e) => { e.stopPropagation(); handleScreenClick(e, '6'); }}
                         onClick={(e) => { e.stopPropagation(); handleScreenClick(e, '6'); }}
                         style={{
                             width: '100px', height: '100px', borderRadius: '50%',
@@ -809,7 +809,7 @@ export function DuelScreen() {
                         6
                     </button>
                     <button 
-                        onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); handleScreenClick(e, '7'); }}
+                        onTouchStart={(e) => { e.stopPropagation(); handleScreenClick(e, '7'); }}
                         onClick={(e) => { e.stopPropagation(); handleScreenClick(e, '7'); }}
                         style={{
                             width: '100px', height: '100px', borderRadius: '50%',
