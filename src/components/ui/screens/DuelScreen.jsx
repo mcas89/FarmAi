@@ -8,7 +8,7 @@ import { Trophy, Timer, X } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
-import { sixSevenFrames } from '../../../3d/avatar/animations/farmSixSeven';
+import { sixSevenFrames } from '../../3d/avatar/animations/farmSixSeven';
 
 // Componente leve exclusivo para a arena (sem depender dos sistemas do jogo local)
 function SimpleAvatar({ modelFile, score }) {
