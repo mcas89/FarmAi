@@ -128,11 +128,31 @@ function App() {
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
+    // Efeito de clique global
+    const handleGlobalClick = (e) => {
+      const target = e.target;
+      // Toca som se for um button, a (link), ou tiver cursor: pointer
+      const isClickable = target.tagName === 'BUTTON' || 
+                          target.tagName === 'A' || 
+                          target.closest('button') || 
+                          target.closest('.icon-btn') ||
+                          target.closest('.action-button') ||
+                          window.getComputedStyle(target).cursor === 'pointer';
+                          
+      if (isClickable) {
+          import('./systems/useAudioSystem').then(m => {
+              m.useAudioSystem.getState().playSFX('click');
+          });
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+
     // Expõe a função globalmente para podermos chamar quando telas mudarem (já que currentScreen não está no array de dep do useEffect principal)
     window.executeGameSave = executeGameSave;
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('click', handleGlobalClick);
       delete window.executeGameSave;
       unsubscribe();
     };
@@ -143,6 +163,21 @@ function App() {
     if (window.executeGameSave && ['STORE', 'RANKING', 'ACHIEVEMENTS', 'CHARACTERS'].includes(currentScreen)) {
         window.executeGameSave();
     }
+  }, [currentScreen]);
+
+  // 5. Gerenciamento da Música de Fundo (BGM)
+  useEffect(() => {
+    import('./systems/useAudioSystem').then(m => {
+        const audioSys = m.useAudioSystem.getState();
+        if (currentScreen === 'LOGIN' || currentScreen === 'SPLASH') {
+            audioSys.playBGM('intro');
+        } else if (currentScreen === 'GAME') {
+            audioSys.playBGM('game');
+        } else {
+            // Demais telas como MENU, STORE, RANKING, etc
+            audioSys.playBGM('home');
+        }
+    });
   }, [currentScreen]);
 
   return (

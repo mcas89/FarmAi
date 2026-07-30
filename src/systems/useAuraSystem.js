@@ -42,6 +42,8 @@ export const useAuraSystem = create((set, get) => ({
                 if (pointsGained > 0) {
                     useQuestSystem.getState().updateQuestProgress('gain_aura', pointsGained);
                     useQuestSystem.getState().updateQuestProgress('make_touches', 1);
+                    // Toca som de farm (movimento)
+                    import('./useAudioSystem').then(m => m.useAudioSystem.getState().playSFX('farm'));
                 }
                 if (comboCount > 0) {
                     useQuestSystem.getState().updateQuestProgress('reach_combo', comboCount);

@@ -5,8 +5,9 @@ import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { useRankingSystem } from '../../../systems/useRankingSystem';
 import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
+import { useAudioSystem } from '../../../systems/useAudioSystem';
 import { 
-    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles
+    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles, Volume2, VolumeX
 } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
 import { auth } from '../../../config/firebase';
@@ -381,7 +382,12 @@ export function MainMenu() {
                     <X size={24} color="#888" cursor="pointer" onClick={() => setIsMenuOpen(false)} />
                 </div>
                 
-                <div className="drawer-btn"><Settings size={18} /> CONFIGURAÇÃO</div>
+                <div className="drawer-btn" onClick={() => {
+                    import('../../../systems/useAudioSystem').then(m => m.useAudioSystem.getState().toggleMute());
+                }}>
+                    {useAudioSystem(state => state.isMuted) ? <VolumeX size={18} /> : <Volume2 size={18} />} 
+                    {useAudioSystem(state => state.isMuted) ? 'MÚSICA: DESLIGADA' : 'MÚSICA: LIGADA'}
+                </div>
                 <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowAboutModal(true); }}><Info size={18} /> SOBRE O GAME</div>
                 
                 <div className="drawer-btn" style={{ marginTop: '20px', color: '#f87171' }} onClick={handleLogout}>
