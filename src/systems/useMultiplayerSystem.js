@@ -28,14 +28,12 @@ export const useMultiplayerSystem = create((set, get) => ({
     },
 
     getGlobalOnlineCount: async () => {
-        const { initColyseusClient } = get();
-        const client = initColyseusClient();
         try {
-            const availableRooms = await client.getAvailableRooms(ROOM_NAME);
-            if (availableRooms && availableRooms.length > 0) {
-                return availableRooms.reduce((acc, room) => acc + room.clients, 0);
-            }
-            return 0;
+            // Converte wss://... para https://... ou ws://... para http://...
+            const httpUrl = WS_URL.replace('ws', 'http');
+            const response = await fetch(`${httpUrl}/api/online`);
+            const data = await response.json();
+            return data.online || 0;
         } catch (e) {
             console.error("Erro ao buscar contagem global online:", e);
             return 0;
