@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
@@ -23,8 +22,6 @@ function expDecay(current, target, decay, dt) {
 }
 
 export function Avatar({ url }) {
-  const mySessionId = useMultiplayerSystem(state => state.mySessionId);
-  const chatMessage = useMultiplayerSystem(state => state.playerMessages[mySessionId]);
   const [vrm, setVrm] = useState(null);
   const keys = useRef({ isLeftDebug: false, isRightDebug: false, shift: false });
   const blinkStateRef = useRef({ timer: 4.0, state: 0 });
@@ -320,43 +317,5 @@ export function Avatar({ url }) {
     }
   });
 
-  return vrm ? (
-    <primitive object={vrm.scene}>
-        <Html>
-            <style>{`
-                @keyframes bubblePop {
-                    0% { transform: scale(0.3) translateY(10px); opacity: 0; }
-                    70% { transform: scale(1.1) translateY(-5px); opacity: 1; }
-                    100% { transform: scale(1) translateY(0); opacity: 1; }
-                }
-            `}</style>
-        </Html>
-        {chatMessage && (
-            <Html position={[0, 3.2, 0]} center style={{ pointerEvents: 'none', zIndex: 20 }}>
-                <div style={{
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    padding: '8px 14px', borderRadius: '16px',
-                    border: '2px solid #a855f7',
-                    color: '#1e1b4b', fontSize: '0.85rem', fontWeight: 'bold',
-                    boxShadow: '0 8px 25px rgba(168,85,247,0.4)',
-                    maxWidth: '200px', whiteSpace: 'pre-wrap', textAlign: 'center',
-                    position: 'relative',
-                    animation: 'bubblePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                }}>
-                    {chatMessage}
-                    <div style={{
-                        position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)',
-                        borderLeft: '8px solid transparent', borderRight: '8px solid transparent',
-                        borderTop: '8px solid #a855f7'
-                    }} />
-                    <div style={{
-                        position: 'absolute', bottom: '-5px', left: '50%', transform: 'translateX(-50%)',
-                        borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-                        borderTop: '6px solid rgba(255, 255, 255, 0.95)'
-                    }} />
-                </div>
-            </Html>
-        )}
-    </primitive>
-  ) : null;
+  return vrm ? <primitive object={vrm.scene} /> : null;
 }

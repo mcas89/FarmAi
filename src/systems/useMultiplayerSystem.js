@@ -17,7 +17,7 @@ export const useMultiplayerSystem = create((set, get) => ({
     remotePlayers: {},
     localPlayerInfo: null,
     latency: 0,
-    chatMessages: [], playerMessages: {},
+    chatMessages: [],
 
     // Instancia o cliente Colyseus apenas uma vez
     initColyseusClient: () => {
@@ -94,28 +94,9 @@ export const useMultiplayerSystem = create((set, get) => ({
 
             // Chat
             room.onMessage("chat", (message) => {
-                set((state) => {
-                    const newMessages = { ...state.playerMessages };
-                    if (message.sessionId) {
-                        newMessages[message.sessionId] = message.text;
-                        
-                        // Limpa o balão após 5 segundos
-                        setTimeout(() => {
-                            set((s) => {
-                                const msgs = { ...s.playerMessages };
-                                if (msgs[message.sessionId] === message.text) {
-                                    delete msgs[message.sessionId];
-                                }
-                                return { playerMessages: msgs };
-                            });
-                        }, 5000);
-                    }
-                    
-                    return {
-                        chatMessages: [...state.chatMessages.slice(-49), message],
-                        playerMessages: newMessages
-                    };
-                });
+                set((state) => ({
+                    chatMessages: [...state.chatMessages.slice(-49), message]
+                }));
             });
 
             room.onLeave((code) => {
