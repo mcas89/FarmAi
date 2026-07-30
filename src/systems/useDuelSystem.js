@@ -62,9 +62,11 @@ export const useDuelSystem = create((set, get) => ({
     respondToInvite: async (inviteId, accept) => {
         const inviteRef = doc(db, 'duel_invites', inviteId);
         if (accept) {
-            await updateDoc(inviteRef, { status: 'accepted' });
-            // Entrar na sala de duelo
+            // Pega os dados ANTES de atualizar, senão o listener de pending remove ele!
             const inviteData = get().incomingInvites.find(i => i.id === inviteId);
+            await updateDoc(inviteRef, { status: 'accepted' });
+            
+            // Entrar na sala de duelo
             if (inviteData) {
                 get().joinDuelRoom(inviteId, inviteData.betAmount);
             }
