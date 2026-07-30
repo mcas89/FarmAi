@@ -21,235 +21,150 @@ function createEffectId(prefix) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-/**
- * Move a câmera levemente quando ocorre um impacto importante.
- * Não usa estado React por frame.
- */
+// 1. Efeitos Visuais Refeitos do Zero
 function CameraRig({ shakeSignal }) {
     const { camera } = useThree();
-    const originalPosition = useRef(camera.position.clone());
-    const shakeStrength = useRef(0);
-    const previousSignal = useRef(shakeSignal);
+    const originalPos = useRef(camera.position.clone());
+    const shakeAmount = useRef(0);
+    const lastSignal = useRef(shakeSignal);
 
     useEffect(() => {
-        if (shakeSignal !== previousSignal.current) {
-            previousSignal.current = shakeSignal;
-            shakeStrength.current = 0.12;
+        if (shakeSignal !== lastSignal.current) {
+            lastSignal.current = shakeSignal;
+            shakeAmount.current = 0.15;
         }
     }, [shakeSignal]);
 
     useFrame((_, delta) => {
-        if (shakeStrength.current > 0.001) {
-            camera.position.x = originalPosition.current.x + (Math.random() - 0.5) * shakeStrength.current;
-            camera.position.y = originalPosition.current.y + (Math.random() - 0.5) * shakeStrength.current;
-            shakeStrength.current = THREE.MathUtils.damp(shakeStrength.current, 0, 10, delta);
-            return;
+        if (shakeAmount.current > 0.001) {
+            camera.position.x = originalPos.current.x + (Math.random() - 0.5) * shakeAmount.current;
+            camera.position.y = originalPos.current.y + (Math.random() - 0.5) * shakeAmount.current;
+            shakeAmount.current = THREE.MathUtils.damp(shakeAmount.current, 0, 15, delta);
+        } else {
+            camera.position.lerp(originalPos.current, delta * 10);
         }
-
-        camera.position.lerp(originalPosition.current, Math.min(1, delta * 12));
     });
-
     return null;
 }
 
-/**
- * Pulso rápido no ponto de impacto.
- */
 function ImpactBurst({ position, color, scale = 1, onComplete }) {
-    const groupRef = useRef();
-    const ringRef = useRef();
-    const coreRef = useRef();
-    const progressRef = useRef(0);
-    const completedRef = useRef(false);
-
+    const group = useRef();
+    const core = useRef();
+    const ring = useRef();
+    const time = useRef(0);
+    
     useFrame((_, delta) => {
-        progressRef.current += delta * 3.5;
-        const progress = progressRef.current;
-
-        if (groupRef.current) {
-            groupRef.current.rotation.z += delta * 2;
+        time.current += delta * 3.5;
+        const t = time.current;
+        if (group.current) group.current.rotation.z += delta * 2;
+        if (ring.current) {
+            ring.current.scale.setScalar(scale * (0.5 + t * 2.5));
+            ring.current.material.opacity = Math.max(0, 0.8 * (1 - t));
         }
-
-        if (ringRef.current) {
-            const ringScale = scale * (0.5 + progress * 2.5);
-            ringRef.current.scale.setScalar(ringScale);
-            ringRef.current.material.opacity = Math.max(0, 0.75 * (1 - progress));
+        if (core.current) {
+            core.current.scale.setScalar(scale * (1 + Math.sin(t * Math.PI * 4) * 0.2));
+            core.current.material.opacity = Math.max(0, 1 - t);
         }
-
-        if (coreRef.current) {
-            const pulse = scale * (1 + Math.sin(progress * Math.PI * 5) * 0.18);
-            coreRef.current.scale.setScalar(pulse);
-            coreRef.current.material.opacity = Math.max(0, 1 - progress);
-        }
-
-        if (progress >= 1 && !completedRef.current) {
-            completedRef.current = true;
-            onComplete();
-        }
+        if (t >= 1) onComplete();
     });
 
     return (
-        <group ref={groupRef} position={position}>
-            <mesh ref={coreRef}>
-                <sphereGeometry args={[0.22, 18, 18]} />
+        <group ref={group} position={position}>
+            <mesh ref={core}>
+                <sphereGeometry args={[0.25, 16, 16]} />
                 <meshBasicMaterial color={color} transparent toneMapped={false} />
             </mesh>
-
-            <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.18, 0.27, 32]} />
-                <meshBasicMaterial
-                    color={color}
-                    transparent
-                    opacity={0.75}
-                    side={THREE.DoubleSide}
-                    depthWrite={false}
-                    toneMapped={false}
-                />
+            <mesh ref={ring} rotation={[Math.PI/2, 0, 0]}>
+                <ringGeometry args={[0.15, 0.3, 32]} />
+                <meshBasicMaterial color={color} transparent side={THREE.DoubleSide} toneMapped={false} />
             </mesh>
-
-            <pointLight color={color} intensity={5 * scale} distance={4} decay={2} />
+            <pointLight color={color} intensity={6 * scale} distance={5} />
         </group>
     );
 }
 
-/**
- * Rajada de energia multicamada. O movimento é atualizado com refs,
- * evitando setState em todos os frames.
- */
+function CenterExplosion({ position, onComplete }) {
+    const group = useRef();
+    const fog = useRef();
+    const time = useRef(0);
+
+    useFrame((_, delta) => {
+        time.current += delta * 2.5;
+        const t = time.current;
+        
+        if (fog.current) {
+            fog.current.scale.setScalar(1 + t * 4);
+            fog.current.material.opacity = Math.max(0, 1 - t * 1.5);
+            fog.current.rotation.z += delta;
+        }
+        if (t >= 1) onComplete();
+    });
+
+    return (
+        <group ref={group} position={position}>
+            <mesh ref={fog}>
+                <torusGeometry args={[0.5, 0.3, 16, 32]} />
+                <meshBasicMaterial color="#a855f7" transparent toneMapped={false} />
+            </mesh>
+            <pointLight color="#a855f7" intensity={10} distance={8} decay={2} />
+            {/* Fragmentos espalhados para dar sensação épica de choque de poder */}
+            <mesh position={[-0.2, 0, 0]}>
+                <sphereGeometry args={[0.15, 8, 8]} />
+                <meshBasicMaterial color={BLUE} transparent opacity={Math.max(0, 1 - time.current)} toneMapped={false} />
+            </mesh>
+            <mesh position={[0.2, 0, 0]}>
+                <sphereGeometry args={[0.15, 8, 8]} />
+                <meshBasicMaterial color={RED} transparent opacity={Math.max(0, 1 - time.current)} toneMapped={false} />
+            </mesh>
+        </group>
+    );
+}
+
 function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnregisterRef }) {
-    const groupRef = useRef();
-    const coreRef = useRef();
-    const auraRef = useRef();
-    const trailRefs = useRef([]);
+    const group = useRef();
+    const core = useRef();
     const progressRef = useRef(0);
-    const completedRef = useRef(false);
-
-    const {
-        startX,
-        endX,
-        color,
-        power = 1,
-        type = 'normal',
-        id,
-    } = effect;
-
+    
+    const { startX, endX, color, power = 1, type = 'normal', id } = effect;
     const speed = type === 'combo' ? 2.1 : 2.8;
-    const baseSize = type === 'combo' ? 0.22 : 0.13;
 
-    // Registra este projétil no mapa global para detecção de colisão
     useEffect(() => {
-        onRegisterRef?.(id, { progressRef, startX, endX, color, completedRef });
+        onRegisterRef?.(id, { progressRef, startX, endX, color });
         return () => onUnregisterRef?.(id);
     }, [id]); // eslint-disable-line
 
     useFrame((state, delta) => {
-        if (!groupRef.current || completedRef.current) return;
-
+        if (!group.current) return;
         progressRef.current += delta * speed;
-        const progress = clamp(progressRef.current, 0, 1);
-        const direction = Math.sign(endX - startX) || 1;
-        const x = THREE.MathUtils.lerp(startX, endX, progress);
-        const arcHeight = 0.22;
-        const y = 0.85 + Math.sin(progress * Math.PI) * arcHeight;
-        const pulse = 1 + Math.sin(state.clock.elapsedTime * 20) * 0.12;
-
-        groupRef.current.position.set(x, y, 0);
-        groupRef.current.rotation.z += delta * 8 * direction;
-
-        if (coreRef.current) {
-            coreRef.current.scale.setScalar(pulse * power);
+        const p = Math.min(progressRef.current, 1);
+        const x = THREE.MathUtils.lerp(startX, endX, p);
+        const y = 0.85 + Math.sin(p * Math.PI) * 0.2;
+        
+        group.current.position.set(x, y, 0);
+        
+        if (core.current) {
+            core.current.scale.setScalar((1 + Math.sin(state.clock.elapsedTime * 20) * 0.2) * power);
         }
 
-        if (auraRef.current) {
-            auraRef.current.scale.setScalar((1.7 + progress * 0.25) * power);
-            auraRef.current.material.opacity = 0.3 * (1 - progress * 0.45);
-        }
-
-        trailRefs.current.forEach((trail, index) => {
-            if (!trail) return;
-            const distance = (index + 1) * 0.13 * direction;
-            trail.position.x = -distance;
-            trail.scale.setScalar(Math.max(0.25, 0.85 - index * 0.14) * power);
-            trail.material.opacity = Math.max(0, (0.32 - index * 0.045) * (1 - progress));
-        });
-
-        if (progress >= 1) {
-            completedRef.current = true;
-            onImpact({
-                position: [endX, 0.85, 0],
-                color,
-                scale: type === 'combo' ? 1.25 : 0.75,
-                strong: type !== 'normal',
-            });
+        if (p >= 1) {
+            onImpact({ position: [endX, 0.85, 0], color, scale: type === 'combo' ? 1.5 : 1, strong: type === 'combo' });
             onComplete();
         }
     });
 
     return (
-        <group ref={groupRef} position={[startX, 0.85, 0]}>
-            <mesh ref={coreRef}>
-                <sphereGeometry args={[baseSize, 20, 20]} />
+        <group ref={group} position={[startX, 0.85, 0]}>
+            <mesh ref={core}>
+                <sphereGeometry args={[type === 'combo' ? 0.3 : 0.2, 16, 16]} />
                 <meshBasicMaterial color={color} toneMapped={false} />
             </mesh>
-
-            <mesh ref={auraRef} scale={1.7}>
-                <sphereGeometry args={[baseSize, 18, 18]} />
-                <meshBasicMaterial
-                    color={color}
-                    transparent
-                    opacity={0.3}
-                    depthWrite={false}
-                    toneMapped={false}
-                />
+            {/* Rastro simples */}
+            <mesh position={[-0.2 * Math.sign(endX - startX), 0, 0]} scale={0.6}>
+                <sphereGeometry args={[type === 'combo' ? 0.3 : 0.2, 16, 16]} />
+                <meshBasicMaterial color={color} transparent opacity={0.4} toneMapped={false} />
             </mesh>
-
-            {[0, 1, 2, 3, 4].map((index) => (
-                <mesh
-                    key={index}
-                    ref={(node) => { trailRefs.current[index] = node; }}
-                >
-                    <sphereGeometry args={[baseSize * 0.72, 12, 12]} />
-                    <meshBasicMaterial
-                        color={color}
-                        transparent
-                        opacity={0.25}
-                        depthWrite={false}
-                        toneMapped={false}
-                    />
-                </mesh>
-            ))}
-
-            <pointLight color={color} intensity={3} distance={5} decay={2} />
+            <pointLight color={color} intensity={4} distance={4} />
         </group>
-    );
-}
-
-function ArenaPulse({ color, side }) {
-    const meshRef = useRef();
-
-    useFrame((state) => {
-        if (!meshRef.current) return;
-        const pulse = 1 + Math.sin(state.clock.elapsedTime * 4) * 0.08;
-        meshRef.current.scale.setScalar(pulse);
-        meshRef.current.material.opacity = 0.08 + Math.sin(state.clock.elapsedTime * 3) * 0.025;
-    });
-
-    return (
-        <mesh
-            ref={meshRef}
-            position={[side === 'left' ? -1.55 : 1.55, 0.02, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-        >
-            <ringGeometry args={[0.75, 1.15, 48]} />
-            <meshBasicMaterial
-                color={color}
-                transparent
-                opacity={0.1}
-                side={THREE.DoubleSide}
-                depthWrite={false}
-                toneMapped={false}
-            />
-        </mesh>
     );
 }
 
@@ -377,53 +292,41 @@ export function DuelScreen() {
     const [effects, setEffects] = useState([]);
     const [impacts, setImpacts] = useState([]);
     const [shakeSignal, setShakeSignal] = useState(0);
-    const [blockedFlash, setBlockedFlash] = useState(false); // feedback visual de click inválido
+    const [blockedFlash, setBlockedFlash] = useState(false);
 
     const clickCountRef = useRef(0);
     const lastClickTimeRef = useRef(0);
-    const lastButtonRef = useRef(null); // '6' ou '7' - para forçar alternância
+    const lastButtonRef = useRef(null); 
     const prevScore1 = useRef(0);
     const prevScore2 = useRef(0);
     const lastShotAt = useRef({ p1: 0, p2: 0 });
     const previousDuelStatus = useRef(null);
-    // Mapa id -> { progressRef, startX, endX, color, completedRef } para detecção de colisão
     const activeProjectilesRef = useRef({});
 
     const addEffect = useCallback((effect) => {
-        setEffects((current) => [
-            ...current.slice(-(MAX_VISIBLE_EFFECTS - 1)),
-            { ...effect, id: createEffectId(effect.type || 'effect') },
-        ]);
+        setEffects((current) => [...current.slice(-(MAX_VISIBLE_EFFECTS - 1)), { ...effect, id: createEffectId(effect.type || 'effect') }]);
     }, []);
 
     const addImpact = useCallback((impact) => {
-        setImpacts((current) => [
-            ...current.slice(-7),
-            { ...impact, id: createEffectId('impact') },
-        ]);
-
-        if (impact.strong) {
-            setShakeSignal((value) => value + 1);
-        }
+        setImpacts((current) => [...current.slice(-7), { ...impact, id: createEffectId(impact.type || 'impact') }]);
+        if (impact.strong) setShakeSignal(v => v + 1);
     }, []);
 
     const handleScreenClick = useCallback((event, buttonId) => {
         const now = Date.now();
-
-        // Evita o clique duplicado gerado por touch + click no celular.
+        // Debounce nativo para evitar spam
         if (now - lastClickTimeRef.current < 45) return;
         lastClickTimeRef.current = now;
 
         if (duelState?.status !== 'playing') return;
 
-        // --- REGRA DE ALTERNÂNCIA: só pontua se alternado 6->7->6->7 ---
+        // Regra de alternância limpa (ignorando duplos de hardware se houver)
         if (lastButtonRef.current === buttonId) {
-            // Mesmo botão clicado duas vezes: feedback visual, sem pontuar
-            setBlockedFlash(f => !f);
+            setBlockedFlash(true);
+            setTimeout(() => setBlockedFlash(false), 150);
             return;
         }
         lastButtonRef.current = buttonId;
-        // --- FIM REGRA ---
 
         clickCountRef.current += 1;
         setClickCount(clickCountRef.current);
@@ -435,38 +338,29 @@ export function DuelScreen() {
         });
     }, [duelState?.status, sendDuelHit]);
 
-    // Callbacks para registrar projéteis ativos no mapa de colisão
     const handleRegisterProjectile = useCallback((id, data) => {
         activeProjectilesRef.current[id] = data;
     }, []);
+    
     const handleUnregisterProjectile = useCallback((id) => {
         delete activeProjectilesRef.current[id];
     }, []);
 
-    // Verifica colisões entre projéteis opostos e cria explosão no centro
+    // Verificação central simplificada e direta
     const handleCollisionCheck = useCallback(() => {
-        const projectiles = Object.values(activeProjectilesRef.current);
-        const leftMoving = projectiles.filter(p => !p.completedRef.current && p.endX > p.startX); // indo para a direita
-        const rightMoving = projectiles.filter(p => !p.completedRef.current && p.endX < p.startX); // indo para a esquerda
+        const projs = Object.values(activeProjectilesRef.current);
+        const leftMoving = projs.filter(p => p.endX > p.startX);
+        const rightMoving = projs.filter(p => p.endX < p.startX);
 
         leftMoving.forEach(lp => {
             rightMoving.forEach(rp => {
-                const lProgress = lp.progressRef.current;
-                const rProgress = rp.progressRef.current;
-                // Se ambos estão perto do centro (entre 35% e 65% do percurso)
-                if (lProgress > 0.35 && lProgress < 0.65 && rProgress > 0.35 && rProgress < 0.65) {
-                    // Colisao! Marca os dois como completos e cria explosão mista no centro
-                    if (!lp.completedRef.current && !rp.completedRef.current) {
-                        lp.completedRef.current = true;
-                        rp.completedRef.current = true;
-                        // Explosão AZUL + VERMELHA no ponto de impacto (x=0 é o centro)
-                        addImpact({ position: [0, 0.85, 0], color: '#a855f7', scale: 2.2, strong: true });
-                        addImpact({ position: [0, 0.85, 0], color: BLUE, scale: 1.2, strong: false });
-                        addImpact({ position: [0, 0.85, 0], color: RED, scale: 1.2, strong: false });
-                        setShakeSignal(v => v + 1);
-                        // Remove os dois projéteis do DOM
-                        setEffects(current => current.filter(e => e.id !== lp.id && e.id !== rp.id));
-                    }
+                const lpProg = lp.progressRef.current;
+                const rpProg = rp.progressRef.current;
+                
+                // Zona de impacto central
+                if (lpProg > 0.4 && lpProg < 0.6 && rpProg > 0.4 && rpProg < 0.6) {
+                    addImpact({ type: 'center', position: [0, 0.85, 0], strong: true });
+                    setEffects(cur => cur.filter(e => e.id !== lp.id && e.id !== rp.id));
                 }
             });
         });
@@ -654,15 +548,15 @@ export function DuelScreen() {
                 ))}
 
                 {impacts.map((impact) => (
-                    <ImpactBurst
-                        key={impact.id}
-                        position={impact.position}
-                        color={impact.color}
-                        scale={impact.scale}
-                        onComplete={() => {
-                            setImpacts((current) => current.filter((item) => item.id !== impact.id));
-                        }}
-                    />
+                    impact.type === 'center' 
+                        ? <CenterExplosion key={impact.id} position={impact.position} onComplete={() => setImpacts(c => c.filter(i => i.id !== impact.id))} />
+                        : <ImpactBurst
+                            key={impact.id}
+                            position={impact.position}
+                            color={impact.color}
+                            scale={impact.scale}
+                            onComplete={() => setImpacts(c => c.filter(i => i.id !== impact.id))}
+                        />
                 ))}
             </Canvas>
 
@@ -791,33 +685,33 @@ export function DuelScreen() {
                 </div>
             )}
 
-            {/* BOTÕES DE JOGO (Aparecem apenas quando a partida começar) */}
+            {/* BOTÕES DE JOGO - Usando onPointerDown para corrigir cliques fantasmas/duplos no mobile */}
             {duelState.status === 'playing' && (
                 <div style={{ position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '80px', zIndex: 100, pointerEvents: 'auto' }}>
                     <button 
-                        onTouchStart={(e) => { e.stopPropagation(); handleScreenClick(e, '6'); }}
-                        onClick={(e) => { e.stopPropagation(); handleScreenClick(e, '6'); }}
+                        onPointerDown={(e) => { e.stopPropagation(); handleScreenClick(e, '6'); }}
                         style={{
                             width: '100px', height: '100px', borderRadius: '50%',
                             background: blockedFlash && lastButtonRef.current === '6' ? 'rgba(239,68,68,0.4)' : 'rgba(0,0,0,0.8)',
                             border: '4px solid #3b82f6',
                             color: '#3b82f6', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
                             boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
-                            transition: 'background 0.1s'
+                            transition: 'background 0.1s',
+                            touchAction: 'manipulation'
                         }}
                     >
                         6
                     </button>
                     <button 
-                        onTouchStart={(e) => { e.stopPropagation(); handleScreenClick(e, '7'); }}
-                        onClick={(e) => { e.stopPropagation(); handleScreenClick(e, '7'); }}
+                        onPointerDown={(e) => { e.stopPropagation(); handleScreenClick(e, '7'); }}
                         style={{
                             width: '100px', height: '100px', borderRadius: '50%',
                             background: blockedFlash && lastButtonRef.current === '7' ? 'rgba(239,68,68,0.4)' : 'rgba(0,0,0,0.8)',
                             border: '4px solid #ef4444',
                             color: '#ef4444', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
                             boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)',
-                            transition: 'background 0.1s'
+                            transition: 'background 0.1s',
+                            touchAction: 'manipulation'
                         }}
                     >
                         7
