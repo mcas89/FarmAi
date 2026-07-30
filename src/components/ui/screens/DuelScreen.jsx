@@ -53,7 +53,7 @@ export function DuelScreen() {
         }
     }, [duelState]);
 
-    if (!duelState) return <div style={{background: '#000', width: '100%', height: '100%'}}>Carregando...</div>;
+    if (!duelState || !duelState.player1 || !duelState.player2) return <div style={{background: '#000', width: '100%', height: '100%', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>Carregando Arena...</div>;
 
     const myId = activeDuelRoom?.sessionId;
     const isP1 = myId === duelState.player1.id;
