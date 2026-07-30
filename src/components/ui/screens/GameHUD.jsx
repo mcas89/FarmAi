@@ -746,6 +746,9 @@ export function GameHUD() {
                 }} onClick={toggleMapMode}>
                     <Map size={22} color={isMapMode ? "#fff" : "#a855f7"} />
                 </div>
+                
+                {/* Botão do Chat e Janela (Movido para cá) */}
+                {isOnlineMode && <MultiplayerChat />}
             </div>
 
             {/* MODAL INVENTÁRIO DE POÇÕES */}
@@ -1060,9 +1063,6 @@ export function GameHUD() {
                     </div>
                 </div>
             )}
-
-            {/* Chat multiplayer (só aparece no modo online) */}
-            {isOnlineMode && <MultiplayerChat />}
         </div>
     );
 }

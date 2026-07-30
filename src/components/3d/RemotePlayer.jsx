@@ -8,8 +8,10 @@ import { AuraEffects } from './AuraEffects';
 import { Html } from '@react-three/drei';
 import { Diamond } from 'lucide-react';
 import { getPlayerLevel, getPlayerTitle } from '../../systems/progressionRules';
+import { useMultiplayerSystem } from '../../systems/useMultiplayerSystem';
 
 export function RemotePlayer({ playerData }) {
+  const chatMessage = useMultiplayerSystem(state => state.playerMessages[playerData.id]);
   const [vrm, setVrm] = useState(null);
   const remoteComboRef = useRef(0);
   
@@ -181,6 +183,11 @@ export function RemotePlayer({ playerData }) {
                     80% { transform: scale(1) translateY(-30px); opacity: 1; }
                     100% { transform: scale(0.8) translateY(-40px); opacity: 0; }
                 }
+                @keyframes bubblePop {
+                    0% { transform: scale(0.3) translateY(10px); opacity: 0; }
+                    70% { transform: scale(1.1) translateY(-5px); opacity: 1; }
+                    100% { transform: scale(1) translateY(0); opacity: 1; }
+                }
             `}</style>
         </Html>
 
@@ -218,6 +225,34 @@ export function RemotePlayer({ playerData }) {
                 </div>
             </div>
         </Html>
+        {/* Balão de Fala (Chat) */}
+        {chatMessage && (
+            <Html position={[0, 4.2, 0]} center style={{ pointerEvents: 'none', zIndex: 20 }}>
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    padding: '8px 14px', borderRadius: '16px',
+                    border: '2px solid #a855f7',
+                    color: '#1e1b4b', fontSize: '0.85rem', fontWeight: 'bold',
+                    boxShadow: '0 8px 25px rgba(168,85,247,0.4)',
+                    maxWidth: '200px', whiteSpace: 'pre-wrap', textAlign: 'center',
+                    position: 'relative',
+                    animation: 'bubblePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                }}>
+                    {chatMessage}
+                    {/* Triângulo do balão */}
+                    <div style={{
+                        position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)',
+                        borderLeft: '8px solid transparent', borderRight: '8px solid transparent',
+                        borderTop: '8px solid #a855f7'
+                    }} />
+                    <div style={{
+                        position: 'absolute', bottom: '-5px', left: '50%', transform: 'translateX(-50%)',
+                        borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+                        borderTop: '6px solid rgba(255, 255, 255, 0.95)'
+                    }} />
+                </div>
+            </Html>
+        )}
     </group>
   ) : null;
 }

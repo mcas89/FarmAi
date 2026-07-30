@@ -42,19 +42,20 @@ export function MultiplayerChat() {
             <div
                 onClick={() => { setIsOpen(o => !o); setUnreadCount(0); }}
                 style={{
-                    position: 'fixed', bottom: '100px', right: '16px',
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: isOpen ? 'rgba(168,85,247,0.8)' : 'rgba(20,20,30,0.85)',
-                    border: '1px solid rgba(168,85,247,0.5)',
-                    backdropFilter: 'blur(12px)',
+                    position: 'relative',
+                    width: '45px', height: '45px', borderRadius: '50%',
+                    background: isOpen ? 'rgba(168,85,247,0.8)' : 'var(--bg-glass)',
+                    border: isOpen ? '1px solid #a855f7' : '1px solid rgba(255, 255, 255, 0.1)',
                     display: 'flex', justifyContent: 'center', alignItems: 'center',
                     cursor: 'pointer', zIndex: 100,
-                    boxShadow: '0 4px 20px rgba(168,85,247,0.3)',
+                    boxShadow: isOpen ? '0 0 15px rgba(168,85,247,0.5)' : 'none',
                     transition: 'all 0.2s ease',
-                    pointerEvents: 'auto'
+                    pointerEvents: 'auto',
+                    animation: !isOpen && unreadCount > 0 ? 'pulseGlow 1.5s infinite' : 'none'
                 }}
+                className={!isOpen && unreadCount > 0 ? "anim-float" : ""}
             >
-                {isOpen ? <X size={18} color="#fff" /> : <MessageCircle size={18} color="#a855f7" />}
+                {isOpen ? <X size={22} color="#fff" /> : <MessageCircle size={22} color={!isOpen && unreadCount > 0 ? "#fff" : "#a855f7"} />}
                 {!isOpen && unreadCount > 0 && (
                     <div style={{
                         position: 'absolute', top: '-4px', right: '-4px',
