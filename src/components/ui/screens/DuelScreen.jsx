@@ -10,8 +10,10 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 
 // Componente leve exclusivo para a arena (sem depender dos sistemas do jogo local)
-function SimpleAvatar({ modelFile, animation }) {
+function SimpleAvatar({ modelFile, score }) {
     const [vrm, setVrm] = useState(null);
+    const lastScoreRef = useRef(score || 0);
+    const farmPulseRef = useRef(0);
 
     useEffect(() => {
         if (!modelFile) return;
@@ -71,17 +73,29 @@ function SimpleAvatar({ modelFile, animation }) {
     }, [modelFile]);
 
     useFrame((state, delta) => {
-        if (vrm) {
+        if (vrm && vrm.humanoid) {
             vrm.update(delta);
-            // Animação super simples de respiração/pulo dependendo do status
-            if (animation === 'dance') {
-                vrm.scene.position.y = Math.sin(state.clock.elapsedTime * 15) * 0.1;
-                if (vrm.humanoid) {
-                    vrm.humanoid.getNormalizedBoneNode('spine').rotation.y = Math.sin(state.clock.elapsedTime * 20) * 0.1;
-                }
-            } else {
-                vrm.scene.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.02;
+            
+            // Toda vez que a prop de pontuação sobe, ativamos o "Pulso" da marretada
+            if (score > lastScoreRef.current) {
+                farmPulseRef.current = 1.0;
+                lastScoreRef.current = score;
             }
+            
+            // Decaimento rápido do pulso
+            farmPulseRef.current = Math.max(0, farmPulseRef.current - delta * 6);
+            
+            // Animação reativa dos braços apenas (Modo Six Seven)
+            const getBone = (name) => vrm.humanoid.getNormalizedBoneNode(name);
+            
+            const lLower = getBone('leftLowerArm');
+            if (lLower) lLower.rotation.z = -1.82 + (farmPulseRef.current * 0.6);
+            
+            const rLower = getBone('rightLowerArm');
+            if (rLower) rLower.rotation.z = 0.12 - (farmPulseRef.current * 0.6);
+            
+            // Garante que o corpo e as pernas fiquem 100% imóveis (sem pulos)
+            vrm.scene.position.y = 0;
         }
     });
 
@@ -173,14 +187,14 @@ export function DuelScreen() {
                 {/* Left Player (P1 ou Você) */}
                 {LeftPlayer?.model && (
                     <group position={[-1.5, 0, 0]} rotation={[0, -Math.PI/2, 0]} scale={0.7}>
-                        <SimpleAvatar modelFile={LeftPlayer.model} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
+                        <SimpleAvatar modelFile={LeftPlayer.model} score={LeftPlayer.score} />
                     </group>
                 )}
 
                 {/* Right Player (Oponente) */}
                 {RightPlayer?.model && (
                     <group position={[1.5, 0, 0]} rotation={[0, Math.PI/2, 0]} scale={0.7}>
-                        <SimpleAvatar modelFile={RightPlayer.model} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
+                        <SimpleAvatar modelFile={RightPlayer.model} score={RightPlayer.score} />
                     </group>
                 )}
             </Canvas>
