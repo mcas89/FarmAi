@@ -12,7 +12,6 @@ const BLUE = '#3b82f6';
 const BLUE_LIGHT = '#93c5fd';
 const RED = '#ef4444';
 const RED_LIGHT = '#fca5a5';
-const POWER_REQUIRED = 100;
 const MAX_VISIBLE_EFFECTS = 18;
 const NORMAL_SHOT_COOLDOWN_MS = 150;
 
@@ -117,7 +116,7 @@ function ImpactBurst({ position, color, scale = 1, onComplete }) {
  * Rajada de energia multicamada. O movimento é atualizado com refs,
  * evitando setState em todos os frames.
  */
-function EnergyProjectile({ effect, onImpact, onComplete }) {
+function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnregisterRef }) {
     const groupRef = useRef();
     const coreRef = useRef();
     const auraRef = useRef();
@@ -131,10 +130,17 @@ function EnergyProjectile({ effect, onImpact, onComplete }) {
         color,
         power = 1,
         type = 'normal',
+        id,
     } = effect;
 
-    const speed = type === 'six_seven' ? 1.65 : type === 'combo' ? 2.1 : 2.8;
-    const baseSize = type === 'six_seven' ? 0.32 : type === 'combo' ? 0.22 : 0.13;
+    const speed = type === 'combo' ? 2.1 : 2.8;
+    const baseSize = type === 'combo' ? 0.22 : 0.13;
+
+    // Registra este projétil no mapa global para detecção de colisão
+    useEffect(() => {
+        onRegisterRef?.(id, { progressRef, startX, endX, color, completedRef });
+        return () => onUnregisterRef?.(id);
+    }, [id]); // eslint-disable-line
 
     useFrame((state, delta) => {
         if (!groupRef.current || completedRef.current) return;
@@ -143,7 +149,7 @@ function EnergyProjectile({ effect, onImpact, onComplete }) {
         const progress = clamp(progressRef.current, 0, 1);
         const direction = Math.sign(endX - startX) || 1;
         const x = THREE.MathUtils.lerp(startX, endX, progress);
-        const arcHeight = type === 'six_seven' ? 0.55 : 0.22;
+        const arcHeight = 0.22;
         const y = 0.85 + Math.sin(progress * Math.PI) * arcHeight;
         const pulse = 1 + Math.sin(state.clock.elapsedTime * 20) * 0.12;
 
@@ -172,7 +178,7 @@ function EnergyProjectile({ effect, onImpact, onComplete }) {
             onImpact({
                 position: [endX, 0.85, 0],
                 color,
-                scale: type === 'six_seven' ? 1.8 : type === 'combo' ? 1.25 : 0.75,
+                scale: type === 'combo' ? 1.25 : 0.75,
                 strong: type !== 'normal',
             });
             onComplete();
@@ -213,20 +219,7 @@ function EnergyProjectile({ effect, onImpact, onComplete }) {
                 </mesh>
             ))}
 
-            {type === 'six_seven' && (
-                <>
-                    <mesh position={[-0.18, 0.25, 0]}>
-                        <torusGeometry args={[0.13, 0.035, 10, 24]} />
-                        <meshBasicMaterial color={color} toneMapped={false} />
-                    </mesh>
-                    <mesh position={[0.2, 0.25, 0]} rotation={[0, 0, -0.55]}>
-                        <boxGeometry args={[0.08, 0.32, 0.06]} />
-                        <meshBasicMaterial color={color} toneMapped={false} />
-                    </mesh>
-                </>
-            )}
-
-            <pointLight color={color} intensity={type === 'six_seven' ? 8 : 3} distance={5} decay={2} />
+            <pointLight color={color} intensity={3} distance={5} decay={2} />
         </group>
     );
 }
@@ -384,13 +377,17 @@ export function DuelScreen() {
     const [effects, setEffects] = useState([]);
     const [impacts, setImpacts] = useState([]);
     const [shakeSignal, setShakeSignal] = useState(0);
+    const [blockedFlash, setBlockedFlash] = useState(false); // feedback visual de click inválido
 
     const clickCountRef = useRef(0);
     const lastClickTimeRef = useRef(0);
+    const lastButtonRef = useRef(null); // '6' ou '7' - para forçar alternância
     const prevScore1 = useRef(0);
     const prevScore2 = useRef(0);
     const lastShotAt = useRef({ p1: 0, p2: 0 });
     const previousDuelStatus = useRef(null);
+    // Mapa id -> { progressRef, startX, endX, color, completedRef } para detecção de colisão
+    const activeProjectilesRef = useRef({});
 
     const addEffect = useCallback((effect) => {
         setEffects((current) => [
@@ -410,7 +407,7 @@ export function DuelScreen() {
         }
     }, []);
 
-    const handleScreenClick = useCallback((event) => {
+    const handleScreenClick = useCallback((event, buttonId) => {
         const now = Date.now();
 
         // Evita o clique duplicado gerado por touch + click no celular.
@@ -418,6 +415,15 @@ export function DuelScreen() {
         lastClickTimeRef.current = now;
 
         if (duelState?.status !== 'playing') return;
+
+        // --- REGRA DE ALTERNÂNCIA: só pontua se alternado 6->7->6->7 ---
+        if (lastButtonRef.current === buttonId) {
+            // Mesmo botão clicado duas vezes: feedback visual, sem pontuar
+            setBlockedFlash(f => !f);
+            return;
+        }
+        lastButtonRef.current = buttonId;
+        // --- FIM REGRA ---
 
         clickCountRef.current += 1;
         setClickCount(clickCountRef.current);
@@ -428,6 +434,43 @@ export function DuelScreen() {
             inputType: event?.type || 'unknown',
         });
     }, [duelState?.status, sendDuelHit]);
+
+    // Callbacks para registrar projéteis ativos no mapa de colisão
+    const handleRegisterProjectile = useCallback((id, data) => {
+        activeProjectilesRef.current[id] = data;
+    }, []);
+    const handleUnregisterProjectile = useCallback((id) => {
+        delete activeProjectilesRef.current[id];
+    }, []);
+
+    // Verifica colisões entre projéteis opostos e cria explosão no centro
+    const handleCollisionCheck = useCallback(() => {
+        const projectiles = Object.values(activeProjectilesRef.current);
+        const leftMoving = projectiles.filter(p => !p.completedRef.current && p.endX > p.startX); // indo para a direita
+        const rightMoving = projectiles.filter(p => !p.completedRef.current && p.endX < p.startX); // indo para a esquerda
+
+        leftMoving.forEach(lp => {
+            rightMoving.forEach(rp => {
+                const lProgress = lp.progressRef.current;
+                const rProgress = rp.progressRef.current;
+                // Se ambos estão perto do centro (entre 35% e 65% do percurso)
+                if (lProgress > 0.35 && lProgress < 0.65 && rProgress > 0.35 && rProgress < 0.65) {
+                    // Colisao! Marca os dois como completos e cria explosão mista no centro
+                    if (!lp.completedRef.current && !rp.completedRef.current) {
+                        lp.completedRef.current = true;
+                        rp.completedRef.current = true;
+                        // Explosão AZUL + VERMELHA no ponto de impacto (x=0 é o centro)
+                        addImpact({ position: [0, 0.85, 0], color: '#a855f7', scale: 2.2, strong: true });
+                        addImpact({ position: [0, 0.85, 0], color: BLUE, scale: 1.2, strong: false });
+                        addImpact({ position: [0, 0.85, 0], color: RED, scale: 1.2, strong: false });
+                        setShakeSignal(v => v + 1);
+                        // Remove os dois projéteis do DOM
+                        setEffects(current => current.filter(e => e.id !== lp.id && e.id !== rp.id));
+                    }
+                }
+            });
+        });
+    }, [addImpact]);
 
     const player1 = duelState?.player1;
     const player2 = duelState?.player2;
@@ -447,20 +490,30 @@ export function DuelScreen() {
                 setImpacts([]);
                 setClickCount(0);
                 clickCountRef.current = 0;
+                lastButtonRef.current = null; // Zera a alternância ao começar
+                activeProjectilesRef.current = {};
                 prevScore1.current = player1?.score || 0;
                 prevScore2.current = player2?.score || 0;
             }
         }
     }, [duelState?.status, player1?.score, player2?.score]);
 
+    // Loop de detecção de colisão (a cada 60ms para não travar)
+    useEffect(() => {
+        if (duelState?.status !== 'playing') return;
+        const interval = setInterval(handleCollisionCheck, 60);
+        return () => clearInterval(interval);
+    }, [duelState?.status, handleCollisionCheck]);
+
     useEffect(() => {
         if (!player1 || !player2) return;
 
         const score1 = Number(player1.score) || 0;
         const score2 = Number(player2.score) || 0;
-        const difference = score1 - score2;
-        const maxDifference = Number(duelState?.maxDominanceDifference) || 200;
-        const progress = 50 + clamp((difference / maxDifference) * 50, -50, 50);
+        const total = score1 + score2;
+        // A barra mostra QUEM DOMINA: o lado que tem mais pontos cresce, o que tem menos encolhe.
+        // Se score1=80, score2=20 -> total=100 -> p1Progress=80%
+        const progress = total > 0 ? clamp((score1 / total) * 100, 5, 95) : 50;
         setP1Progress(progress);
 
         const now = Date.now();
@@ -502,7 +555,7 @@ export function DuelScreen() {
 
         prevScore1.current = score1;
         prevScore2.current = score2;
-    }, [addEffect, duelState?.maxDominanceDifference, player1, player2]);
+    }, [addEffect, player1, player2]);
 
     const dominanceLabel = useMemo(() => {
         const localProgress = isP1 ? p1Progress : 100 - p1Progress;
@@ -592,6 +645,8 @@ export function DuelScreen() {
                         key={effect.id}
                         effect={effect}
                         onImpact={addImpact}
+                        onRegisterRef={handleRegisterProjectile}
+                        onUnregisterRef={handleUnregisterProjectile}
                         onComplete={() => {
                             setEffects((current) => current.filter((item) => item.id !== effect.id));
                         }}
@@ -740,23 +795,29 @@ export function DuelScreen() {
             {duelState.status === 'playing' && (
                 <div style={{ position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '80px', zIndex: 100, pointerEvents: 'auto' }}>
                     <button 
-                        onTouchStart={(e) => { e.stopPropagation(); handleScreenClick(e); }}
-                        onClick={(e) => { e.stopPropagation(); handleScreenClick(e); }}
+                        onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); handleScreenClick(e, '6'); }}
+                        onClick={(e) => { e.stopPropagation(); handleScreenClick(e, '6'); }}
                         style={{
-                            width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #3b82f6',
+                            width: '100px', height: '100px', borderRadius: '50%',
+                            background: blockedFlash && lastButtonRef.current === '6' ? 'rgba(239,68,68,0.4)' : 'rgba(0,0,0,0.8)',
+                            border: '4px solid #3b82f6',
                             color: '#3b82f6', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
-                            boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)'
+                            boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
+                            transition: 'background 0.1s'
                         }}
                     >
                         6
                     </button>
                     <button 
-                        onTouchStart={(e) => { e.stopPropagation(); handleScreenClick(e); }}
-                        onClick={(e) => { e.stopPropagation(); handleScreenClick(e); }}
+                        onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); handleScreenClick(e, '7'); }}
+                        onClick={(e) => { e.stopPropagation(); handleScreenClick(e, '7'); }}
                         style={{
-                            width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #ef4444',
+                            width: '100px', height: '100px', borderRadius: '50%',
+                            background: blockedFlash && lastButtonRef.current === '7' ? 'rgba(239,68,68,0.4)' : 'rgba(0,0,0,0.8)',
+                            border: '4px solid #ef4444',
                             color: '#ef4444', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
-                            boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)'
+                            boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)',
+                            transition: 'background 0.1s'
                         }}
                     >
                         7
