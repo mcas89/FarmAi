@@ -42,7 +42,8 @@ function SimpleAvatar({ modelFile, score }) {
                 const getBone = (name) => loadedVrm.humanoid.getNormalizedBoneNode(name);
                 
                 const hips = getBone('hips');
-                if (hips) { hips.rotation.x = 0.18; hips.rotation.y = 3.14; }
+                // Hips retas (sem inclinação no x), mantém a virada de 180 graus (y=3.14)
+                if (hips) { hips.rotation.x = 0; hips.rotation.y = Math.PI; }
                 
                 const lShoulder = getBone('leftShoulder');
                 if (lShoulder) lShoulder.rotation.x = -1.59;
@@ -63,7 +64,7 @@ function SimpleAvatar({ modelFile, score }) {
                 if (rLower) rLower.rotation.z = 0.12;
                 
                 const chest = getBone('chest');
-                if (chest) chest.rotation.z = -0.12;
+                if (chest) chest.rotation.z = 0;
             }
             
             setVrm(loadedVrm);
@@ -88,11 +89,18 @@ function SimpleAvatar({ modelFile, score }) {
             // Animação reativa dos braços apenas (Modo Six Seven)
             const getBone = (name) => vrm.humanoid.getNormalizedBoneNode(name);
             
+            // Movimentos de vida
+            const chest = getBone('chest');
+            if (chest) chest.rotation.x = Math.sin(state.clock.elapsedTime * 2) * 0.02;
+            
+            const neck = getBone('neck');
+            if (neck) neck.rotation.y = Math.sin(state.clock.elapsedTime * 1) * 0.05;
+            
             const lLower = getBone('leftLowerArm');
-            if (lLower) lLower.rotation.z = -1.82 + (farmPulseRef.current * 0.6);
+            if (lLower) lLower.rotation.z = -1.82 + (farmPulseRef.current * 1.5);
             
             const rLower = getBone('rightLowerArm');
-            if (rLower) rLower.rotation.z = 0.12 - (farmPulseRef.current * 0.6);
+            if (rLower) rLower.rotation.z = 0.12 - (farmPulseRef.current * 1.5);
             
             // Garante que o corpo e as pernas fiquem 100% imóveis (sem pulos)
             vrm.scene.position.y = 0;
@@ -162,7 +170,6 @@ export function DuelScreen() {
 
     return (
         <div 
-            onClick={handleScreenClick}
             style={{ 
                 position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh', 
                 background: 'radial-gradient(circle at center, #1e1b4b, #000)', 
@@ -278,8 +285,36 @@ export function DuelScreen() {
             
             {/* INSTRUÇÃO DE JOGO (Desaparece quando começa) */}
             {duelState.status === 'countdown' && (
-                <div style={{ position: 'absolute', bottom: '20%', left: '0', width: '100%', textAlign: 'center', color: '#fff', fontSize: '1.2rem', animation: 'pulse 1s infinite' }}>
-                    PREPARE-SE PARA CLICAR!
+                <div style={{ position: 'absolute', bottom: '20%', left: '0', width: '100%', textAlign: 'center', color: '#fff', fontSize: '1.2rem', animation: 'pulse 1s infinite', zIndex: 50 }}>
+                    PREPARE-SE PARA CLICAR NOS BOTÕES!
+                </div>
+            )}
+            
+            {/* BOTÕES DE JOGO (Aparecem apenas quando a partida começar) */}
+            {duelState.status === 'playing' && (
+                <div style={{ position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '20px', zIndex: 100, pointerEvents: 'auto' }}>
+                    <button 
+                        onTouchStart={(e) => { e.preventDefault(); handleScreenClick(); }}
+                        onClick={handleScreenClick}
+                        style={{
+                            width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #3b82f6',
+                            color: '#3b82f6', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
+                            boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)'
+                        }}
+                    >
+                        6
+                    </button>
+                    <button 
+                        onTouchStart={(e) => { e.preventDefault(); handleScreenClick(); }}
+                        onClick={handleScreenClick}
+                        style={{
+                            width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #ef4444',
+                            color: '#ef4444', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
+                            boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)'
+                        }}
+                    >
+                        7
+                    </button>
                 </div>
             )}
         </div>
