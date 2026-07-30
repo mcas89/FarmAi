@@ -120,6 +120,35 @@ function CenterExplosion({ position, onComplete }) {
     );
 }
 
+function ArenaPulse({ color, side }) {
+    const meshRef = useRef();
+
+    useFrame((state) => {
+        if (!meshRef.current) return;
+        const pulse = 1 + Math.sin(state.clock.elapsedTime * 4) * 0.08;
+        meshRef.current.scale.setScalar(pulse);
+        meshRef.current.material.opacity = 0.08 + Math.sin(state.clock.elapsedTime * 3) * 0.025;
+    });
+
+    return (
+        <mesh
+            ref={meshRef}
+            position={[side === 'left' ? -1.55 : 1.55, 0.02, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+        >
+            <ringGeometry args={[0.75, 1.15, 48]} />
+            <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={0.1}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+                toneMapped={false}
+            />
+        </mesh>
+    );
+}
+
 function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnregisterRef }) {
     const group = useRef();
     const core = useRef();
