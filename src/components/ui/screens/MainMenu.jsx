@@ -411,7 +411,7 @@ export function MainMenu() {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, zIndex: 10 }}>
                         <div className="anim-float" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(168,85,247,0.1)', padding: '2px 6px', borderRadius: '8px', border: '1px solid rgba(168,85,247,0.3)' }}>
-                            <Target size={10} color="#a855f7" />
+                            <Sparkles size={10} color="#a855f7" />
                             <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 'bold' }}>{Math.floor(aura).toLocaleString()}</span>
                         </div>
                         <div className="anim-float" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(52,211,153,0.1)', padding: '2px 6px', borderRadius: '8px', border: '1px solid rgba(52,211,153,0.3)', animationDelay: '0.5s' }}>
