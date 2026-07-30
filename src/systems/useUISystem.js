@@ -53,7 +53,32 @@ export const useUISystem = create((set) => ({
     })),
 
     // Atualiza status mockados (ou carregados do Firebase)
-    updateStats: (stats) => set((state) => ({ playerStats: { ...state.playerStats, ...stats, auracash: stats.diamonds || stats.auracash || state.playerStats.auracash } })),
+    updateStats: (stats) => {
+        set((state) => ({ playerStats: { ...state.playerStats, ...stats, auracash: stats.diamonds || stats.auracash || state.playerStats.auracash } }));
+        
+        // Se o auracash/diamonds mudou, salva imediatamente no banco
+        if (stats.diamonds !== undefined || stats.auracash !== undefined) {
+            const newDiamonds = stats.diamonds ?? stats.auracash;
+            Promise.all([
+                import('./usePlayerSystem'),
+                import('./useDatabaseSystem'),
+                import('./useQuestSystem'),
+                import('./useAchievementSystem'),
+                import('./useAuraSystem')
+            ]).then(([pSys, dbSys, qSys, achSys, aSys]) => {
+                const pos = pSys.usePlayerSystem.getState().position;
+                const model = pSys.usePlayerSystem.getState().activeModel;
+                const unlockedCharacters = pSys.usePlayerSystem.getState().unlockedCharacters;
+                const { aura, comboCount, maxCombo, weeklyAura } = aSys.useAuraSystem.getState();
+                const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+                const achievements = achSys.useAchievementSystem.getState().getSavableData();
+                dbSys.useDatabaseSystem.getState().saveGameState(
+                    pos, comboCount, model, aura, newDiamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements, unlockedCharacters
+                );
+                console.log(`[DiamondSave] AuraCash=${newDiamonds} salvo imediatamente.`);
+            });
+        }
+    },
 
     isMapMode: false,
     toggleMapMode: () => set((state) => ({ isMapMode: !state.isMapMode }))
