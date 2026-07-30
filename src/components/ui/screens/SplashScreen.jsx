@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
+import { useAudioSystem } from '../../../systems/useAudioSystem';
 import splashImg from '../../../assets/splash.png';
 
 export function SplashScreen() {
@@ -7,6 +8,9 @@ export function SplashScreen() {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
+        // Tocar a música de introdução
+        useAudioSystem.getState().playBGM('intro');
+
         // Barra de progresso artificial e confiável (4 segundos)
         const duration = 4000;
         const intervalTime = 50;
