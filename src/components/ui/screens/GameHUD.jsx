@@ -1045,13 +1045,6 @@ export function GameHUD() {
             )}
 
             {/* Chat Multiplayer */}
-            {isOnlineMode && (
-                <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}>
-                    <button onClick={() => setShowDuelModal(true)} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid #a855f7', color: '#fff', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer' }}>
-                        <Swords size={20} />
-                    </button>
-                </div>
-            )}
             {isOnlineMode && <MultiplayerChat />}
 
             {/* Modais de Duelo */}

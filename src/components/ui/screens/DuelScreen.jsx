@@ -3,7 +3,7 @@ import { useDuelSystem } from '../../../systems/useDuelSystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { Canvas } from '@react-three/fiber';
 import { Environment, Text } from '@react-three/drei';
-import { VRMAvatar } from '../../3d/VRMAvatar';
+import { Avatar } from '../../3d/Avatar';
 import { OrbitControls } from '@react-three/drei'; // Somente se quiser, mas deixaremos fixa
 import { Trophy, Timer, X } from 'lucide-react';
 
@@ -92,14 +92,14 @@ export function DuelScreen() {
                 {/* Left Player (P1 ou Você) */}
                 {LeftPlayer?.model && (
                     <group position={[-1.5, 0, 0]} rotation={[0, Math.PI/2, 0]}>
-                        <VRMAvatar modelPath={`/models/${LeftPlayer.model}`} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
+                        <Avatar modelPath={`/models/${LeftPlayer.model}`} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
                     </group>
                 )}
 
                 {/* Right Player (Oponente) */}
                 {RightPlayer?.model && (
                     <group position={[1.5, 0, 0]} rotation={[0, -Math.PI/2, 0]}>
-                        <VRMAvatar modelPath={`/models/${RightPlayer.model}`} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
+                        <Avatar modelPath={`/models/${RightPlayer.model}`} animation={duelState.status === 'playing' ? 'dance' : 'idle'} />
                     </group>
                 )}
             </Canvas>
