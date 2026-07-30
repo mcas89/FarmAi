@@ -16,72 +16,94 @@ const sfxFiles = {
     walk: 'passos.mp3'
 };
 
-export const useAudioSystem = create((set, get) => {
-    const bgmAudio = new Audio();
-    bgmAudio.loop = true;
-    
-    const sfxCache = {};
-    
-    Object.keys(sfxFiles).forEach(key => {
+// Inicialização LAZY — só cria os objetos Audio no primeiro uso real (gesto do usuário)
+// Evita erros no mobile onde new Audio() fora de um gesto é bloqueado
+let bgmAudio = null;
+const sfxCache = {};
+
+const getBgmAudio = () => {
+    if (!bgmAudio) {
+        bgmAudio = new Audio();
+        bgmAudio.loop = true;
+    }
+    return bgmAudio;
+};
+
+const getSfxAudio = (key) => {
+    if (!sfxCache[key]) {
         const audio = new Audio(`${MUSIC_PATH}${sfxFiles[key]}`);
         audio.preload = 'auto';
         sfxCache[key] = audio;
-    });
+    }
+    return sfxCache[key];
+};
 
-    return {
-        isMuted: false,
-        currentBGM: null,
-        
-        toggleMute: () => set(state => {
-            const newMuted = !state.isMuted;
-            bgmAudio.muted = newMuted;
-            Object.values(sfxCache).forEach(audio => {
-                audio.muted = newMuted;
-            });
-            return { isMuted: newMuted };
-        }),
-        
-        playBGM: (bgmKey) => {
-            const { isMuted, currentBGM } = get();
-            
-            if (currentBGM === bgmKey) return;
+export const useAudioSystem = create((set, get) => ({
+    isMuted: false,
+    currentBGM: null,
 
-            if (bgmFiles[bgmKey]) {
-                bgmAudio.src = `${MUSIC_PATH}${bgmFiles[bgmKey]}`;
-                bgmAudio.muted = isMuted;
-                // Add a small delay to handle autoplay restrictions on some browsers
+    toggleMute: () => set(state => {
+        const newMuted = !state.isMuted;
+        try {
+            if (bgmAudio) bgmAudio.muted = newMuted;
+            Object.values(sfxCache).forEach(audio => { audio.muted = newMuted; });
+        } catch (e) {
+            console.warn('[Audio] toggleMute error:', e);
+        }
+        return { isMuted: newMuted };
+    }),
+
+    playBGM: (bgmKey) => {
+        const { isMuted, currentBGM } = get();
+        if (currentBGM === bgmKey) return;
+
+        if (bgmFiles[bgmKey]) {
+            try {
+                const audio = getBgmAudio();
+                audio.src = `${MUSIC_PATH}${bgmFiles[bgmKey]}`;
+                audio.muted = isMuted;
                 setTimeout(() => {
-                    bgmAudio.play().catch(e => console.warn('Autoplay prevented:', e));
+                    audio.play().catch(e => console.warn('Autoplay prevented:', e));
                 }, 100);
                 set({ currentBGM: bgmKey });
+            } catch (e) {
+                console.warn('[Audio] playBGM error:', e);
             }
-        },
+        }
+    },
 
-        stopBGM: () => {
-            bgmAudio.pause();
-            bgmAudio.currentTime = 0;
-            set({ currentBGM: null });
-        },
-        
-        playSFX: (sfxKey) => {
-            const { isMuted } = get();
-            if (isMuted) return;
+    stopBGM: () => {
+        try {
+            if (bgmAudio) {
+                bgmAudio.pause();
+                bgmAudio.currentTime = 0;
+            }
+        } catch (e) {}
+        set({ currentBGM: null });
+    },
 
-            const audio = sfxCache[sfxKey];
+    playSFX: (sfxKey) => {
+        const { isMuted } = get();
+        if (isMuted) return;
+        try {
+            const audio = getSfxAudio(sfxKey);
             if (audio) {
                 const soundClone = audio.cloneNode();
                 soundClone.volume = sfxKey === 'walk' ? 0.3 : (sfxKey === 'farm' ? 0.6 : 1.0);
                 soundClone.muted = isMuted;
                 soundClone.play().catch(e => console.warn('Autoplay prevented:', e));
             }
-        },
-        
-        walkAudioNode: null,
-        startWalkSFX: () => {
-            const { isMuted, walkAudioNode } = get();
-            if (isMuted || walkAudioNode) return;
-            
-            const audio = sfxCache['walk'];
+        } catch (e) {
+            console.warn('[Audio] playSFX error:', e);
+        }
+    },
+
+    walkAudioNode: null,
+    startWalkSFX: () => {
+        const { isMuted, walkAudioNode } = get();
+        if (isMuted || walkAudioNode) return;
+        try {
+            const audio = getSfxAudio('walk');
             if (audio) {
                 const node = audio.cloneNode();
                 node.loop = true;
@@ -90,14 +112,18 @@ export const useAudioSystem = create((set, get) => {
                 node.play().catch(e => console.warn('Autoplay prevented:', e));
                 set({ walkAudioNode: node });
             }
-        },
-        stopWalkSFX: () => {
-            const { walkAudioNode } = get();
-            if (walkAudioNode) {
+        } catch (e) {
+            console.warn('[Audio] startWalkSFX error:', e);
+        }
+    },
+    stopWalkSFX: () => {
+        const { walkAudioNode } = get();
+        if (walkAudioNode) {
+            try {
                 walkAudioNode.pause();
                 walkAudioNode.currentTime = 0;
-                set({ walkAudioNode: null });
-            }
+            } catch (e) {}
+            set({ walkAudioNode: null });
         }
-    };
-});
+    }
+}));
