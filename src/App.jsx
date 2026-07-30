@@ -142,14 +142,14 @@ function App() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // 3c. Auto-save periódico a cada 30 segundos (garante que nenhuma aura seja perdida)
+    // 3c. Auto-save periódico a cada 10 segundos (garante que nenhuma aura seja perdida)
     const autoSaveInterval = setInterval(() => {
       const screen = useUISystem.getState().currentScreen;
       if (screen && screen !== 'LOGIN' && screen !== 'SPLASH') {
-        console.log('[AutoSave] Save periódico (30s)...');
+        console.log('[AutoSave] Save periódico (10s)...');
         executeGameSave();
       }
-    }, 30000);
+    }, 10000);
 
     // Efeito de clique global
     const handleGlobalClick = (e) => {
