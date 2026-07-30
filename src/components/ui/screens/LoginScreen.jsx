@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { auth, db } from '../../../config/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import splashImg from '../../../assets/splash.png';
@@ -15,6 +15,7 @@ export function LoginScreen() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
     const [showTerms, setShowTerms] = useState(false);
     
     // Form States
@@ -23,9 +24,34 @@ export function LoginScreen() {
     const [name, setName] = useState('');
     const [birthDate, setBirthDate] = useState('');
 
+    const handleResetPassword = async () => {
+        if (!email) {
+            setError('Por favor, digite seu e-mail para recuperar a senha.');
+            setSuccessMsg('');
+            return;
+        }
+        setError('');
+        setSuccessMsg('');
+        setLoading(true);
+        try {
+            await sendPasswordResetEmail(auth, email);
+            setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+        } catch (err) {
+            console.error("Erro reset senha:", err);
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
+                setError('E-mail não encontrado ou inválido.');
+            } else {
+                setError('Erro ao enviar e-mail de recuperação.');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleAuth = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccessMsg('');
         setLoading(true);
 
         try {
@@ -182,6 +208,16 @@ export function LoginScreen() {
                     </div>
                 )}
 
+                {successMsg && (
+                    <div style={{ 
+                        background: 'rgba(74, 222, 128, 0.1)', border: '1px solid #4ade80', 
+                        color: '#bbf7d0', padding: '10px', borderRadius: '8px', 
+                        fontSize: '0.75rem', marginBottom: '15px', textAlign: 'center' 
+                    }}>
+                        {successMsg}
+                    </div>
+                )}
+
                 <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     
                     {isRegistering && (
@@ -219,9 +255,21 @@ export function LoginScreen() {
                         <input 
                             type="password" placeholder="Senha" 
                             value={password} onChange={e => setPassword(e.target.value)}
-                            required className="glass-input" 
+                            required={!isRegistering && !email} // Required only if not resetting password
+                            className="glass-input" 
                         />
                     </div>
+
+                    {!isRegistering && (
+                        <div style={{ textAlign: 'right', marginTop: '-5px', marginBottom: '5px' }}>
+                            <span 
+                                onClick={handleResetPassword}
+                                style={{ color: '#a855f7', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
+                            >
+                                Esqueci a senha
+                            </span>
+                        </div>
+                    )}
 
                     <button type="submit" disabled={loading} className="submit-btn">
                         {loading ? <Loader2 size={20} className="spin" /> : (isRegistering ? 'CADASTRAR' : 'ENTRAR')}

@@ -131,7 +131,6 @@ function App() {
     // Efeito de clique global
     const handleGlobalClick = (e) => {
       const target = e.target;
-      // Toca som se for um button, a (link), ou tiver cursor: pointer
       const isClickable = target.tagName === 'BUTTON' || 
                           target.tagName === 'A' || 
                           target.closest('button') || 
@@ -146,13 +145,20 @@ function App() {
       }
     };
     window.addEventListener('click', handleGlobalClick);
+    
+    // PWA Install Prompt Listener
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      import('./systems/usePWASystem').then(m => m.usePWASystem.getState().setPrompt(e));
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Expõe a função globalmente para podermos chamar quando telas mudarem (já que currentScreen não está no array de dep do useEffect principal)
     window.executeGameSave = executeGameSave;
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('click', handleGlobalClick);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       delete window.executeGameSave;
       unsubscribe();
     };

@@ -6,8 +6,9 @@ import { useRankingSystem } from '../../../systems/useRankingSystem';
 import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { useAudioSystem } from '../../../systems/useAudioSystem';
+import { usePWASystem } from '../../../systems/usePWASystem';
 import { 
-    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles, Volume2, VolumeX
+    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles, Volume2, VolumeX, Download
 } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
 import { auth } from '../../../config/firebase';
@@ -390,6 +391,12 @@ export function MainMenu() {
                 </div>
                 <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowAboutModal(true); }}><Info size={18} /> SOBRE O GAME</div>
                 
+                {usePWASystem(state => state.isInstallable) && (
+                    <div className="drawer-btn" style={{ color: '#4ade80' }} onClick={() => usePWASystem.getState().installPWA()}>
+                        <Download size={18} /> INSTALAR APP
+                    </div>
+                )}
+
                 <div className="drawer-btn" style={{ marginTop: '20px', color: '#f87171' }} onClick={handleLogout}>
                     <LogOut size={18} /> SAIR DA CONTA
                 </div>
