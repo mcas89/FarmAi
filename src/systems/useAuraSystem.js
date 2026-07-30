@@ -21,6 +21,7 @@ export const useAuraSystem = create((set, get) => ({
     lastPoints: 0,
     comboCount: 0,
     maxCombo: 0,
+    comboStartTime: null,
     hitId: 0,
     isMilestone: false,
     hitSide: 'left',
@@ -66,6 +67,31 @@ export const useAuraSystem = create((set, get) => ({
             }
 
             const now = Date.now();
+            
+            // 0. Sistema de Fadiga de 45 minutos (Bloqueio Anti-Autoclicker)
+            let newComboStartTime = state.comboStartTime;
+            if (comboCount <= 1 || !newComboStartTime) {
+                newComboStartTime = now;
+            } else {
+                const comboDuration = now - newComboStartTime;
+                if (comboDuration >= 45 * 60 * 1000) { // 45 minutos em milissegundos
+                    setTimeout(() => {
+                        import('./useUISystem').then(m => {
+                            m.useUISystem.getState().setFarmMode('none');
+                            m.useUISystem.getState().setScreen('MENU');
+                        });
+                        alert("Fadiga Extrema! Você manteve o combo por 45 minutos seguidos. Como medida de segurança (anti-autoclicker), você foi enviado de volta ao Menu Principal.");
+                    }, 0);
+                    
+                    return {
+                        comboCount: 0,
+                        comboStartTime: null,
+                        message: "BLOQUEIO DE FADIGA ATINGIDO",
+                        lastPoints: 0
+                    };
+                }
+            }
+
             let newScore = state.suspicionScore;
             
             // 1. Decay natural se demorou pra clicar (comportamento humano)
@@ -153,6 +179,7 @@ export const useAuraSystem = create((set, get) => ({
                 lastPoints: actualPoints,
                 message: message,
                 comboCount: comboCount,
+                comboStartTime: newComboStartTime,
                 maxCombo: newMaxCombo,
                 hitId: Date.now() + Math.random(),
                 isMilestone: isMilestone,

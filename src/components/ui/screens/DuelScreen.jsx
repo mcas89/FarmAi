@@ -1,51 +1,266 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useDuelSystem } from '../../../systems/useDuelSystem';
-import { useAuraSystem } from '../../../systems/useAuraSystem';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, Text } from '@react-three/drei';
-import { OrbitControls } from '@react-three/drei';
-import { Trophy, Timer, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Environment } from '@react-three/drei';
+import { Trophy, Zap } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
+import { useDuelSystem } from '../../../systems/useDuelSystem';
 import { sixSevenFrames } from '../../3d/avatar/animations/farmSixSeven';
 
-// Efeito de projétil de energia atirado pelas mãos
-function EnergyProjectile({ startX, endX, color, onComplete }) {
-    const meshRef = useRef();
-    const [progress, setProgress] = useState(0);
+const BLUE = '#3b82f6';
+const BLUE_LIGHT = '#93c5fd';
+const RED = '#ef4444';
+const RED_LIGHT = '#fca5a5';
+const POWER_REQUIRED = 100;
+const MAX_VISIBLE_EFFECTS = 18;
+const NORMAL_SHOT_COOLDOWN_MS = 150;
 
-    useFrame((state, delta) => {
-        setProgress(p => {
-            const np = p + delta * 2; // Velocidade da bola de energia
-            if (np >= 1) {
-                onComplete();
-                return 1;
-            }
-            return np;
-        });
-        
-        if (meshRef.current) {
-            // Interpola entre a mão do atirador e o corpo do adversário
-            meshRef.current.position.x = THREE.MathUtils.lerp(startX, endX, progress);
-            // Um pequeno arco na trajetória (y=0.8 é altura do peito/mão)
-            // Não precisa de arco se é direto na cara, mas um pequeno arco dá estilo.
-            meshRef.current.position.y = 0.8;
-            
-            // Faz a bola girar para efeito visual
-            meshRef.current.rotation.z += delta * 10;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+function createEffectId(prefix) {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
+ * Move a câmera levemente quando ocorre um impacto importante.
+ * Não usa estado React por frame.
+ */
+function CameraRig({ shakeSignal }) {
+    const { camera } = useThree();
+    const originalPosition = useRef(camera.position.clone());
+    const shakeStrength = useRef(0);
+    const previousSignal = useRef(shakeSignal);
+
+    useEffect(() => {
+        if (shakeSignal !== previousSignal.current) {
+            previousSignal.current = shakeSignal;
+            shakeStrength.current = 0.12;
+        }
+    }, [shakeSignal]);
+
+    useFrame((_, delta) => {
+        if (shakeStrength.current > 0.001) {
+            camera.position.x = originalPosition.current.x + (Math.random() - 0.5) * shakeStrength.current;
+            camera.position.y = originalPosition.current.y + (Math.random() - 0.5) * shakeStrength.current;
+            shakeStrength.current = THREE.MathUtils.damp(shakeStrength.current, 0, 10, delta);
+            return;
+        }
+
+        camera.position.lerp(originalPosition.current, Math.min(1, delta * 12));
+    });
+
+    return null;
+}
+
+/**
+ * Pulso rápido no ponto de impacto.
+ */
+function ImpactBurst({ position, color, scale = 1, onComplete }) {
+    const groupRef = useRef();
+    const ringRef = useRef();
+    const coreRef = useRef();
+    const progressRef = useRef(0);
+    const completedRef = useRef(false);
+
+    useFrame((_, delta) => {
+        progressRef.current += delta * 3.5;
+        const progress = progressRef.current;
+
+        if (groupRef.current) {
+            groupRef.current.rotation.z += delta * 2;
+        }
+
+        if (ringRef.current) {
+            const ringScale = scale * (0.5 + progress * 2.5);
+            ringRef.current.scale.setScalar(ringScale);
+            ringRef.current.material.opacity = Math.max(0, 0.75 * (1 - progress));
+        }
+
+        if (coreRef.current) {
+            const pulse = scale * (1 + Math.sin(progress * Math.PI * 5) * 0.18);
+            coreRef.current.scale.setScalar(pulse);
+            coreRef.current.material.opacity = Math.max(0, 1 - progress);
+        }
+
+        if (progress >= 1 && !completedRef.current) {
+            completedRef.current = true;
+            onComplete();
         }
     });
 
     return (
-        <mesh ref={meshRef} position={[startX, 0.8, 0]}>
-            <sphereGeometry args={[0.2, 16, 16]} />
-            <meshBasicMaterial color={color} transparent opacity={1 - progress} />
+        <group ref={groupRef} position={position}>
+            <mesh ref={coreRef}>
+                <sphereGeometry args={[0.22, 18, 18]} />
+                <meshBasicMaterial color={color} transparent toneMapped={false} />
+            </mesh>
+
+            <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0.18, 0.27, 32]} />
+                <meshBasicMaterial
+                    color={color}
+                    transparent
+                    opacity={0.75}
+                    side={THREE.DoubleSide}
+                    depthWrite={false}
+                    toneMapped={false}
+                />
+            </mesh>
+
+            <pointLight color={color} intensity={5 * scale} distance={4} decay={2} />
+        </group>
+    );
+}
+
+/**
+ * Rajada de energia multicamada. O movimento é atualizado com refs,
+ * evitando setState em todos os frames.
+ */
+function EnergyProjectile({ effect, onImpact, onComplete }) {
+    const groupRef = useRef();
+    const coreRef = useRef();
+    const auraRef = useRef();
+    const trailRefs = useRef([]);
+    const progressRef = useRef(0);
+    const completedRef = useRef(false);
+
+    const {
+        startX,
+        endX,
+        color,
+        power = 1,
+        type = 'normal',
+    } = effect;
+
+    const speed = type === 'six_seven' ? 1.65 : type === 'combo' ? 2.1 : 2.8;
+    const baseSize = type === 'six_seven' ? 0.32 : type === 'combo' ? 0.22 : 0.13;
+
+    useFrame((state, delta) => {
+        if (!groupRef.current || completedRef.current) return;
+
+        progressRef.current += delta * speed;
+        const progress = clamp(progressRef.current, 0, 1);
+        const direction = Math.sign(endX - startX) || 1;
+        const x = THREE.MathUtils.lerp(startX, endX, progress);
+        const arcHeight = type === 'six_seven' ? 0.55 : 0.22;
+        const y = 0.85 + Math.sin(progress * Math.PI) * arcHeight;
+        const pulse = 1 + Math.sin(state.clock.elapsedTime * 20) * 0.12;
+
+        groupRef.current.position.set(x, y, 0);
+        groupRef.current.rotation.z += delta * 8 * direction;
+
+        if (coreRef.current) {
+            coreRef.current.scale.setScalar(pulse * power);
+        }
+
+        if (auraRef.current) {
+            auraRef.current.scale.setScalar((1.7 + progress * 0.25) * power);
+            auraRef.current.material.opacity = 0.3 * (1 - progress * 0.45);
+        }
+
+        trailRefs.current.forEach((trail, index) => {
+            if (!trail) return;
+            const distance = (index + 1) * 0.13 * direction;
+            trail.position.x = -distance;
+            trail.scale.setScalar(Math.max(0.25, 0.85 - index * 0.14) * power);
+            trail.material.opacity = Math.max(0, (0.32 - index * 0.045) * (1 - progress));
+        });
+
+        if (progress >= 1) {
+            completedRef.current = true;
+            onImpact({
+                position: [endX, 0.85, 0],
+                color,
+                scale: type === 'six_seven' ? 1.8 : type === 'combo' ? 1.25 : 0.75,
+                strong: type !== 'normal',
+            });
+            onComplete();
+        }
+    });
+
+    return (
+        <group ref={groupRef} position={[startX, 0.85, 0]}>
+            <mesh ref={coreRef}>
+                <sphereGeometry args={[baseSize, 20, 20]} />
+                <meshBasicMaterial color={color} toneMapped={false} />
+            </mesh>
+
+            <mesh ref={auraRef} scale={1.7}>
+                <sphereGeometry args={[baseSize, 18, 18]} />
+                <meshBasicMaterial
+                    color={color}
+                    transparent
+                    opacity={0.3}
+                    depthWrite={false}
+                    toneMapped={false}
+                />
+            </mesh>
+
+            {[0, 1, 2, 3, 4].map((index) => (
+                <mesh
+                    key={index}
+                    ref={(node) => { trailRefs.current[index] = node; }}
+                >
+                    <sphereGeometry args={[baseSize * 0.72, 12, 12]} />
+                    <meshBasicMaterial
+                        color={color}
+                        transparent
+                        opacity={0.25}
+                        depthWrite={false}
+                        toneMapped={false}
+                    />
+                </mesh>
+            ))}
+
+            {type === 'six_seven' && (
+                <>
+                    <mesh position={[-0.18, 0.25, 0]}>
+                        <torusGeometry args={[0.13, 0.035, 10, 24]} />
+                        <meshBasicMaterial color={color} toneMapped={false} />
+                    </mesh>
+                    <mesh position={[0.2, 0.25, 0]} rotation={[0, 0, -0.55]}>
+                        <boxGeometry args={[0.08, 0.32, 0.06]} />
+                        <meshBasicMaterial color={color} toneMapped={false} />
+                    </mesh>
+                </>
+            )}
+
+            <pointLight color={color} intensity={type === 'six_seven' ? 8 : 3} distance={5} decay={2} />
+        </group>
+    );
+}
+
+function ArenaPulse({ color, side }) {
+    const meshRef = useRef();
+
+    useFrame((state) => {
+        if (!meshRef.current) return;
+        const pulse = 1 + Math.sin(state.clock.elapsedTime * 4) * 0.08;
+        meshRef.current.scale.setScalar(pulse);
+        meshRef.current.material.opacity = 0.08 + Math.sin(state.clock.elapsedTime * 3) * 0.025;
+    });
+
+    return (
+        <mesh
+            ref={meshRef}
+            position={[side === 'left' ? -1.55 : 1.55, 0.02, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+        >
+            <ringGeometry args={[0.75, 1.15, 48]} />
+            <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={0.1}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+                toneMapped={false}
+            />
         </mesh>
     );
 }
 
-// Componente leve exclusivo para a arena (sem depender dos sistemas do jogo local)
+// Componente leve exclusivo para a arena.
 function SimpleAvatar({ modelFile, score }) {
     const [vrm, setVrm] = useState(null);
     const lastScoreRef = useRef(score || 0);
@@ -53,322 +268,747 @@ function SimpleAvatar({ modelFile, score }) {
     const isAnimatingRef = useRef(false);
 
     useEffect(() => {
-        if (!modelFile) return;
+        if (!modelFile) return undefined;
+
         let isMounted = true;
         const loader = new GLTFLoader();
         loader.register((parser) => new VRMLoaderPlugin(parser));
-        
-        loader.load(`/models/${modelFile}`, (gltf) => {
-            if (!isMounted) return;
-            const loadedVrm = gltf.userData.vrm;
-            
-            // Corrige shaders pra ficar no padrão "Anime" flat
-            loadedVrm.scene.traverse((child) => {
-                if (child.isMesh && child.material) {
+
+        loader.load(
+            `/models/${modelFile}`,
+            (gltf) => {
+                if (!isMounted) return;
+                const loadedVrm = gltf.userData.vrm;
+                if (!loadedVrm) return;
+
+                loadedVrm.scene.traverse((child) => {
+                    if (!child.isMesh || !child.material) return;
+
                     if (Array.isArray(child.material)) {
-                        child.material.forEach(m => { m.needsUpdate = true; });
+                        child.material.forEach((material) => {
+                            material.needsUpdate = true;
+                        });
                     } else {
                         child.material.needsUpdate = true;
                     }
-                    child.frustumCulled = false;
-                }
-            });
-            
-            setVrm(loadedVrm);
-        });
 
-        return () => { isMounted = false; };
+                    child.frustumCulled = false;
+                });
+
+                setVrm(loadedVrm);
+            },
+            undefined,
+            (error) => {
+                console.error(`Falha ao carregar avatar ${modelFile}:`, error);
+            },
+        );
+
+        return () => {
+            isMounted = false;
+        };
     }, [modelFile]);
 
-    useFrame((state, delta) => {
-        if (vrm && vrm.humanoid) {
-            vrm.update(delta);
-            
-            if (score > lastScoreRef.current) {
-                isAnimatingRef.current = true;
-                animFrameRef.current = 0;
-                lastScoreRef.current = score;
-            }
-            
-            const getBone = (name) => vrm.humanoid.getNormalizedBoneNode(name);
-            
-            let currentFrameIndex = 0;
-            if (isAnimatingRef.current) {
-                animFrameRef.current += (delta * 60); // Toca a ~60fps
-                currentFrameIndex = Math.floor(animFrameRef.current);
-                if (currentFrameIndex >= sixSevenFrames.length) {
-                    currentFrameIndex = sixSevenFrames.length - 1;
-                    isAnimatingRef.current = false;
-                }
-            }
-            
-            // Aplica os keyframes originais do Six Seven
-            const framePose = sixSevenFrames[currentFrameIndex].pose;
-            Object.keys(framePose).forEach(boneName => {
-                const bone = getBone(boneName);
-                if (bone && framePose[boneName]) {
-                    if (framePose[boneName].x !== undefined) bone.rotation.x = framePose[boneName].x;
-                    if (framePose[boneName].y !== undefined) bone.rotation.y = framePose[boneName].y;
-                    if (framePose[boneName].z !== undefined) bone.rotation.z = framePose[boneName].z;
-                }
+    useEffect(() => () => {
+        if (vrm?.scene) {
+            vrm.scene.traverse((child) => {
+                if (child.geometry) child.geometry.dispose?.();
             });
-            
-            // Corrige o quadril para ficar reto (remover inclinação indesejada) e virado frente a frente
-            const hips = getBone('hips');
-            if (hips) { hips.rotation.x = 0; hips.rotation.y = Math.PI; }
-            const chest = getBone('chest');
-            if (chest) { chest.rotation.z = 0; }
-            
-            // Movimentos de vida somados à pose (apenas respiração suave, sem virar a cabeça)
-            if (chest) chest.rotation.x += Math.sin(state.clock.elapsedTime * 2) * 0.02;
-            
-            // Garante que o corpo e as pernas fiquem 100% imóveis no eixo Y (sem pulos)
-            vrm.scene.position.y = 0;
         }
+    }, [vrm]);
+
+    useFrame((state, delta) => {
+        if (!vrm?.humanoid || sixSevenFrames.length === 0) return;
+
+        vrm.update(delta);
+
+        if (score > lastScoreRef.current) {
+            isAnimatingRef.current = true;
+            animFrameRef.current = 0;
+            lastScoreRef.current = score;
+        }
+
+        const getBone = (name) => vrm.humanoid.getNormalizedBoneNode(name);
+        let currentFrameIndex = 0;
+
+        if (isAnimatingRef.current) {
+            animFrameRef.current += delta * 60;
+            currentFrameIndex = Math.floor(animFrameRef.current);
+
+            if (currentFrameIndex >= sixSevenFrames.length) {
+                currentFrameIndex = sixSevenFrames.length - 1;
+                isAnimatingRef.current = false;
+            }
+        }
+
+        const framePose = sixSevenFrames[currentFrameIndex]?.pose || {};
+        Object.keys(framePose).forEach((boneName) => {
+            const bone = getBone(boneName);
+            const pose = framePose[boneName];
+            if (!bone || !pose) return;
+
+            if (pose.x !== undefined) bone.rotation.x = pose.x;
+            if (pose.y !== undefined) bone.rotation.y = pose.y;
+            if (pose.z !== undefined) bone.rotation.z = pose.z;
+        });
+
+        const hips = getBone('hips');
+        const chest = getBone('chest');
+
+        if (hips) {
+            hips.rotation.x = 0;
+            hips.rotation.y = Math.PI;
+        }
+
+        if (chest) {
+            chest.rotation.z = 0;
+            chest.rotation.x += Math.sin(state.clock.elapsedTime * 2) * 0.02;
+        }
+
+        vrm.scene.position.y = 0;
     });
 
     return vrm ? <primitive object={vrm.scene} /> : null;
 }
 
+function PowerMeter({ value, color, ready, label }) {
+    return (
+        <div style={{ width: '100%', maxWidth: 260 }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                color: '#fff',
+                fontSize: '0.72rem',
+                fontWeight: 900,
+                letterSpacing: '0.08em',
+                marginBottom: 5,
+            }}>
+                <span>{label}</span>
+                <span>{ready ? 'PODER PRONTO' : `${Math.floor(value)}%`}</span>
+            </div>
+            <div style={{
+                height: 8,
+                borderRadius: 999,
+                overflow: 'hidden',
+                background: 'rgba(255,255,255,0.12)',
+                border: `1px solid ${color}`,
+                boxShadow: ready ? `0 0 18px ${color}` : 'none',
+            }}>
+                <div style={{
+                    width: `${clamp(value, 0, 100)}%`,
+                    height: '100%',
+                    background: `linear-gradient(90deg, ${color}, #fff)`,
+                    transition: 'width 120ms linear',
+                }} />
+            </div>
+        </div>
+    );
+}
+
 export function DuelScreen() {
-    const { activeDuelRoom, duelState, leaveDuel, sendDuelHit } = useDuelSystem();
-    const { addAura } = useAuraSystem();
+    const {
+        activeDuelRoom,
+        duelState,
+        leaveDuel,
+        sendDuelHit,
+        sendDuelPower,
+    } = useDuelSystem();
+
     const [p1Progress, setP1Progress] = useState(50);
     const [clickCount, setClickCount] = useState(0);
+    const [effects, setEffects] = useState([]);
+    const [impacts, setImpacts] = useState([]);
+    const [shakeSignal, setShakeSignal] = useState(0);
+    const [localPowerSpent, setLocalPowerSpent] = useState(0);
+
+    const clickCountRef = useRef(0);
     const lastClickTimeRef = useRef(0);
-    
-    // Gerenciador de Projéteis
-    const [projectiles, setProjectiles] = useState([]);
     const prevScore1 = useRef(0);
     const prevScore2 = useRef(0);
+    const lastShotAt = useRef({ p1: 0, p2: 0 });
+    const previousDuelStatus = useRef(null);
 
-    // Quando o jogador clica em qualquer lugar da tela
-    const handleScreenClick = (e) => {
+    const addEffect = useCallback((effect) => {
+        setEffects((current) => [
+            ...current.slice(-(MAX_VISIBLE_EFFECTS - 1)),
+            { ...effect, id: createEffectId(effect.type || 'effect') },
+        ]);
+    }, []);
+
+    const addImpact = useCallback((impact) => {
+        setImpacts((current) => [
+            ...current.slice(-7),
+            { ...impact, id: createEffectId('impact') },
+        ]);
+
+        if (impact.strong) {
+            setShakeSignal((value) => value + 1);
+        }
+    }, []);
+
+    const handleScreenClick = useCallback((event) => {
         const now = Date.now();
-        if (now - lastClickTimeRef.current < 50) return; // Debounce de 50ms para evitar duplo clique no mobile (onTouch + onClick)
+
+        // Evita o clique duplicado gerado por touch + click no celular.
+        if (now - lastClickTimeRef.current < 45) return;
         lastClickTimeRef.current = now;
-        
+
         if (duelState?.status !== 'playing') return;
-        
-        const newCount = clickCount + 1;
-        setClickCount(newCount);
-        
-        // Dispara hit no servidor
-        sendDuelHit(newCount);
-        
-        // Simula farm nativo para dar recompensa base também (opcional)
-        // addAura(); 
-    };
 
-    // Atualiza a barra de progresso suavemente (Cabo de Guerra)
-    useEffect(() => {
-        if (!duelState || !duelState.player1 || !duelState.player2) return;
-        
-        const s1 = duelState.player1.score;
-        const s2 = duelState.player2.score;
-        const total = s1 + s2;
-        
-        if (total === 0) {
-            setP1Progress(50);
-        } else {
-            // Regra do cabo de guerra: não é porcentagem do total, mas sim diferença limitante.
-            // Exemplo: se P1 tem 10 a mais que P2, a barra move 5% pra direita.
-            // Aqui fazemos uma porcentagem simples baseada numa diferença máxima (ex: 200 cliques).
-            const diff = s1 - s2;
-            const maxDiff = 200; 
-            
-            // pct varia de -50 a +50
-            let pct = (diff / maxDiff) * 50; 
-            if (pct > 50) pct = 50;
-            if (pct < -50) pct = -50;
-            
-            setP1Progress(50 + pct);
-        }
-        
-        // Spawn de Projéteis baseado no score
-        if (s1 > prevScore1.current) {
-            setProjectiles(p => [...p, { id: Date.now() + Math.random(), startX: -1.0, endX: 1.0, color: '#3b82f6' }]);
-            prevScore1.current = s1;
-        }
-        if (s2 > prevScore2.current) {
-            setProjectiles(p => [...p, { id: Date.now() + Math.random(), startX: 1.0, endX: -1.0, color: '#ef4444' }]);
-            prevScore2.current = s2;
-        }
-        
-    }, [duelState]);
+        clickCountRef.current += 1;
+        setClickCount(clickCountRef.current);
 
-    if (!duelState || !duelState.player1 || !duelState.player2) return <div style={{background: '#000', width: '100%', height: '100%', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>Carregando Arena...</div>;
+        sendDuelHit?.(clickCountRef.current, {
+            timestamp: now,
+            isTrusted: event?.isTrusted !== false,
+            inputType: event?.type || 'unknown',
+        });
+    }, [duelState?.status, sendDuelHit]);
 
+    const player1 = duelState?.player1;
+    const player2 = duelState?.player2;
     const myId = activeDuelRoom?.sessionId;
-    const isP1 = myId === duelState.player1.id;
-    
-    // Determina quem fica na Esquerda e quem fica na Direita
-    const LeftPlayer = isP1 ? duelState.player1 : duelState.player2;
-    const RightPlayer = isP1 ? duelState.player2 : duelState.player1;
+    const isP1 = myId === player1?.id;
+    const LeftPlayer = isP1 ? player1 : player2;
+    const RightPlayer = isP1 ? player2 : player1;
+    const myPlayer = isP1 ? player1 : player2;
+    const opponentPlayer = isP1 ? player2 : player1;
 
-    // Se o jogo acabou, mostramos o overlay de vitória e o botão de voltar
+    const hasServerPower = Number.isFinite(myPlayer?.powerEnergy);
+    const fallbackPower = (Number(myPlayer?.score) || 0) - localPowerSpent;
+    const myPower = clamp(hasServerPower ? myPlayer.powerEnergy : fallbackPower, 0, 100);
+    const opponentScore = Number(opponentPlayer?.score) || 0;
+    const opponentPower = clamp(
+        Number.isFinite(opponentPlayer?.powerEnergy)
+            ? opponentPlayer.powerEnergy
+            : (opponentScore > 0 && opponentScore % POWER_REQUIRED === 0
+                ? POWER_REQUIRED
+                : opponentScore % POWER_REQUIRED),
+        0,
+        100,
+    );
+    const isPowerReady = myPower >= POWER_REQUIRED;
+
+    const activatePower = useCallback(() => {
+        if (duelState?.status !== 'playing' || !isPowerReady) return;
+
+        const localStartX = -1.15;
+        const localEndX = 1.15;
+        const localColor = BLUE;
+
+        addEffect({
+            type: 'six_seven',
+            startX: localStartX,
+            endX: localEndX,
+            color: localColor,
+            power: 1.2,
+        });
+
+        setShakeSignal((value) => value + 1);
+
+        if (typeof sendDuelPower === 'function') {
+            sendDuelPower('six_seven_impact');
+        } else {
+            // Compatibilidade visual enquanto o backend ainda não possui sendDuelPower.
+            console.info('Impacto Six Seven ativado localmente. Integre sendDuelPower no useDuelSystem para aplicar o efeito no servidor.');
+        }
+
+        setLocalPowerSpent((spent) => spent + POWER_REQUIRED);
+    }, [addEffect, duelState?.status, isPowerReady, sendDuelPower]);
+
+    useEffect(() => {
+        if (previousDuelStatus.current !== duelState?.status) {
+            previousDuelStatus.current = duelState?.status;
+
+            if (duelState?.status === 'countdown') {
+                setEffects([]);
+                setImpacts([]);
+                setClickCount(0);
+                clickCountRef.current = 0;
+                setLocalPowerSpent(0);
+                prevScore1.current = player1?.score || 0;
+                prevScore2.current = player2?.score || 0;
+            }
+        }
+    }, [duelState?.status, player1?.score, player2?.score]);
+
+    useEffect(() => {
+        if (!player1 || !player2) return;
+
+        const score1 = Number(player1.score) || 0;
+        const score2 = Number(player2.score) || 0;
+        const difference = score1 - score2;
+        const maxDifference = Number(duelState?.maxDominanceDifference) || 200;
+        const progress = 50 + clamp((difference / maxDifference) * 50, -50, 50);
+        setP1Progress(progress);
+
+        const now = Date.now();
+        const delta1 = Math.max(0, score1 - prevScore1.current);
+        const delta2 = Math.max(0, score2 - prevScore2.current);
+
+        const spawnForPlayer = (playerKey, delta, startX, endX, color, nextScore) => {
+            if (delta <= 0) return;
+
+            const reachedComboMilestone = nextScore > 0 && nextScore % 50 < delta;
+            const canSpawnNormal = now - lastShotAt.current[playerKey] >= NORMAL_SHOT_COOLDOWN_MS;
+
+            if (reachedComboMilestone) {
+                addEffect({
+                    type: 'combo',
+                    startX,
+                    endX,
+                    color,
+                    power: 1.1,
+                });
+                lastShotAt.current[playerKey] = now;
+                return;
+            }
+
+            if (canSpawnNormal) {
+                addEffect({
+                    type: 'normal',
+                    startX,
+                    endX,
+                    color,
+                    power: 1,
+                });
+                lastShotAt.current[playerKey] = now;
+            }
+        };
+
+        spawnForPlayer('p1', delta1, -1.15, 1.15, BLUE, score1);
+        spawnForPlayer('p2', delta2, 1.15, -1.15, RED, score2);
+
+        prevScore1.current = score1;
+        prevScore2.current = score2;
+    }, [addEffect, duelState?.maxDominanceDifference, player1, player2]);
+
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                activatePower();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [activatePower]);
+
+    const dominanceLabel = useMemo(() => {
+        const localProgress = isP1 ? p1Progress : 100 - p1Progress;
+        if (localProgress >= 75) return 'DOMINANDO';
+        if (localProgress <= 25) return 'SOB PRESSÃO';
+        return 'DISPUTA EQUILIBRADA';
+    }, [isP1, p1Progress]);
+
+    if (!duelState || !player1 || !player2) {
+        return (
+            <div style={{
+                background: '#000',
+                width: '100%',
+                height: '100%',
+                color: '#fff',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                fontWeight: 800,
+            }}>
+                Carregando Arena...
+            </div>
+        );
+    }
+
     const isGameOver = duelState.status === 'finished';
+    const winnerIsMe = duelState.winnerId === myId;
+    const isDraw = duelState.winnerId === 'draw';
 
     return (
-        <div 
-            style={{ 
-                position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh', 
-                background: 'radial-gradient(circle at center, #1e1b4b, #000)', 
-                overflow: 'hidden', userSelect: 'none',
-                cursor: duelState.status === 'playing' ? 'crosshair' : 'default'
+        <div
+            onPointerDown={duelState.status === 'playing' ? handleScreenClick : undefined}
+            style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100vw',
+                height: '100vh',
+                background: 'radial-gradient(circle at 50% 40%, #172554 0%, #080b18 42%, #000 100%)',
+                overflow: 'hidden',
+                userSelect: 'none',
+                touchAction: 'manipulation',
+                cursor: duelState.status === 'playing' ? 'crosshair' : 'default',
             }}
         >
-            {/* 3D Scene - Câmera Fixa Side-View (Afastada) */}
-            <Canvas camera={{ position: [0, 1.2, 7], fov: 65 }} style={{ position: 'absolute', zIndex: 1 }}>
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[0, 5, 5]} intensity={1} color="#a855f7" />
-                <directionalLight position={[0, -5, -5]} intensity={0.5} color="#ec4899" />
+            <Canvas
+                camera={{ position: [0, 1.25, 7], fov: 62 }}
+                dpr={[1, 1.5]}
+                gl={{ antialias: true, powerPreference: 'high-performance' }}
+                style={{ position: 'absolute', inset: 0, zIndex: 1 }}
+            >
+                <CameraRig shakeSignal={shakeSignal} />
+                <ambientLight intensity={0.42} />
+                <directionalLight position={[-4, 5, 4]} intensity={2.2} color={BLUE_LIGHT} />
+                <directionalLight position={[4, 5, 4]} intensity={2.2} color={RED_LIGHT} />
+                <pointLight position={[-2, 1.6, 1]} intensity={3} distance={5} color={BLUE} />
+                <pointLight position={[2, 1.6, 1]} intensity={3} distance={5} color={RED} />
                 <Environment preset="night" />
 
-                {/* Chão Grid Neon Simple */}
-                <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                    <planeGeometry args={[20, 20]} />
-                    <meshBasicMaterial color="#000" wireframe />
+                <mesh position={[0, -0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[22, 22]} />
+                    <meshStandardMaterial color="#020617" roughness={0.82} metalness={0.18} />
                 </mesh>
-                <gridHelper args={[20, 20, '#a855f7', '#a855f7']} />
+                <gridHelper args={[22, 28, '#334155', '#172554']} position={[0, 0.005, 0]} />
 
-                {/* Left Player (P1 ou Você) */}
+                <ArenaPulse color={BLUE} side="left" />
+                <ArenaPulse color={RED} side="right" />
+
+                <mesh position={[0, 1.1, -0.8]}>
+                    <planeGeometry args={[0.025, 3.4]} />
+                    <meshBasicMaterial color="#ffffff" transparent opacity={0.12} />
+                </mesh>
+
                 {LeftPlayer?.model && (
-                    <group position={[-1.5, 0, 0]} rotation={[0, -Math.PI/2, 0]} scale={0.7}>
+                    <group position={[-1.55, 0, 0]} rotation={[0, -Math.PI / 2, 0]} scale={0.7}>
                         <SimpleAvatar modelFile={LeftPlayer.model} score={LeftPlayer.score} />
                     </group>
                 )}
 
-                {/* Right Player (Oponente) */}
                 {RightPlayer?.model && (
-                    <group position={[1.5, 0, 0]} rotation={[0, Math.PI/2, 0]} scale={0.7}>
+                    <group position={[1.55, 0, 0]} rotation={[0, Math.PI / 2, 0]} scale={0.7}>
                         <SimpleAvatar modelFile={RightPlayer.model} score={RightPlayer.score} />
                     </group>
                 )}
 
-                {/* Renderização das Bolhas de Poder */}
-                {projectiles.map(proj => (
-                    <EnergyProjectile 
-                        key={proj.id} 
-                        startX={proj.startX} 
-                        endX={proj.endX} 
-                        color={proj.color} 
+                {effects.map((effect) => (
+                    <EnergyProjectile
+                        key={effect.id}
+                        effect={effect}
+                        onImpact={addImpact}
                         onComplete={() => {
-                            setProjectiles(current => current.filter(p => p.id !== proj.id));
-                        }} 
+                            setEffects((current) => current.filter((item) => item.id !== effect.id));
+                        }}
+                    />
+                ))}
+
+                {impacts.map((impact) => (
+                    <ImpactBurst
+                        key={impact.id}
+                        position={impact.position}
+                        color={impact.color}
+                        scale={impact.scale}
+                        onComplete={() => {
+                            setImpacts((current) => current.filter((item) => item.id !== impact.id));
+                        }}
                     />
                 ))}
             </Canvas>
 
-            {/* HUD 2D SOBREPOSTA */}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' }}>
-                
-                {/* Cabeçalho de Duelo */}
-                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ color: '#fff', fontWeight: '900', fontSize: '2rem', textShadow: '0 0 10px #ef4444' }}>
+            <div style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 10,
+                pointerEvents: 'none',
+            }}>
+                <div style={{
+                    padding: '18px clamp(14px, 4vw, 48px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}>
+                    <div style={{
+                        color: '#fff',
+                        fontWeight: 950,
+                        fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
+                        lineHeight: 1,
+                        textShadow: duelState.timeLeft <= 10
+                            ? '0 0 18px #ef4444, 0 0 35px #ef4444'
+                            : '0 0 16px rgba(255,255,255,0.45)',
+                    }}>
                         {duelState.timeLeft}s
                     </div>
-                    
-                    {/* BARRA DE DOMÍNIO (CABO DE GUERRA) */}
-                    <div style={{ 
-                        width: '80%', height: '20px', background: '#000', border: '2px solid #333', 
-                        borderRadius: '10px', marginTop: '10px', position: 'relative', overflow: 'hidden',
-                        display: 'flex'
+
+                    <div style={{
+                        marginTop: 7,
+                        color: 'rgba(255,255,255,0.68)',
+                        fontWeight: 900,
+                        fontSize: '0.72rem',
+                        letterSpacing: '0.16em',
                     }}>
-                        {/* Lado Azul (Você) */}
-                        <div style={{ 
-                            width: `${p1Progress}%`, height: '100%', 
-                            background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
-                            transition: 'width 0.1s linear' 
-                        }} />
-                        
-                        {/* Lado Vermelho (Adversário) */}
-                        <div style={{ 
-                            width: `${100 - p1Progress}%`, height: '100%', 
-                            background: 'linear-gradient(90deg, #f87171, #ef4444)',
-                            transition: 'width 0.1s linear'
-                        }} />
-                        
-                        {/* Marcador Central */}
-                        <div style={{ position: 'absolute', top: 0, left: '50%', width: '4px', height: '100%', background: '#fff', transform: 'translateX(-50%)' }} />
+                        {dominanceLabel}
                     </div>
 
-                    {/* Nomes dos Jogadores */}
-                    <div style={{ width: '80%', display: 'flex', justifyContent: 'space-between', marginTop: '5px', color: '#fff', fontWeight: 'bold' }}>
-                        <span style={{ color: '#60a5fa' }}>VOCÊ ({LeftPlayer?.score})</span>
-                        <span style={{ color: '#f87171' }}>{RightPlayer?.name} ({RightPlayer?.score})</span>
+                    <div style={{
+                        width: 'min(86%, 980px)',
+                        height: 26,
+                        background: '#020617',
+                        border: '2px solid rgba(255,255,255,0.22)',
+                        borderRadius: 999,
+                        marginTop: 12,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        boxShadow: '0 0 26px rgba(59,130,246,0.2), 0 0 26px rgba(239,68,68,0.2)',
+                    }}>
+                        <div style={{
+                            width: `${p1Progress}%`,
+                            height: '100%',
+                            background: `linear-gradient(90deg, #172554, ${BLUE}, ${BLUE_LIGHT})`,
+                            transition: 'width 100ms linear',
+                        }} />
+
+                        <div style={{
+                            width: `${100 - p1Progress}%`,
+                            height: '100%',
+                            background: `linear-gradient(90deg, ${RED_LIGHT}, ${RED}, #450a0a)`,
+                            transition: 'width 100ms linear',
+                        }} />
+
+                        <div style={{
+                            position: 'absolute',
+                            inset: '0 auto 0 50%',
+                            width: 5,
+                            background: '#fff',
+                            transform: 'translateX(-50%)',
+                            boxShadow: '0 0 16px #fff',
+                        }} />
+                    </div>
+
+                    <div style={{
+                        width: 'min(86%, 980px)',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: 30,
+                        marginTop: 9,
+                    }}>
+                        <div>
+                            <div style={{ color: BLUE_LIGHT, fontWeight: 950, fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>
+                                VOCÊ · {LeftPlayer?.score || 0}
+                            </div>
+                            <PowerMeter
+                                value={myPower}
+                                color={BLUE}
+                                ready={isPowerReady}
+                                label="ENERGIA SIX SEVEN"
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                            <div style={{ color: RED_LIGHT, fontWeight: 950, fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>
+                                {RightPlayer?.name || 'ADVERSÁRIO'} · {RightPlayer?.score || 0}
+                            </div>
+                            <PowerMeter
+                                value={opponentPower}
+                                color={RED}
+                                ready={opponentPower >= POWER_REQUIRED}
+                                label="ENERGIA ADVERSÁRIA"
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* Overlays de Status */}
                 {duelState.status === 'waiting' && (
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}>
-                        Aguardando Oponente...
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        color: '#fff',
+                        fontSize: '1.5rem',
+                        fontWeight: 900,
+                        textShadow: '0 0 18px #000',
+                    }}>
+                        Aguardando oponente...
                     </div>
                 )}
-                
+
                 {duelState.status === 'countdown' && (
-                    <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%, -50%)', color: '#ef4444', fontSize: '5rem', fontWeight: '900', textShadow: '0 0 20px #000' }}>
+                    <div style={{
+                        position: 'absolute',
+                        top: '43%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        color: '#fff',
+                        fontSize: 'clamp(5rem, 16vw, 10rem)',
+                        fontWeight: 1000,
+                        lineHeight: 1,
+                        textShadow: '0 0 25px #3b82f6, 0 0 45px #ef4444',
+                    }}>
                         {duelState.timeLeft}
                     </div>
                 )}
 
-                {/* Fim de Jogo */}
                 {isGameOver && (
-                    <div style={{ 
-                        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
-                        background: 'rgba(0,0,0,0.9)', border: '2px solid #ef4444', borderRadius: '16px',
-                        padding: '30px', textAlign: 'center', pointerEvents: 'auto', width: '300px'
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        background: 'linear-gradient(180deg, rgba(15,23,42,0.98), rgba(0,0,0,0.98))',
+                        border: `2px solid ${winnerIsMe ? '#fbbf24' : RED}`,
+                        borderRadius: 20,
+                        padding: 30,
+                        textAlign: 'center',
+                        pointerEvents: 'auto',
+                        width: 'min(340px, calc(100vw - 40px))',
+                        boxShadow: winnerIsMe
+                            ? '0 0 50px rgba(251,191,36,0.35)'
+                            : '0 0 45px rgba(239,68,68,0.25)',
                     }}>
-                        <Trophy size={48} color={duelState.winnerId === myId ? "#fbbf24" : "#6b7280"} style={{ margin: '0 auto 10px' }} />
-                        <h1 style={{ color: '#fff', margin: 0 }}>
-                            {duelState.winnerId === "draw" ? "EMPATE!" : (duelState.winnerId === myId ? "VITÓRIA!" : "DERROTA")}
+                        <Trophy
+                            size={56}
+                            color={winnerIsMe ? '#fbbf24' : '#64748b'}
+                            style={{ margin: '0 auto 12px' }}
+                        />
+                        <h1 style={{ color: '#fff', margin: 0, fontSize: '2rem' }}>
+                            {isDraw ? 'EMPATE!' : winnerIsMe ? 'VITÓRIA!' : 'DERROTA'}
                         </h1>
-                        <p style={{ color: '#aaa' }}>
-                            {duelState.winnerId === myId ? `Você ganhou ${duelState.betAmount * 2} AuraCash!` : `Você perdeu ${duelState.betAmount} AuraCash.`}
+                        <p style={{ color: '#cbd5e1', lineHeight: 1.5 }}>
+                            {isDraw
+                                ? 'O pote deve ser devolvido ou tratado pelas regras do servidor.'
+                                : winnerIsMe
+                                    ? `Você ganhou ${(duelState.betAmount || 0) * 2} AuraCash!`
+                                    : `Você perdeu ${duelState.betAmount || 0} AuraCash.`}
                         </p>
-                        <button onClick={leaveDuel} style={{ 
-                            background: '#ef4444', color: '#fff', border: 'none', padding: '12px 24px', 
-                            borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '20px', width: '100%' 
-                        }}>
+                        <button
+                            type="button"
+                            onClick={leaveDuel}
+                            style={{
+                                background: winnerIsMe
+                                    ? 'linear-gradient(90deg, #d97706, #fbbf24)'
+                                    : 'linear-gradient(90deg, #991b1b, #ef4444)',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '13px 24px',
+                                borderRadius: 10,
+                                fontWeight: 950,
+                                cursor: 'pointer',
+                                marginTop: 14,
+                                width: '100%',
+                            }}
+                        >
                             SAIR DA ARENA
                         </button>
                     </div>
                 )}
             </div>
-            
-            {/* INSTRUÇÃO DE JOGO (Desaparece quando começa) */}
+
             {duelState.status === 'countdown' && (
-                <div style={{ position: 'absolute', bottom: '20%', left: '0', width: '100%', textAlign: 'center', color: '#fff', fontSize: '1.2rem', animation: 'pulse 1s infinite', zIndex: 50 }}>
-                    PREPARE-SE PARA CLICAR NOS BOTÕES!
+                <div style={{
+                    position: 'absolute',
+                    bottom: '17%',
+                    width: '100%',
+                    zIndex: 50,
+                    color: '#fff',
+                    textAlign: 'center',
+                    fontWeight: 950,
+                    letterSpacing: '0.12em',
+                    textShadow: '0 0 16px #000',
+                }}>
+                    PREPARE-SE · 3 · 2 · 1 · FARMEM!
                 </div>
             )}
-            
-            {/* BOTÕES DE JOGO (Aparecem apenas quando a partida começar) */}
+
             {duelState.status === 'playing' && (
-                <div style={{ position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '80px', zIndex: 100, pointerEvents: 'auto' }}>
-                    <button 
-                        onTouchStart={handleScreenClick}
-                        onClick={handleScreenClick}
+                <div style={{
+                    position: 'absolute',
+                    bottom: '7%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'clamp(18px, 5vw, 70px)',
+                    zIndex: 100,
+                    pointerEvents: 'auto',
+                }}>
+                    <button
+                        type="button"
+                        aria-label="Farmar com o botão 6"
+                        onPointerDown={(event) => {
+                            event.stopPropagation();
+                            handleScreenClick(event);
+                        }}
                         style={{
-                            width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #3b82f6',
-                            color: '#3b82f6', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
-                            boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)'
+                            width: 'clamp(82px, 18vw, 112px)',
+                            height: 'clamp(82px, 18vw, 112px)',
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, rgba(59,130,246,0.25), rgba(0,0,0,0.92))',
+                            border: `4px solid ${BLUE}`,
+                            color: BLUE_LIGHT,
+                            fontSize: '3rem',
+                            fontWeight: 1000,
+                            cursor: 'pointer',
+                            outline: 'none',
+                            boxShadow: '0 0 25px rgba(59,130,246,0.7), inset 0 0 22px rgba(59,130,246,0.3)',
                         }}
                     >
                         6
                     </button>
-                    <button 
-                        onTouchStart={handleScreenClick}
-                        onClick={handleScreenClick}
+
+                    <button
+                        type="button"
+                        disabled={!isPowerReady}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={activatePower}
                         style={{
-                            width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(0,0,0,0.8)', border: '4px solid #ef4444',
-                            color: '#ef4444', fontSize: '3rem', fontWeight: '900', cursor: 'pointer', outline: 'none',
-                            boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)'
+                            width: 'clamp(70px, 14vw, 92px)',
+                            height: 'clamp(70px, 14vw, 92px)',
+                            borderRadius: '50%',
+                            border: isPowerReady ? '3px solid #fbbf24' : '2px solid #475569',
+                            background: isPowerReady
+                                ? 'radial-gradient(circle, #fbbf24, #b45309 70%, #451a03)'
+                                : 'rgba(15,23,42,0.88)',
+                            color: isPowerReady ? '#fff' : '#64748b',
+                            cursor: isPowerReady ? 'pointer' : 'not-allowed',
+                            boxShadow: isPowerReady ? '0 0 35px rgba(251,191,36,0.85)' : 'none',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 950,
+                            fontSize: '0.62rem',
+                            letterSpacing: '0.05em',
+                        }}
+                    >
+                        <Zap size={28} fill={isPowerReady ? '#fff' : 'none'} />
+                        PODER
+                    </button>
+
+                    <button
+                        type="button"
+                        aria-label="Farmar com o botão 7"
+                        onPointerDown={(event) => {
+                            event.stopPropagation();
+                            handleScreenClick(event);
+                        }}
+                        style={{
+                            width: 'clamp(82px, 18vw, 112px)',
+                            height: 'clamp(82px, 18vw, 112px)',
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, rgba(239,68,68,0.25), rgba(0,0,0,0.92))',
+                            border: `4px solid ${RED}`,
+                            color: RED_LIGHT,
+                            fontSize: '3rem',
+                            fontWeight: 1000,
+                            cursor: 'pointer',
+                            outline: 'none',
+                            boxShadow: '0 0 25px rgba(239,68,68,0.7), inset 0 0 22px rgba(239,68,68,0.3)',
                         }}
                     >
                         7
                     </button>
+                </div>
+            )}
+
+            {duelState.status === 'playing' && (
+                <div style={{
+                    position: 'absolute',
+                    right: 16,
+                    bottom: 14,
+                    zIndex: 20,
+                    color: 'rgba(255,255,255,0.5)',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    pointerEvents: 'none',
+                }}>
+                    Cliques locais: {clickCount} · Espaço ativa o poder
                 </div>
             )}
         </div>
