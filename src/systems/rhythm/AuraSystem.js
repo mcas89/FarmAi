@@ -64,6 +64,31 @@ const getBonusForCombo = (comboCount) => {
     return { isMilestone, auraReward, message };
 };
 
+// Salva aura + combo no Firebase toda vez que o combo quebra (estratégia de save)
+const saveOnComboBreak = () => {
+    Promise.all([
+        import('../usePlayerSystem'),
+        import('../useDatabaseSystem'),
+        import('../useQuestSystem'),
+        import('../useAchievementSystem'),
+        import('../useUISystem')
+    ]).then(([pSys, dbSys, qSys, achSys, uiSys]) => {
+        const screen = uiSys.useUISystem.getState().currentScreen;
+        if (!screen || screen === 'LOGIN' || screen === 'SPLASH') return;
+        const pos = pSys.usePlayerSystem.getState().position;
+        const model = pSys.usePlayerSystem.getState().activeModel;
+        const unlockedCharacters = pSys.usePlayerSystem.getState().unlockedCharacters;
+        const { aura, comboCount: combo, maxCombo, weeklyAura } = useAuraSystem.getState();
+        const diamonds = uiSys.useUISystem.getState().playerStats.diamonds || 0;
+        const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
+        const achievements = achSys.useAchievementSystem.getState().getSavableData();
+        dbSys.useDatabaseSystem.getState().saveGameState(
+            pos, combo, model, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements, unlockedCharacters
+        );
+        console.log(`[ComboSave] Aura=${aura} MaxCombo=${maxCombo} salvo após combo break.`);
+    });
+};
+
 // DEBUG: Registra o motivo do break no console
 const breakCombo = (reason = 'decay') => {
     console.warn(`[COMBO BREAK] motivo="${reason}" combo_era=${comboCount}`);
@@ -71,7 +96,9 @@ const breakCombo = (reason = 'decay') => {
     lastValidSide = null;
     lastHitTime = 0;
     comboStartTime = 0;
-    useAuraSystem.getState().registerHit(0, '', 0); 
+    useAuraSystem.getState().registerHit(0, '', 0);
+    // Salva aura e maxCombo no Firebase ao parar o combo
+    saveOnComboBreak();
 };
 
 // Decay normal = 800ms. Em milestones (múltiplos de 50) = 2000ms para absorver processamentos pesados.
