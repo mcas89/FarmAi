@@ -12,8 +12,8 @@ const BLUE = '#3b82f6';
 const BLUE_LIGHT = '#93c5fd';
 const RED = '#ef4444';
 const RED_LIGHT = '#fca5a5';
-const MAX_VISIBLE_EFFECTS = 18;
-const NORMAL_SHOT_COOLDOWN_MS = 150;
+const MAX_VISIBLE_EFFECTS = 10;
+const NORMAL_SHOT_COOLDOWN_MS = 210;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -49,73 +49,112 @@ function CameraRig({ shakeSignal }) {
 
 function ImpactBurst({ position, color, scale = 1, onComplete }) {
     const group = useRef();
-    const core = useRef();
-    const ring = useRef();
+    const ringA = useRef();
+    const ringB = useRef();
+    const slashA = useRef();
+    const slashB = useRef();
     const time = useRef(0);
-    
+
     useFrame((_, delta) => {
-        time.current += delta * 3.5;
+        time.current += delta * 3.8;
         const t = time.current;
-        if (group.current) group.current.rotation.z += delta * 2;
-        if (ring.current) {
-            ring.current.scale.setScalar(scale * (0.5 + t * 2.5));
-            ring.current.material.opacity = Math.max(0, 0.8 * (1 - t));
+        const fade = Math.max(0, 1 - t);
+
+        if (group.current) group.current.rotation.x += delta * 1.5;
+        if (ringA.current) {
+            ringA.current.scale.setScalar(scale * (0.4 + t * 3.4));
+            ringA.current.material.opacity = fade * 0.9;
         }
-        if (core.current) {
-            core.current.scale.setScalar(scale * (1 + Math.sin(t * Math.PI * 4) * 0.2));
-            core.current.material.opacity = Math.max(0, 1 - t);
+        if (ringB.current) {
+            ringB.current.scale.setScalar(scale * (0.25 + t * 2.4));
+            ringB.current.rotation.z -= delta * 5;
+            ringB.current.material.opacity = fade * 0.65;
+        }
+        if (slashA.current) {
+            slashA.current.scale.x = scale * (0.5 + t * 3.2);
+            slashA.current.material.opacity = fade;
+        }
+        if (slashB.current) {
+            slashB.current.scale.x = scale * (0.5 + t * 3.2);
+            slashB.current.material.opacity = fade;
         }
         if (t >= 1) onComplete();
     });
 
     return (
         <group ref={group} position={position}>
-            <mesh ref={core}>
-                <sphereGeometry args={[0.25, 16, 16]} />
-                <meshBasicMaterial color={color} transparent toneMapped={false} />
+            <mesh ref={ringA} rotation={[0, 0, Math.PI / 2]}>
+                <torusGeometry args={[0.22, 0.035, 8, 48]} />
+                <meshBasicMaterial color={color} transparent depthWrite={false} toneMapped={false} />
             </mesh>
-            <mesh ref={ring} rotation={[Math.PI/2, 0, 0]}>
-                <ringGeometry args={[0.15, 0.3, 32]} />
-                <meshBasicMaterial color={color} transparent side={THREE.DoubleSide} toneMapped={false} />
+            <mesh ref={ringB} rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[0.34, 0.018, 8, 48]} />
+                <meshBasicMaterial color="#ffffff" transparent depthWrite={false} toneMapped={false} />
             </mesh>
-            <pointLight color={color} intensity={6 * scale} distance={5} />
+            <mesh ref={slashA} rotation={[0, 0, Math.PI / 4]} scale={[0.5, 1, 1]}>
+                <planeGeometry args={[1.2, 0.055]} />
+                <meshBasicMaterial color={color} transparent side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            </mesh>
+            <mesh ref={slashB} rotation={[0, 0, -Math.PI / 4]} scale={[0.5, 1, 1]}>
+                <planeGeometry args={[1.2, 0.055]} />
+                <meshBasicMaterial color="#ffffff" transparent side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            </mesh>
+            <pointLight color={color} intensity={8 * scale} distance={6} />
         </group>
     );
 }
 
 function CenterExplosion({ position, onComplete }) {
     const group = useRef();
-    const fog = useRef();
+    const ring = useRef();
+    const vertical = useRef();
+    const horizontal = useRef();
     const time = useRef(0);
 
     useFrame((_, delta) => {
-        time.current += delta * 2.5;
+        time.current += delta * 2.7;
         const t = time.current;
-        
-        if (fog.current) {
-            fog.current.scale.setScalar(1 + t * 4);
-            fog.current.material.opacity = Math.max(0, 1 - t * 1.5);
-            fog.current.rotation.z += delta;
+        const fade = Math.max(0, 1 - t);
+
+        if (group.current) group.current.rotation.z += delta * 2.5;
+        if (ring.current) {
+            ring.current.scale.setScalar(0.6 + t * 4.5);
+            ring.current.material.opacity = fade * 0.95;
+        }
+        if (vertical.current) {
+            vertical.current.scale.y = 1 + t * 4;
+            vertical.current.material.opacity = fade * 0.75;
+        }
+        if (horizontal.current) {
+            horizontal.current.scale.x = 1 + t * 4;
+            horizontal.current.material.opacity = fade * 0.75;
         }
         if (t >= 1) onComplete();
     });
 
     return (
         <group ref={group} position={position}>
-            <mesh ref={fog}>
-                <torusGeometry args={[0.5, 0.3, 16, 32]} />
-                <meshBasicMaterial color="#a855f7" transparent toneMapped={false} />
+            <mesh ref={ring} rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[0.42, 0.08, 12, 64]} />
+                <meshBasicMaterial color="#c084fc" transparent side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
             </mesh>
-            <pointLight color="#a855f7" intensity={10} distance={8} decay={2} />
-            {/* Fragmentos espalhados para dar sensação épica de choque de poder */}
-            <mesh position={[-0.2, 0, 0]}>
-                <sphereGeometry args={[0.15, 8, 8]} />
-                <meshBasicMaterial color={BLUE} transparent opacity={Math.max(0, 1 - time.current)} toneMapped={false} />
+            <mesh ref={vertical}>
+                <planeGeometry args={[0.08, 1.7]} />
+                <meshBasicMaterial color="#ffffff" transparent side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
             </mesh>
-            <mesh position={[0.2, 0, 0]}>
-                <sphereGeometry args={[0.15, 8, 8]} />
-                <meshBasicMaterial color={RED} transparent opacity={Math.max(0, 1 - time.current)} toneMapped={false} />
+            <mesh ref={horizontal}>
+                <planeGeometry args={[1.7, 0.08]} />
+                <meshBasicMaterial color="#ffffff" transparent side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
             </mesh>
+            <mesh position={[-0.34, 0, 0]} scale={[0.7, 1, 1]}>
+                <coneGeometry args={[0.22, 0.9, 24, 1, true]} />
+                <meshBasicMaterial color={BLUE} transparent opacity={0.7} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            </mesh>
+            <mesh position={[0.34, 0, 0]} rotation={[0, 0, Math.PI]} scale={[0.7, 1, 1]}>
+                <coneGeometry args={[0.22, 0.9, 24, 1, true]} />
+                <meshBasicMaterial color={RED} transparent opacity={0.7} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            </mesh>
+            <pointLight color="#c084fc" intensity={14} distance={9} decay={2} />
         </group>
     );
 }
@@ -151,50 +190,103 @@ function ArenaPulse({ color, side }) {
 
 function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnregisterRef }) {
     const group = useRef();
-    const core = useRef();
+    const beam = useRef();
+    const innerBeam = useRef();
+    const handRing = useRef();
+    const waveFront = useRef();
     const progressRef = useRef(0);
-    
+
     const { startX, endX, color, power = 1, type = 'normal', id } = effect;
-    const speed = type === 'combo' ? 2.1 : 2.8;
+    const direction = Math.sign(endX - startX) || 1;
+    const distance = Math.abs(endX - startX);
+    const speed = type === 'combo' ? 2.25 : 3.1;
+    const beamRadius = type === 'combo' ? 0.16 : 0.095;
 
     useEffect(() => {
-        onRegisterRef?.(id, { progressRef, startX, endX, color });
+        onRegisterRef?.(id, { id, progressRef, startX, endX, color });
         return () => onUnregisterRef?.(id);
     }, [id]); // eslint-disable-line
 
     useFrame((state, delta) => {
-        if (!group.current) return;
         progressRef.current += delta * speed;
         const p = Math.min(progressRef.current, 1);
-        const x = THREE.MathUtils.lerp(startX, endX, p);
-        const y = 0.85 + Math.sin(p * Math.PI) * 0.2;
-        
-        group.current.position.set(x, y, 0);
-        
-        if (core.current) {
-            core.current.scale.setScalar((1 + Math.sin(state.clock.elapsedTime * 20) * 0.2) * power);
+        const currentX = THREE.MathUtils.lerp(startX, endX, p);
+        const currentLength = Math.max(0.04, Math.abs(currentX - startX));
+        const centerX = startX + direction * currentLength * 0.5;
+        const pulse = 1 + Math.sin(state.clock.elapsedTime * 28) * 0.12;
+
+        if (group.current) group.current.position.set(0, 0.9, 0);
+
+        if (beam.current) {
+            beam.current.position.x = centerX;
+            beam.current.scale.set(1, currentLength, pulse * power);
+        }
+        if (innerBeam.current) {
+            innerBeam.current.position.x = centerX;
+            innerBeam.current.scale.set(1, currentLength, pulse * power);
+        }
+        if (waveFront.current) {
+            waveFront.current.position.x = currentX;
+            waveFront.current.rotation.x += delta * 8;
+            waveFront.current.rotation.y += delta * 5;
+            waveFront.current.scale.setScalar((type === 'combo' ? 1.25 : 0.85) * pulse);
+        }
+        if (handRing.current) {
+            handRing.current.position.x = startX;
+            handRing.current.rotation.x += delta * 5;
+            handRing.current.rotation.y += delta * 7;
+            handRing.current.scale.setScalar((0.8 + Math.sin(state.clock.elapsedTime * 20) * 0.12) * power);
         }
 
         if (p >= 1) {
-            onImpact({ position: [endX, 0.85, 0], color, scale: type === 'combo' ? 1.5 : 1, strong: type === 'combo' });
+            onImpact({ position: [endX, 0.9, 0], color, scale: type === 'combo' ? 1.65 : 1, strong: type === 'combo' });
             onComplete();
         }
     });
 
     return (
-        <group ref={group} position={[startX, 0.85, 0]}>
-            <mesh ref={core}>
-                <sphereGeometry args={[type === 'combo' ? 0.12 : 0.08, 16, 16]} />
-                <meshBasicMaterial color={color} toneMapped={false} />
-            </mesh>
-            {/* Rastro simples com partículas menores */}
-            {[1, 2, 3].map((i) => (
-                <mesh key={i} position={[-0.15 * i * Math.sign(endX - startX), 0, 0]} scale={1 - i * 0.2}>
-                    <sphereGeometry args={[type === 'combo' ? 0.1 : 0.06, 16, 16]} />
-                    <meshBasicMaterial color={color} transparent opacity={0.5 / i} toneMapped={false} />
+        <group ref={group}>
+            {/* Energia concentrada nas mãos */}
+            <group ref={handRing} position={[startX, 0.9, 0]}>
+                <mesh rotation={[0, Math.PI / 2, 0]}>
+                    <torusGeometry args={[type === 'combo' ? 0.26 : 0.17, 0.025, 8, 40]} />
+                    <meshBasicMaterial color={color} transparent opacity={0.95} depthWrite={false} toneMapped={false} />
                 </mesh>
-            ))}
-            <pointLight color={color} intensity={4} distance={4} />
+                <mesh rotation={[Math.PI / 2, 0, 0]}>
+                    <ringGeometry args={[type === 'combo' ? 0.08 : 0.05, type === 'combo' ? 0.22 : 0.14, 32]} />
+                    <meshBasicMaterial color="#ffffff" transparent opacity={0.7} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+                </mesh>
+                <pointLight color={color} intensity={type === 'combo' ? 10 : 6} distance={4} />
+            </group>
+
+            {/* Feixe externo: nasce nas mãos e cresce até o alvo */}
+            <mesh ref={beam} rotation={[0, 0, -direction * Math.PI / 2]}>
+                <cylinderGeometry args={[beamRadius * 0.45, beamRadius * 1.15, 1, 16, 1, true]} />
+                <meshBasicMaterial color={color} transparent opacity={type === 'combo' ? 0.52 : 0.38} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            </mesh>
+
+            {/* Núcleo branco do feixe */}
+            <mesh ref={innerBeam} rotation={[0, 0, -direction * Math.PI / 2]}>
+                <cylinderGeometry args={[beamRadius * 0.16, beamRadius * 0.45, 1, 12, 1, true]} />
+                <meshBasicMaterial color="#ffffff" transparent opacity={0.9} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            </mesh>
+
+            {/* Frente cortante da onda, sem formato de bola */}
+            <group ref={waveFront} position={[startX, 0.9, 0]}>
+                <mesh rotation={[0, Math.PI / 2, 0]}>
+                    <torusGeometry args={[type === 'combo' ? 0.31 : 0.2, type === 'combo' ? 0.045 : 0.026, 8, 36]} />
+                    <meshBasicMaterial color={color} transparent opacity={0.95} depthWrite={false} toneMapped={false} />
+                </mesh>
+                <mesh rotation={[0, 0, Math.PI / 4]}>
+                    <planeGeometry args={[type === 'combo' ? 0.75 : 0.48, 0.04]} />
+                    <meshBasicMaterial color="#ffffff" transparent opacity={0.85} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+                </mesh>
+                <mesh rotation={[0, 0, -Math.PI / 4]}>
+                    <planeGeometry args={[type === 'combo' ? 0.75 : 0.48, 0.04]} />
+                    <meshBasicMaterial color={color} transparent opacity={0.8} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+                </mesh>
+                <pointLight color={color} intensity={type === 'combo' ? 10 : 6} distance={5} />
+            </group>
         </group>
     );
 }
@@ -436,52 +528,63 @@ export function DuelScreen() {
         const score1 = Number(player1.score) || 0;
         const score2 = Number(player2.score) || 0;
 
-        // Lógica de Cabo de Guerra original (baseada em diferença)
-        const myScore = isP1 ? score1 : score2;
-        const oppScore = isP1 ? score2 : score1;
-        
-        const diff = myScore - oppScore;
-        const maxDiff = 200;
-        let pct = (diff / maxDiff) * 50;
-        
-        if (pct > 50) pct = 50;
-        if (pct < -50) pct = -50;
-        
-        // p1Progress na verdade é "MyProgress" agora, pois LeftPlayer é sempre "eu"
-        setP1Progress(50 + pct);
+        // Prioridade: pressão calculada pelo servidor.
+        // Aceita tanto 0..100 quanto 0..1000.
+        const rawPressure = Number(duelState?.pressure);
+        let progress;
+
+        if (Number.isFinite(rawPressure)) {
+            progress = rawPressure > 100 ? rawPressure / 10 : rawPressure;
+        } else {
+            // Fallback local: cada ponto líquido desloca 1.25% da barra.
+            // Diferente da proporção score1 / total, isto continua perceptível
+            // mesmo quando os dois jogadores têm placares altos e próximos.
+            const scoreDifference = score1 - score2;
+            progress = 50 + scoreDifference * 1.25;
+        }
+
+        setP1Progress(clamp(progress, 0, 100));
 
         const now = Date.now();
         const delta1 = Math.max(0, score1 - prevScore1.current);
         const delta2 = Math.max(0, score2 - prevScore2.current);
 
-        const spawnForPlayer = (playerKey, delta, isMe, nextScore) => {
+        const spawnForPlayer = (playerKey, delta, startX, endX, color, nextScore) => {
             if (delta <= 0) return;
 
             const reachedComboMilestone = nextScore > 0 && nextScore % 50 < delta;
             const canSpawnNormal = now - lastShotAt.current[playerKey] >= NORMAL_SHOT_COOLDOWN_MS;
 
-            const startX = isMe ? -1.15 : 1.15;
-            const endX = isMe ? 1.15 : -1.15;
-            const color = isMe ? BLUE : RED;
-
             if (reachedComboMilestone) {
-                addEffect({ type: 'combo', startX, endX, color, power: 1.1 });
+                addEffect({
+                    type: 'combo',
+                    startX,
+                    endX,
+                    color,
+                    power: 1.1,
+                });
                 lastShotAt.current[playerKey] = now;
                 return;
             }
 
             if (canSpawnNormal) {
-                addEffect({ type: 'normal', startX, endX, color, power: 1 });
+                addEffect({
+                    type: 'normal',
+                    startX,
+                    endX,
+                    color,
+                    power: 1,
+                });
                 lastShotAt.current[playerKey] = now;
             }
         };
 
-        spawnForPlayer('p1', delta1, isP1, score1);
-        spawnForPlayer('p2', delta2, !isP1, score2);
+        spawnForPlayer('p1', delta1, -1.15, 1.15, BLUE, score1);
+        spawnForPlayer('p2', delta2, 1.15, -1.15, RED, score2);
 
         prevScore1.current = score1;
         prevScore2.current = score2;
-    }, [addEffect, player1?.score, player2?.score, isP1]);
+    }, [addEffect, duelState?.pressure, player1?.score, player2?.score]);
 
     const dominanceLabel = useMemo(() => {
         const localProgress = isP1 ? p1Progress : 100 - p1Progress;
@@ -489,6 +592,9 @@ export function DuelScreen() {
         if (localProgress <= 25) return 'SOB PRESSÃO';
         return 'DISPUTA EQUILIBRADA';
     }, [isP1, p1Progress]);
+
+    // A interface sempre mostra o jogador local em azul à esquerda.
+    const blueProgress = isP1 ? p1Progress : 100 - p1Progress;
 
     if (!duelState || !player1 || !player2) {
         return (
@@ -513,7 +619,6 @@ export function DuelScreen() {
 
     return (
         <div
-            onPointerDown={duelState.status === 'playing' ? handleScreenClick : undefined}
             style={{
                 position: 'absolute',
                 inset: 0,
@@ -600,20 +705,20 @@ export function DuelScreen() {
                     
                     {/* BARRA DE DOMÍNIO (CABO DE GUERRA) */}
                     <div style={{ 
-                        width: '80%', height: '20px', background: '#000', border: '2px solid #333', 
+                        width: '80%', height: '28px', background: '#000', border: '2px solid #333', 
                         borderRadius: '10px', marginTop: '10px', position: 'relative', overflow: 'hidden',
                         display: 'flex', boxShadow: '0 0 15px rgba(255,255,255,0.1)'
                     }}>
                         <div style={{ 
-                            width: `${p1Progress}%`, height: '100%', 
+                            width: `${blueProgress}%`, height: '100%', 
                             background: `linear-gradient(90deg, #172554, ${BLUE}, ${BLUE_LIGHT})`,
-                            transition: 'width 0.1s linear' 
+                            transition: 'width 0.12s cubic-bezier(0.22, 1, 0.36, 1)' 
                         }} />
                         
                         <div style={{ 
-                            width: `${100 - p1Progress}%`, height: '100%', 
+                            width: `${100 - blueProgress}%`, height: '100%', 
                             background: `linear-gradient(90deg, ${RED_LIGHT}, ${RED}, #450a0a)`,
-                            transition: 'width 0.1s linear'
+                            transition: 'width 0.12s cubic-bezier(0.22, 1, 0.36, 1)'
                         }} />
                         
                         <div style={{ position: 'absolute', top: 0, left: '50%', width: '4px', height: '100%', background: '#fff', transform: 'translateX(-50%)', boxShadow: '0 0 10px #fff' }} />
