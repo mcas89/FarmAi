@@ -27,22 +27,39 @@ export const useRankingSystem = create((set, get) => ({
         try {
             const usersRef = collection(db, 'users');
 
-            // 1. GLOBAL RANKING (Top 50 por Aura Total)
+            // 1. GLOBAL RANKING (Top 50 por Aura Total) — índice simples, funciona direto
             const qGlobal = query(usersRef, orderBy('aura', 'desc'), limit(50));
             const snapGlobal = await getDocs(qGlobal);
             const globalData = get().formatRankings(snapGlobal.docs, 'aura');
 
-            // 2. COMBO RANKING (Top 50 por Max Combo)
+            // 2. COMBO RANKING (Top 50 por Max Combo) — índice simples, funciona direto
             const qCombo = query(usersRef, orderBy('maxCombo', 'desc'), limit(50));
             const snapCombo = await getDocs(qCombo);
             const comboData = get().formatRankings(snapCombo.docs, 'maxCombo');
 
-            // 3. WEEKLY RANKING (Top 50 por Aura Semanal)
+            // 3. WEEKLY RANKING — campo dinâmico (weeklyAura_2026_W07_27) exige índice
+            // composto no Firestore. Para evitar erro, buscamos todos os docs e ordenamos
+            // localmente no cliente. Limitamos a 200 docs para não explodir o plano free.
             const currentWeek = getCurrentWeekString();
             const weeklyField = `weeklyAura_${currentWeek}`;
-            const qWeekly = query(usersRef, orderBy(weeklyField, 'desc'), limit(50));
-            const snapWeekly = await getDocs(qWeekly);
-            const weeklyData = get().formatRankings(snapWeekly.docs, weeklyField);
+
+            let weeklyData = [];
+            try {
+                // Tenta primeiro com orderBy (funciona se o índice já existir)
+                const qWeekly = query(usersRef, orderBy(weeklyField, 'desc'), limit(50));
+                const snapWeekly = await getDocs(qWeekly);
+                weeklyData = get().formatRankings(snapWeekly.docs, weeklyField);
+            } catch (weeklyError) {
+                console.warn(`[Ranking] Índice semanal não encontrado, ordenando no cliente...`, weeklyError.message);
+                // Fallback: busca todos, filtra quem tem score esta semana, ordena no cliente
+                const qAll = query(usersRef, limit(200));
+                const snapAll = await getDocs(qAll);
+                const sorted = snapAll.docs
+                    .filter(doc => (doc.data()[weeklyField] || 0) > 0)
+                    .sort((a, b) => (b.data()[weeklyField] || 0) - (a.data()[weeklyField] || 0))
+                    .slice(0, 50);
+                weeklyData = get().formatRankings(sorted, weeklyField);
+            }
 
             set({
                 globalRanking: globalData,

@@ -623,7 +623,11 @@ export function MainMenu() {
 
             {/* 7. RODAPÉ FIXO DE RANKING */}
             <div className="fixed-footer">
-                <div className="footer-btn btn-global" onClick={() => { setRankingType('global'); setShowRankingModal(true); }}>
+                <div className="footer-btn btn-global" onClick={() => { 
+                    setRankingType('global'); 
+                    setShowRankingModal(true);
+                    import('../../../systems/useRankingSystem').then(m => m.useRankingSystem.getState().fetchRankings());
+                }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Globe size={14} /> RANKING GLOBAL
@@ -633,7 +637,11 @@ export function MainMenu() {
                         </div>
                     </div>
                 </div>
-                <div className="footer-btn btn-weekly" onClick={() => { setRankingType('weekly'); setShowRankingModal(true); }}>
+                <div className="footer-btn btn-weekly" onClick={() => { 
+                    setRankingType('weekly'); 
+                    setShowRankingModal(true);
+                    import('../../../systems/useRankingSystem').then(m => m.useRankingSystem.getState().fetchRankings());
+                }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Trophy size={14} /> RANKING SEMANAL
