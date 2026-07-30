@@ -370,39 +370,6 @@ function SimpleAvatar({ modelFile, score }) {
     return vrm ? <primitive object={vrm.scene} /> : null;
 }
 
-function PowerMeter({ value, color, ready, label }) {
-    return (
-        <div style={{ width: '100%', maxWidth: 260 }}>
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                color: '#fff',
-                fontSize: '0.72rem',
-                fontWeight: 900,
-                letterSpacing: '0.08em',
-                marginBottom: 5,
-            }}>
-                <span>{label}</span>
-                <span>{ready ? 'PODER PRONTO' : `${Math.floor(value)}%`}</span>
-            </div>
-            <div style={{
-                height: 8,
-                borderRadius: 999,
-                overflow: 'hidden',
-                background: 'rgba(255,255,255,0.12)',
-                border: `1px solid ${color}`,
-                boxShadow: ready ? `0 0 18px ${color}` : 'none',
-            }}>
-                <div style={{
-                    width: `${clamp(value, 0, 100)}%`,
-                    height: '100%',
-                    background: `linear-gradient(90deg, ${color}, #fff)`,
-                    transition: 'width 120ms linear',
-                }} />
-            </div>
-        </div>
-    );
-}
 
 export function DuelScreen() {
     const {
@@ -410,7 +377,6 @@ export function DuelScreen() {
         duelState,
         leaveDuel,
         sendDuelHit,
-        sendDuelPower,
     } = useDuelSystem();
 
     const [p1Progress, setP1Progress] = useState(50);
@@ -418,7 +384,6 @@ export function DuelScreen() {
     const [effects, setEffects] = useState([]);
     const [impacts, setImpacts] = useState([]);
     const [shakeSignal, setShakeSignal] = useState(0);
-    const [localPowerSpent, setLocalPowerSpent] = useState(0);
 
     const clickCountRef = useRef(0);
     const lastClickTimeRef = useRef(0);
@@ -471,49 +436,7 @@ export function DuelScreen() {
     const LeftPlayer = isP1 ? player1 : player2;
     const RightPlayer = isP1 ? player2 : player1;
     const myPlayer = isP1 ? player1 : player2;
-    const opponentPlayer = isP1 ? player2 : player1;
 
-    const hasServerPower = Number.isFinite(myPlayer?.powerEnergy);
-    const fallbackPower = (Number(myPlayer?.score) || 0) - localPowerSpent;
-    const myPower = clamp(hasServerPower ? myPlayer.powerEnergy : fallbackPower, 0, 100);
-    const opponentScore = Number(opponentPlayer?.score) || 0;
-    const opponentPower = clamp(
-        Number.isFinite(opponentPlayer?.powerEnergy)
-            ? opponentPlayer.powerEnergy
-            : (opponentScore > 0 && opponentScore % POWER_REQUIRED === 0
-                ? POWER_REQUIRED
-                : opponentScore % POWER_REQUIRED),
-        0,
-        100,
-    );
-    const isPowerReady = myPower >= POWER_REQUIRED;
-
-    const activatePower = useCallback(() => {
-        if (duelState?.status !== 'playing' || !isPowerReady) return;
-
-        const localStartX = -1.15;
-        const localEndX = 1.15;
-        const localColor = BLUE;
-
-        addEffect({
-            type: 'six_seven',
-            startX: localStartX,
-            endX: localEndX,
-            color: localColor,
-            power: 1.2,
-        });
-
-        setShakeSignal((value) => value + 1);
-
-        if (typeof sendDuelPower === 'function') {
-            sendDuelPower('six_seven_impact');
-        } else {
-            // Compatibilidade visual enquanto o backend ainda não possui sendDuelPower.
-            console.info('Impacto Six Seven ativado localmente. Integre sendDuelPower no useDuelSystem para aplicar o efeito no servidor.');
-        }
-
-        setLocalPowerSpent((spent) => spent + POWER_REQUIRED);
-    }, [addEffect, duelState?.status, isPowerReady, sendDuelPower]);
 
     useEffect(() => {
         if (previousDuelStatus.current !== duelState?.status) {
@@ -524,7 +447,6 @@ export function DuelScreen() {
                 setImpacts([]);
                 setClickCount(0);
                 clickCountRef.current = 0;
-                setLocalPowerSpent(0);
                 prevScore1.current = player1?.score || 0;
                 prevScore2.current = player2?.score || 0;
             }
@@ -581,18 +503,6 @@ export function DuelScreen() {
         prevScore1.current = score1;
         prevScore2.current = score2;
     }, [addEffect, duelState?.maxDominanceDifference, player1, player2]);
-
-    useEffect(() => {
-        const handleKeyDown = (event) => {
-            if (event.code === 'Space') {
-                event.preventDefault();
-                activatePower();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activatePower]);
 
     const dominanceLabel = useMemo(() => {
         const localProgress = isP1 ? p1Progress : 100 - p1Progress;
@@ -782,24 +692,12 @@ export function DuelScreen() {
                             <div style={{ color: BLUE_LIGHT, fontWeight: 950, fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>
                                 VOCÊ · {LeftPlayer?.score || 0}
                             </div>
-                            <PowerMeter
-                                value={myPower}
-                                color={BLUE}
-                                ready={isPowerReady}
-                                label="ENERGIA SIX SEVEN"
-                            />
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                             <div style={{ color: RED_LIGHT, fontWeight: 950, fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>
                                 {RightPlayer?.name || 'ADVERSÁRIO'} · {RightPlayer?.score || 0}
                             </div>
-                            <PowerMeter
-                                value={opponentPower}
-                                color={RED}
-                                ready={opponentPower >= POWER_REQUIRED}
-                                label="ENERGIA ADVERSÁRIA"
-                            />
                         </div>
                     </div>
                 </div>
@@ -944,35 +842,6 @@ export function DuelScreen() {
 
                     <button
                         type="button"
-                        disabled={!isPowerReady}
-                        onPointerDown={(event) => event.stopPropagation()}
-                        onClick={activatePower}
-                        style={{
-                            width: 'clamp(70px, 14vw, 92px)',
-                            height: 'clamp(70px, 14vw, 92px)',
-                            borderRadius: '50%',
-                            border: isPowerReady ? '3px solid #fbbf24' : '2px solid #475569',
-                            background: isPowerReady
-                                ? 'radial-gradient(circle, #fbbf24, #b45309 70%, #451a03)'
-                                : 'rgba(15,23,42,0.88)',
-                            color: isPowerReady ? '#fff' : '#64748b',
-                            cursor: isPowerReady ? 'pointer' : 'not-allowed',
-                            boxShadow: isPowerReady ? '0 0 35px rgba(251,191,36,0.85)' : 'none',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 950,
-                            fontSize: '0.62rem',
-                            letterSpacing: '0.05em',
-                        }}
-                    >
-                        <Zap size={28} fill={isPowerReady ? '#fff' : 'none'} />
-                        PODER
-                    </button>
-
-                    <button
-                        type="button"
                         aria-label="Farmar com o botão 7"
                         onPointerDown={(event) => {
                             event.stopPropagation();
@@ -994,21 +863,6 @@ export function DuelScreen() {
                     >
                         7
                     </button>
-                </div>
-            )}
-
-            {duelState.status === 'playing' && (
-                <div style={{
-                    position: 'absolute',
-                    right: 16,
-                    bottom: 14,
-                    zIndex: 20,
-                    color: 'rgba(255,255,255,0.5)',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    pointerEvents: 'none',
-                }}>
-                    Cliques locais: {clickCount} · Espaço ativa o poder
                 </div>
             )}
         </div>
