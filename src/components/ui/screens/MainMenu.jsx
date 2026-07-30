@@ -391,9 +391,11 @@ export function MainMenu() {
                     import('../../../systems/useAudioSystem').then(m => m.useAudioSystem.getState().toggleMute());
                 }}>
                     {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />} 
-                    {isMuted ? 'MÚSICA: DESLIGADA' : 'MÚSICA: LIGADA'}
+                    <span>{isMuted ? 'MÚSICA: DESLIGADA' : 'MÚSICA: LIGADA'}</span>
                 </div>
-                <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowAboutModal(true); }}><Info size={18} /> SOBRE O GAME</div>
+                <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowAboutModal(true); }}>
+                    <Info size={18} /> <span>SOBRE O GAME</span>
+                </div>
                 
                 {isInstallable && (
                     <div className="drawer-btn" style={{ color: '#4ade80' }} onClick={() => usePWASystem.getState().installPWA()}>
