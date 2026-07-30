@@ -122,11 +122,34 @@ function App() {
       useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements, unlockedCharacters);
     };
 
-    // 3. Salvar ao fechar/sair do jogo
+    // 3. Salvar ao fechar/sair do jogo (desktop)
     const handleBeforeUnload = () => {
       executeGameSave();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // 3b. Salvar quando o app vai para background (mobile PWA / trocar de aba)
+    // CRÍTICO: Em mobile, o beforeunload não dispara — este é o save mais importante!
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        const screen = useUISystem.getState().currentScreen;
+        // Só salva se o jogador estiver logado (não na tela de login)
+        if (screen && screen !== 'LOGIN') {
+          console.log('[AutoSave] App foi para background, salvando...');
+          executeGameSave();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 3c. Auto-save periódico a cada 30 segundos (garante que nenhuma aura seja perdida)
+    const autoSaveInterval = setInterval(() => {
+      const screen = useUISystem.getState().currentScreen;
+      if (screen && screen !== 'LOGIN' && screen !== 'SPLASH') {
+        console.log('[AutoSave] Save periódico (30s)...');
+        executeGameSave();
+      }
+    }, 30000);
 
     // Efeito de clique global
     const handleGlobalClick = (e) => {
@@ -157,6 +180,8 @@ function App() {
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(autoSaveInterval);
       window.removeEventListener('click', handleGlobalClick);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       delete window.executeGameSave;
