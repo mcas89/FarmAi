@@ -1,4 +1,4 @@
-const { Server } = require("colyseus");
+const { Server, matchMaker } = require("colyseus");
 const { createServer } = require("http");
 const express = require("express");
 const cors = require("cors");
@@ -12,6 +12,17 @@ app.use(express.json());
 
 app.get("/", (req, res) => {
     res.send("FarmaAi Server está online!");
+});
+
+app.get("/api/online", async (req, res) => {
+    try {
+        const rooms = await matchMaker.query({ name: "farma_room" });
+        const total = rooms.reduce((acc, room) => acc + room.clients, 0);
+        res.json({ online: total });
+    } catch (e) {
+        console.error("Erro ao consultar online:", e);
+        res.json({ online: 0 });
+    }
 });
 
 const gameServer = new Server({
