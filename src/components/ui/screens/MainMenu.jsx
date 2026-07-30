@@ -22,6 +22,10 @@ export function MainMenu() {
     const updateStats = useUISystem(state => state.updateStats);
     const activeModel = usePlayerSystem(state => state.activeModel);
     const nickname = stats.nickname || 'Marcos';
+    
+    // Hooks devem sempre ser chamados no topo do componente
+    const isMuted = useAudioSystem(state => state.isMuted);
+    const isInstallable = usePWASystem(state => state.isInstallable);
 
     const [dailyQuests, setDailyQuests] = useState([]);
     const [rankings, setRankings] = useState({ global: [], combo: [], weekly: [], isLoading: true });
@@ -386,12 +390,12 @@ export function MainMenu() {
                 <div className="drawer-btn" onClick={() => {
                     import('../../../systems/useAudioSystem').then(m => m.useAudioSystem.getState().toggleMute());
                 }}>
-                    {useAudioSystem(state => state.isMuted) ? <VolumeX size={18} /> : <Volume2 size={18} />} 
-                    {useAudioSystem(state => state.isMuted) ? 'MÚSICA: DESLIGADA' : 'MÚSICA: LIGADA'}
+                    {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />} 
+                    {isMuted ? 'MÚSICA: DESLIGADA' : 'MÚSICA: LIGADA'}
                 </div>
                 <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowAboutModal(true); }}><Info size={18} /> SOBRE O GAME</div>
                 
-                {usePWASystem(state => state.isInstallable) && (
+                {isInstallable && (
                     <div className="drawer-btn" style={{ color: '#4ade80' }} onClick={() => usePWASystem.getState().installPWA()}>
                         <Download size={18} /> INSTALAR APP
                     </div>
