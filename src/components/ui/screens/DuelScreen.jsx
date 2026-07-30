@@ -184,14 +184,16 @@ function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnreg
     return (
         <group ref={group} position={[startX, 0.85, 0]}>
             <mesh ref={core}>
-                <sphereGeometry args={[type === 'combo' ? 0.3 : 0.2, 16, 16]} />
+                <sphereGeometry args={[type === 'combo' ? 0.12 : 0.08, 16, 16]} />
                 <meshBasicMaterial color={color} toneMapped={false} />
             </mesh>
-            {/* Rastro simples */}
-            <mesh position={[-0.2 * Math.sign(endX - startX), 0, 0]} scale={0.6}>
-                <sphereGeometry args={[type === 'combo' ? 0.3 : 0.2, 16, 16]} />
-                <meshBasicMaterial color={color} transparent opacity={0.4} toneMapped={false} />
-            </mesh>
+            {/* Rastro simples com partículas menores */}
+            {[1, 2, 3].map((i) => (
+                <mesh key={i} position={[-0.15 * i * Math.sign(endX - startX), 0, 0]} scale={1 - i * 0.2}>
+                    <sphereGeometry args={[type === 'combo' ? 0.1 : 0.06, 16, 16]} />
+                    <meshBasicMaterial color={color} transparent opacity={0.5 / i} toneMapped={false} />
+                </mesh>
+            ))}
             <pointLight color={color} intensity={4} distance={4} />
         </group>
     );
@@ -433,52 +435,53 @@ export function DuelScreen() {
 
         const score1 = Number(player1.score) || 0;
         const score2 = Number(player2.score) || 0;
-        const total = score1 + score2;
-        // A barra mostra QUEM DOMINA: o lado que tem mais pontos cresce, o que tem menos encolhe.
-        // Se score1=80, score2=20 -> total=100 -> p1Progress=80%
-        const progress = total > 0 ? clamp((score1 / total) * 100, 5, 95) : 50;
-        setP1Progress(progress);
+
+        // Lógica de Cabo de Guerra original (baseada em diferença)
+        const myScore = isP1 ? score1 : score2;
+        const oppScore = isP1 ? score2 : score1;
+        
+        const diff = myScore - oppScore;
+        const maxDiff = 200;
+        let pct = (diff / maxDiff) * 50;
+        
+        if (pct > 50) pct = 50;
+        if (pct < -50) pct = -50;
+        
+        // p1Progress na verdade é "MyProgress" agora, pois LeftPlayer é sempre "eu"
+        setP1Progress(50 + pct);
 
         const now = Date.now();
         const delta1 = Math.max(0, score1 - prevScore1.current);
         const delta2 = Math.max(0, score2 - prevScore2.current);
 
-        const spawnForPlayer = (playerKey, delta, startX, endX, color, nextScore) => {
+        const spawnForPlayer = (playerKey, delta, isMe, nextScore) => {
             if (delta <= 0) return;
 
             const reachedComboMilestone = nextScore > 0 && nextScore % 50 < delta;
             const canSpawnNormal = now - lastShotAt.current[playerKey] >= NORMAL_SHOT_COOLDOWN_MS;
 
+            const startX = isMe ? -1.15 : 1.15;
+            const endX = isMe ? 1.15 : -1.15;
+            const color = isMe ? BLUE : RED;
+
             if (reachedComboMilestone) {
-                addEffect({
-                    type: 'combo',
-                    startX,
-                    endX,
-                    color,
-                    power: 1.1,
-                });
+                addEffect({ type: 'combo', startX, endX, color, power: 1.1 });
                 lastShotAt.current[playerKey] = now;
                 return;
             }
 
             if (canSpawnNormal) {
-                addEffect({
-                    type: 'normal',
-                    startX,
-                    endX,
-                    color,
-                    power: 1,
-                });
+                addEffect({ type: 'normal', startX, endX, color, power: 1 });
                 lastShotAt.current[playerKey] = now;
             }
         };
 
-        spawnForPlayer('p1', delta1, -1.15, 1.15, BLUE, score1);
-        spawnForPlayer('p2', delta2, 1.15, -1.15, RED, score2);
+        spawnForPlayer('p1', delta1, isP1, score1);
+        spawnForPlayer('p2', delta2, !isP1, score2);
 
         prevScore1.current = score1;
         prevScore2.current = score2;
-    }, [addEffect, player1?.score, player2?.score]);
+    }, [addEffect, player1?.score, player2?.score, isP1]);
 
     const dominanceLabel = useMemo(() => {
         const localProgress = isP1 ? p1Progress : 100 - p1Progress;
