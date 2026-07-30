@@ -478,7 +478,7 @@ export function DuelScreen() {
 
         prevScore1.current = score1;
         prevScore2.current = score2;
-    }, [addEffect, player1, player2]);
+    }, [addEffect, player1?.score, player2?.score]);
 
     const dominanceLabel = useMemo(() => {
         const localProgress = isP1 ? p1Progress : 100 - p1Progress;
