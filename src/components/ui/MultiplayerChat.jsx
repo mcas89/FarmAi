@@ -9,17 +9,20 @@ export function MultiplayerChat() {
     const chatMessages = useMultiplayerSystem(state => state.chatMessages);
     const sendChatMessage = useMultiplayerSystem(state => state.sendChatMessage);
     const messagesEndRef = useRef(null);
-    const prevCountRef = useRef(chatMessages.length);
+    const prevMessagesRef = useRef(chatMessages);
 
-    // Scroll para o final quando novas mensagens chegam
+    // Scroll para o final quando novas mensagens chegam e gerenciar notificações
     useEffect(() => {
         if (isOpen) {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
             setUnreadCount(0);
-        } else if (chatMessages.length > prevCountRef.current) {
-            setUnreadCount(n => n + (chatMessages.length - prevCountRef.current));
+        } else if (chatMessages !== prevMessagesRef.current) {
+            // Se o array de mensagens mudou (nova mensagem chegou) e o chat está fechado
+            if (chatMessages.length > 0) {
+                setUnreadCount(n => n + 1);
+            }
         }
-        prevCountRef.current = chatMessages.length;
+        prevMessagesRef.current = chatMessages;
     }, [chatMessages, isOpen]);
 
     const handleSend = () => {
