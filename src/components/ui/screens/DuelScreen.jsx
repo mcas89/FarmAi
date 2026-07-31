@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
-import { Trophy, Zap } from 'lucide-react';
+import { Trophy, Zap, LogOut } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
@@ -829,6 +829,21 @@ export function DuelScreen() {
             </Canvas>
 
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' }}>
+                {/* BOTÃO DE SAIR */}
+                <button 
+                    onClick={leaveDuel}
+                    style={{
+                        position: 'absolute', top: '20px', right: '20px',
+                        background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '50%', width: '40px', height: '40px',
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        cursor: 'pointer', zIndex: 50, pointerEvents: 'auto',
+                        backdropFilter: 'blur(8px)', color: '#ef4444'
+                    }}
+                >
+                    <LogOut size={20} />
+                </button>
+
                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ color: '#fff', fontWeight: '900', fontSize: '2rem', textShadow: '0 0 10px #ef4444' }}>
                         {duelState.timeLeft}s
