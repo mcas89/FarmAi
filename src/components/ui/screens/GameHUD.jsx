@@ -664,12 +664,44 @@ export function GameHUD() {
 
             </div>
 
-            {/* BOTTOM AREA */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: 'var(--bot-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', zIndex: 5, marginBottom: '85px' }}>
-                <div style={{ position: 'relative', width: '45px', height: '45px', transform: 'scale(1.1)', transformOrigin: 'bottom left', pointerEvents: 'auto' }}>
+            {/* BOTTOM AREA (Joystick + Botões 6 e 7) */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', padding: 'var(--bot-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', zIndex: 5, marginBottom: '85px', gap: '20px' }}>
+                
+                {farmMode === 'six_seven' && (
+                    <div style={{ 
+                        width: '70px', height: '70px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.15)',
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        fontSize: '2rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
+                        touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
+                        userSelect: 'none', marginBottom: '10px'
+                    }}
+                    onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleLeftDown(e); }}
+                    onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
+                    onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
+                    >
+                        6
+                    </div>
+                )}
+
+                <div style={{ position: 'relative', width: '45px', height: '45px', transform: 'scale(1.1)', transformOrigin: 'bottom center', pointerEvents: 'auto' }}>
                     <Joystick />
                 </div>
 
+                {farmMode === 'six_seven' && (
+                    <div style={{ 
+                        width: '70px', height: '70px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.15)',
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        fontSize: '2rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
+                        touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
+                        userSelect: 'none', marginBottom: '10px'
+                    }}
+                    onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleRightDown(e); }}
+                    onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
+                    onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
+                    >
+                        7
+                    </div>
+                )}
             </div>
 
             {/* BOTÕES LADO ESQUERDO (Mapa e Modo Farm) */}
@@ -684,7 +716,7 @@ export function GameHUD() {
                     border: showFarmModal ? '1px solid #eab308' : '1px solid rgba(255, 255, 255, 0.1)',
                     boxShadow: showFarmModal ? '0 0 15px rgba(234, 179, 8, 0.5)' : 'none'
                 }} onClick={() => setShowFarmModal(true)}>
-                    <Pickaxe size={22} color={showFarmModal ? "#fff" : "#eab308"} />
+                    <Sparkles size={22} color={showFarmModal ? "#fff" : "#eab308"} />
                     {farmMode !== 'none' && (
                         <div style={{
                             position: 'absolute', top: '-2px', right: '-2px',
@@ -735,6 +767,9 @@ export function GameHUD() {
                         <Swords size={22} color="#ef4444" />
                     </div>
                 )}
+
+                {/* Botão do Chat Multiplayer logo abaixo do Duelo */}
+                {isOnlineMode && <MultiplayerChat />}
             </div>
 
             {/* MODAL INVENTÁRIO DE POÇÕES */}
@@ -824,7 +859,7 @@ export function GameHUD() {
                     }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Pickaxe color="#eab308" /> Modos de Farm
+                                <Sparkles color="#eab308" /> Modos de Farm
                             </h2>
                             <button onClick={() => setShowFarmModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
                         </div>
@@ -929,41 +964,7 @@ export function GameHUD() {
 
             {/* Zonas de Farm (Six Seven e Livres) */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', pointerEvents: 'none', zIndex: 4 }}>
-                {farmMode === 'six_seven' ? (
-                    <>
-                        {/* Botão 6 (Esquerda) */}
-                        <div style={{ 
-                            position: 'absolute', top: '50%', left: '8%', transform: 'translateY(-50%)',
-                            width: '100px', height: '100px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.15)',
-                            display: 'flex', justifyContent: 'center', alignItems: 'center',
-                            fontSize: '3.5rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
-                            touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
-                            userSelect: 'none'
-                        }}
-                        onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleLeftDown(e); }}
-                        onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
-                        onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
-                        >
-                            6
-                        </div>
-
-                        {/* Botão 7 (Direita) */}
-                        <div style={{ 
-                            position: 'absolute', top: '50%', right: '8%', transform: 'translateY(-50%)',
-                            width: '100px', height: '100px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.15)',
-                            display: 'flex', justifyContent: 'center', alignItems: 'center',
-                            fontSize: '3.5rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
-                            touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
-                            userSelect: 'none'
-                        }}
-                        onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleRightDown(e); }}
-                        onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
-                        onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
-                        >
-                            7
-                        </div>
-                    </>
-                ) : farmMode === 'free' ? (
+                {farmMode === 'free' ? (
                     <>
                         <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={handleLeftDown} onPointerUp={handleLeftUp} onPointerCancel={handleLeftUp} />
                         <div style={{ width: '40%', pointerEvents: 'none' }}></div>
