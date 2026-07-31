@@ -710,8 +710,16 @@ export function DuelScreen() {
             }
         };
 
-        spawnForPlayer('p1', delta1, -1.15, 1.15, BLUE, score1);
-        spawnForPlayer('p2', delta2, 1.15, -1.15, RED, score2);
+        const myDelta = isP1 ? delta1 : delta2;
+        const opDelta = isP1 ? delta2 : delta1;
+        const myScore = isP1 ? score1 : score2;
+        const opScore = isP1 ? score2 : score1;
+
+        // O jogador local (LeftPlayer) atira da esquerda (-1.15) para a direita (1.15)
+        spawnForPlayer(isP1 ? 'p1' : 'p2', myDelta, -1.15, 1.15, BLUE, myScore);
+        
+        // O oponente (RightPlayer) atira da direita (1.15) para a esquerda (-1.15)
+        spawnForPlayer(isP1 ? 'p2' : 'p1', opDelta, 1.15, -1.15, RED, opScore);
 
         prevScore1.current = score1;
         prevScore2.current = score2;
