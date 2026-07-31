@@ -90,7 +90,7 @@ export function MainMenu() {
         const aura = useAuraSystem.getState().aura || 0;
         const success = await joinRoom(roomId, { 
             name: nickname, 
-            model: activeModel || 'san.vrm',
+            model: activeModel || 'Carol.vrm',
             aura
         });
         if (success) {

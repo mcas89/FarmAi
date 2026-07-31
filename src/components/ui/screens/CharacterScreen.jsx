@@ -5,12 +5,16 @@ import { AuracashIcon } from '../AuracashIcon';
 import { CheckCircle, ShoppingCart, X } from 'lucide-react';
 
 export const CHARACTERS = [
-    { file: 'san.vrm',   name: 'Carol', image: '/images/characters/Samy.png', price: 0,    level: 1,  desc: 'Jardineira novata cheia de energia e vontade de cultivar a melhor fazenda.' },
-    { file: 'deric.vrm', name: 'Rafa',  image: '/images/characters/Marc.png', price: 0,    level: 1,  desc: 'Um rapaz focado e muito ágil. Gosta de planejar bem as plantações.' },
-    { file: 'carol.vrm', name: 'Kelly', image: '/images/characters/Carol.png', price: 1500, level: 5,  desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
-    { file: 'rafa.vrm',  name: 'Dan',   image: '/images/characters/Rafa.png', price: 1700, level: 5,  desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
-    { file: 'mary.vrm',  name: 'Mary',  image: '/images/characters/Mary.png', price: 3500, level: 10, desc: 'Mestre da colheita e lenda entre os jardineiros.' },
-    { file: 'eric.vrm',  name: 'Eric',  image: '/images/characters/Eric.png', price: 3500, level: 10, desc: 'Especialista em magias da terra e solo sagrado.' },
+    { file: 'Carol.vrm', name: 'Carol', image: '/images/characters/carol.png', price: 0, level: 1, desc: 'Jardineira novata cheia de energia e vontade de cultivar a melhor fazenda.' },
+    { file: 'Eric.vrm',  name: 'Eric',  image: '/images/characters/Eric.png',  price: 0, level: 1, desc: 'Especialista em magias da terra e solo sagrado.' },
+    { file: 'dan.vrm',   name: 'Dan',   image: '/images/characters/Dan.png',   price: 1200, level: 2, desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
+    { file: 'cris.vrm',  name: 'Cris',  image: '/images/characters/Cris.png',  price: 1700, level: 3, desc: 'Um talento nato para o cultivo rápido e eficiente.' },
+    { file: 'gui.vrm',   name: 'Gui',   image: '/images/characters/Gui.png',   price: 2000, level: 4, desc: 'Sempre focado e muito ágil. Gosta de planejar bem as plantações.' },
+    { file: 'rafa.vrm',  name: 'Rafa',  image: '/images/characters/Rafa.png',  price: 3000, level: 5, desc: 'Rápido e destemido. A lenda das colheitas de outono.' },
+    { file: 'jack.vrm',  name: 'Jack',  image: '/images/characters/Jack.png',  price: 3500, level: 6, desc: 'O mestre da colheita e lenda entre os jardineiros de elite.' },
+    { file: 'kelly.vrm', name: 'Kelly', image: '/images/characters/Kelly.png', price: 3900, level: 7, desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
+    { file: 'tio.vrm',   name: 'Tio',   image: '/images/characters/Tio.png',   price: 4000, level: 8, desc: 'Experiência inigualável. Consegue cultivar nas piores condições.' },
+    { file: 'nick.vrm',  name: 'Nick',  image: '/images/characters/Nick.png',  price: 4500, level: 10, desc: 'Um cultivador mítico cujos segredos poucos conhecem.' },
 ];
 
 export function CharacterScreen() {
