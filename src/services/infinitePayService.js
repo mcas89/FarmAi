@@ -160,34 +160,28 @@ export async function verifyInfinitePayment(orderNsu) {
 // Usada tanto na loja (UI) quanto na validação pós-pagamento.
 // ============================================================
 export const AURACASH_PACKS = {
+    pack_500: {
+        auracash: 500,
+        priceCents: 490,         // R$ 4,90
+        label: "500 AuraCash",
+        description: "Pacote Básico - 500 AuraCash no FarmaAI"
+    },
     pack_1000: {
         auracash: 1000,
-        priceCents: 490,         // R$ 4,90
-        label: "1.000 AuraCash",
-        description: "Pacote Inicial - 1.000 AuraCash no FarmaAI"
-    },
-    pack_2500: {
-        auracash: 2500,
         priceCents: 990,         // R$ 9,90
-        label: "2.500 AuraCash",
-        description: "Pacote Pequeno - 2.500 AuraCash no FarmaAI"
+        label: "1.000 AuraCash",
+        description: "Pacote Pequeno - 1.000 AuraCash no FarmaAI"
     },
-    pack_7000: {
-        auracash: 7000,
+    pack_3000: {
+        auracash: 3000,
         priceCents: 1990,        // R$ 19,90
-        label: "7.000 AuraCash",
-        description: "Pacote Médio - 7.000 AuraCash no FarmaAI"
+        label: "3.000 AuraCash",
+        description: "Pacote Médio - 3.000 AuraCash no FarmaAI"
     },
-    pack_18000: {
-        auracash: 18000,
+    pack_5000: {
+        auracash: 5000,
         priceCents: 3990,        // R$ 39,90
-        label: "18.000 AuraCash",
-        description: "Pacote Grande - 18.000 AuraCash no FarmaAI"
-    },
-    pack_50000: {
-        auracash: 50000,
-        priceCents: 8990,        // R$ 89,90
-        label: "50.000 AuraCash",
-        description: "Pacote Supremo - 50.000 AuraCash no FarmaAI"
+        label: "5.000 AuraCash",
+        description: "Pacote Grande - 5.000 AuraCash no FarmaAI"
     }
 };

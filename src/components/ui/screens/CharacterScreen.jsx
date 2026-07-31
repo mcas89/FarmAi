@@ -5,7 +5,7 @@ import { AuracashIcon } from '../AuracashIcon';
 import { CheckCircle, ShoppingCart, X } from 'lucide-react';
 
 export const CHARACTERS = [
-    { file: 'Carol.vrm', name: 'Carol', image: '/images/characters/carol.png', price: 0, level: 1, desc: 'Jardineira novata cheia de energia e vontade de cultivar a melhor fazenda.' },
+    { file: 'Carol.vrm', name: 'Carol', image: '/images/characters/Carol.png', price: 0, level: 1, desc: 'Jardineira novata cheia de energia e vontade de cultivar a melhor fazenda.' },
     { file: 'Eric.vrm',  name: 'Eric',  image: '/images/characters/Eric.png',  price: 0, level: 1, desc: 'Especialista em magias da terra e solo sagrado.' },
     { file: 'dan.vrm',   name: 'Dan',   image: '/images/characters/Dan.png',   price: 1200, level: 2, desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
     { file: 'cris.vrm',  name: 'Cris',  image: '/images/characters/Cris.png',  price: 1700, level: 3, desc: 'Um talento nato para o cultivo rápido e eficiente.' },

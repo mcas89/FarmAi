@@ -417,70 +417,56 @@ export function StoreScreen() {
 
                                 <div className="store-card">
                                     <AuracashIcon size={32} color="#94a3b8" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#fff', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>1.000</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.6rem', marginBottom: '8px' }}>Inicial</div>
+                                    <div style={{ color: '#fff', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>500</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.6rem', marginBottom: '8px' }}>Básico</div>
+                                    <button
+                                        className="buy-btn"
+                                        disabled={!!buyingPack}
+                                        onClick={() => handlePurchaseAuraCash('pack_500')}
+                                        style={{ opacity: buyingPack === 'pack_500' ? 0.6 : 1 }}
+                                    >
+                                        {buyingPack === 'pack_500' ? '⏳ Aguarde...' : 'R$ 4,90'}
+                                    </button>
+                                </div>
+                                <div className="store-card">
+                                    <AuracashIcon size={32} color="#34d399" style={{ marginBottom: '8px' }} />
+                                    <div style={{ color: '#34d399', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>1.000</div>
+                                    <div style={{ color: '#6ee7b7', fontSize: '0.6rem', marginBottom: '8px' }}>Pequeno</div>
                                     <button
                                         className="buy-btn"
                                         disabled={!!buyingPack}
                                         onClick={() => handlePurchaseAuraCash('pack_1000')}
                                         style={{ opacity: buyingPack === 'pack_1000' ? 0.6 : 1 }}
                                     >
-                                        {buyingPack === 'pack_1000' ? '⏳ Aguarde...' : 'R$ 4,90'}
-                                    </button>
-                                </div>
-                                <div className="store-card">
-                                    <AuracashIcon size={32} color="#34d399" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#34d399', fontSize: '1rem', fontWeight: '900', marginBottom: '4px' }}>2.500</div>
-                                    <div style={{ color: '#6ee7b7', fontSize: '0.6rem', marginBottom: '8px' }}>Pequeno</div>
-                                    <button
-                                        className="buy-btn"
-                                        disabled={!!buyingPack}
-                                        onClick={() => handlePurchaseAuraCash('pack_2500')}
-                                        style={{ opacity: buyingPack === 'pack_2500' ? 0.6 : 1 }}
-                                    >
-                                        {buyingPack === 'pack_2500' ? '⏳ Aguarde...' : 'R$ 9,90'}
+                                        {buyingPack === 'pack_1000' ? '⏳ Aguarde...' : 'R$ 9,90'}
                                     </button>
                                 </div>
                                 <div className="store-card premium-card">
                                     <div className="badge" style={{ background: '#3b82f6', color: '#fff' }}>POPULAR</div>
                                     <Gift size={36} color="#60a5fa" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#60a5fa', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>7.000</div>
+                                    <div style={{ color: '#60a5fa', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>3.000</div>
                                     <div style={{ color: '#93c5fd', fontSize: '0.6rem', marginBottom: '8px' }}>Médio</div>
                                     <button
                                         className="buy-btn"
                                         disabled={!!buyingPack}
-                                        onClick={() => handlePurchaseAuraCash('pack_7000')}
-                                        style={{ opacity: buyingPack === 'pack_7000' ? 0.6 : 1 }}
+                                        onClick={() => handlePurchaseAuraCash('pack_3000')}
+                                        style={{ opacity: buyingPack === 'pack_3000' ? 0.6 : 1 }}
                                     >
-                                        {buyingPack === 'pack_7000' ? '⏳ Aguarde...' : 'R$ 19,90'}
+                                        {buyingPack === 'pack_3000' ? '⏳ Aguarde...' : 'R$ 19,90'}
                                     </button>
                                 </div>
                                 <div className="store-card premium-card" style={{ border: '1px solid #ec4899', background: 'rgba(236, 72, 153, 0.05)' }}>
                                     <div className="badge" style={{ background: '#ec4899', color: '#fff' }}>MELHOR</div>
                                     <Gift size={36} color="#ec4899" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#ec4899', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>18.000</div>
+                                    <div style={{ color: '#ec4899', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>5.000</div>
                                     <div style={{ color: '#f472b6', fontSize: '0.6rem', marginBottom: '8px' }}>Grande</div>
                                     <button
                                         className="buy-btn"
                                         disabled={!!buyingPack}
-                                        onClick={() => handlePurchaseAuraCash('pack_18000')}
-                                        style={{ opacity: buyingPack === 'pack_18000' ? 0.6 : 1 }}
+                                        onClick={() => handlePurchaseAuraCash('pack_5000')}
+                                        style={{ opacity: buyingPack === 'pack_5000' ? 0.6 : 1 }}
                                     >
-                                        {buyingPack === 'pack_18000' ? '⏳ Aguarde...' : 'R$ 39,90'}
-                                    </button>
-                                </div>
-                                <div className="store-card" style={{ border: '2px solid #fbbf24', background: 'rgba(251, 191, 36, 0.1)' }}>
-                                    <div className="badge" style={{ background: '#fbbf24', color: '#000' }}>ÉPICO</div>
-                                    <AuracashIcon size={32} color="#fbbf24" style={{ marginBottom: '8px' }} />
-                                    <div style={{ color: '#fbbf24', fontSize: '1.2rem', fontWeight: '900', marginBottom: '4px' }}>50.000</div>
-                                    <div style={{ color: '#fde68a', fontSize: '0.6rem', marginBottom: '8px' }}>Supremo</div>
-                                    <button
-                                        className="buy-btn"
-                                        disabled={!!buyingPack}
-                                        onClick={() => handlePurchaseAuraCash('pack_50000')}
-                                        style={{ background: 'linear-gradient(90deg, #d97706, #fbbf24)', opacity: buyingPack === 'pack_50000' ? 0.6 : 1 }}
-                                    >
-                                        {buyingPack === 'pack_50000' ? '⏳ Aguarde...' : 'R$ 89,90'}
+                                        {buyingPack === 'pack_5000' ? '⏳ Aguarde...' : 'R$ 39,90'}
                                     </button>
                                 </div>
                             </>

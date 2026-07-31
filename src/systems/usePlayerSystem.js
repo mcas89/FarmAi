@@ -20,5 +20,9 @@ export const usePlayerSystem = create((set) => ({
     setRotation: (rot) => set({ rotation: rot }),
     setState: (state) => set({ currentState: state }),
     setActiveModel: (model) => set({ activeModel: model }),
-    setUnlockedCharacters: (chars) => set({ unlockedCharacters: chars })
+    setUnlockedCharacters: (chars) => {
+        const defaultChars = ['Carol.vrm', 'Eric.vrm'];
+        const merged = Array.from(new Set([...defaultChars, ...chars]));
+        set({ unlockedCharacters: merged });
+    }
 }));
