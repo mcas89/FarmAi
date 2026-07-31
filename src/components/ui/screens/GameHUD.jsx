@@ -18,6 +18,19 @@ import { DuelModal } from './DuelModal';
 import { DuelInvitePopup } from './DuelInvitePopup';
 import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 
+const formatGameNumber = (value = 0) => {
+    const number = Number(value) || 0;
+    const abs = Math.abs(number);
+    const units = [
+        [1e15, 'Q'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']
+    ];
+    const unit = units.find(([limit]) => abs >= limit);
+    if (!unit) return Math.floor(number).toLocaleString('pt-BR');
+    const [limit, suffix] = unit;
+    const digits = abs >= limit * 100 ? 0 : abs >= limit * 10 ? 1 : 2;
+    return `${(number / limit).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: digits })}${suffix}`;
+};
+
 export function GameHUD() {
     const { aura, message, lastPoints, comboCount, maxCombo, hitId, isMilestone, hitSide, auraMultiplier, multiplierEndTime } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
@@ -263,11 +276,11 @@ export function GameHUD() {
 
                 .farm-crescent {
                     position: absolute;
-                    bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-                    width: clamp(92px, 11vw, 128px);
-                    height: clamp(150px, 23vh, 205px);
+                    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+                    width: clamp(66px, 7.5vw, 88px);
+                    height: clamp(108px, 16vh, 142px);
                     display: flex; flex-direction: column; align-items: center; justify-content: center;
-                    gap: 4px; overflow: hidden; pointer-events: auto; touch-action: none;
+                    gap: 2px; overflow: hidden; pointer-events: auto; touch-action: none;
                     user-select: none; -webkit-user-select: none; cursor: pointer;
                     color: #fff; border: 1px solid rgba(255,255,255,0.18);
                     background: radial-gradient(circle at center, rgba(168,85,247,0.28), rgba(20,12,38,0.9) 58%, rgba(7,5,15,0.97) 100%);
@@ -278,11 +291,11 @@ export function GameHUD() {
 
                 .farm-crescent:hover { opacity: 0.92; }
                 .farm-crescent-left {
-                    left: 0; border-left: none; border-radius: 0 100% 100% 0; padding-right: 20px;
+                    left: 0; border-left: none; border-radius: 0 100% 100% 0; padding-right: 13px;
                     box-shadow: 10px 0 35px rgba(168,85,247,0.25), inset -7px 0 24px rgba(168,85,247,0.16);
                 }
                 .farm-crescent-right {
-                    right: 0; border-right: none; border-radius: 100% 0 0 100%; padding-left: 20px;
+                    right: 0; border-right: none; border-radius: 100% 0 0 100%; padding-left: 13px;
                     box-shadow: -10px 0 35px rgba(251,191,36,0.22), inset 7px 0 24px rgba(251,191,36,0.14);
                 }
                 .farm-crescent::before {
@@ -290,14 +303,14 @@ export function GameHUD() {
                     border: 1px solid rgba(255,255,255,0.06); pointer-events: none;
                 }
                 .farm-crescent-number {
-                    position: relative; z-index: 1; font-size: clamp(2.2rem, 5vw, 3.2rem);
+                    position: relative; z-index: 1; font-size: clamp(1.65rem, 3.6vw, 2.25rem);
                     font-weight: 950; line-height: 1; text-shadow: 0 3px 5px rgba(0,0,0,0.85), 0 0 24px currentColor;
                 }
                 .farm-crescent-left .farm-crescent-number { color: #c084fc; }
                 .farm-crescent-right .farm-crescent-number { color: #fbbf24; }
                 .farm-crescent-label {
                     position: relative; z-index: 1; color: rgba(255,255,255,0.55);
-                    font-size: 0.46rem; font-weight: 900; letter-spacing: 1.5px;
+                    font-size: 0.38rem; font-weight: 900; letter-spacing: 1.5px;
                 }
                 .farm-crescent[data-pressed='true'] {
                     transform: scaleX(0.91) scaleY(0.96); filter: brightness(1.45); opacity: 1;
@@ -309,19 +322,19 @@ export function GameHUD() {
                     box-shadow: -12px 0 42px rgba(251,191,36,0.5), inset 15px 0 45px rgba(251,191,36,0.42);
                 }
                 .premium-joystick-area {
-                    position: absolute; left: 50%; bottom: calc(108px + env(safe-area-inset-bottom, 0px));
-                    transform: translateX(-50%); width: clamp(105px, 15vw, 145px); height: clamp(105px, 15vw, 145px);
+                    position: absolute; left: 50%; bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+                    transform: translateX(-50%); width: 96px; height: 96px;
                     display: flex; align-items: center; justify-content: center; pointer-events: auto; touch-action: none;
                 }
 
                 @media (max-width: 768px) {
                     .farm-crescent {
-                        bottom: calc(92px + env(safe-area-inset-bottom, 0px));
-                        width: 94px; height: min(175px, 25vh);
+                        bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+                        width: 70px; height: min(126px, 18vh);
                     }
                     .premium-joystick-area {
-                        bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-                        width: 118px; height: 118px;
+                        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+                        width: 92px; height: 92px;
                     }
                 }
                 
@@ -487,7 +500,7 @@ export function GameHUD() {
 
             {/* ══════════ TOP BAR — GRID 3 COLUNAS FIXAS ══════════ */}
             <div style={{
-                padding: '10px 14px 0 14px',
+                padding: '8px 12px 0 12px',
                 opacity: menuOpacity, transition: 'opacity 0.5s',
                 pointerEvents: 'none', zIndex: 10, width: '100%',
                 boxSizing: 'border-box', position: 'relative'
@@ -501,8 +514,8 @@ export function GameHUD() {
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
                     border: '1px solid rgba(168,85,247,0.18)',
-                    borderRadius: '16px',
-                    padding: '8px 12px',
+                    borderRadius: '14px',
+                    padding: '7px 10px',
                     boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
                 }}>
 
@@ -582,7 +595,7 @@ export function GameHUD() {
                                 fontVariantNumeric: 'tabular-nums',
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                             }}>
-                                {Math.floor(aura).toLocaleString()}
+                                {formatGameNumber(aura)}
                             </span>
                         </div>
 
@@ -607,7 +620,7 @@ export function GameHUD() {
                                 whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
                                 overflow: 'hidden', textOverflow: 'ellipsis'
                             }}>
-                                {(stats.diamonds || 0).toLocaleString()}
+                                {formatGameNumber(stats.diamonds || 0)}
                             </span>
                         </div>
 
@@ -745,12 +758,12 @@ export function GameHUD() {
                         onPointerCancel={(e) => handleFarmPointerUp('left', e)}
                     >
                         <span className="farm-crescent-number">6</span>
-                        <span className="farm-crescent-label">FARM</span>
+                        <span className="farm-crescent-label">AURA</span>
                     </button>
                 )}
 
                 <div className="premium-joystick-area">
-                    <Joystick />
+                    <Joystick size={92} opacity={0.6} />
                 </div>
 
                 {farmMode === 'six_seven' && (
@@ -763,7 +776,7 @@ export function GameHUD() {
                         onPointerCancel={(e) => handleFarmPointerUp('right', e)}
                     >
                         <span className="farm-crescent-number">7</span>
-                        <span className="farm-crescent-label">FARM</span>
+                        <span className="farm-crescent-label">AURA</span>
                     </button>
                 )}
             </div>
@@ -962,9 +975,9 @@ export function GameHUD() {
 
             {/* BOTTOM STATS HUD (COMPACT PILL) */}
             <div className={comboCount > 50 ? 'anim-footer-fire' : comboCount > 10 ? 'anim-footer-epic' : ''} style={{ 
-                position: 'absolute', bottom: '15px', left: '50%', transform: 'translateX(-50%)',
+                position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                width: '95%', maxWidth: '500px', height: '60px', padding: '0 15px', borderRadius: '30px',
+                width: 'min(92%, 560px)', height: '52px', padding: '0 12px', borderRadius: '18px',
                 background: comboCount > 50 ? 'rgba(30,5,5,0.95)' : 'rgba(15,10,20,0.95)', 
                 border: `1.5px solid ${comboCount > 50 ? '#f87171' : comboCount > 10 ? '#a855f7' : 'rgba(255,255,255,0.15)'}`, 
                 boxShadow: comboCount > 50 ? '0 10px 25px rgba(248,113,113,0.4)' : '0 10px 25px rgba(0,0,0,0.7)', 
@@ -974,18 +987,18 @@ export function GameHUD() {
                 {/* COMBO DESTAQUE */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1.2 }}>
                     <div style={{ 
-                        flexShrink: 0, width: '40px', height: '40px', borderRadius: '50%', 
+                        flexShrink: 0, width: '34px', height: '34px', borderRadius: '50%', 
                         background: comboCount > 50 ? 'radial-gradient(circle, rgba(248,113,113,0.3), transparent)' : 'radial-gradient(circle, rgba(168,85,247,0.3), transparent)', 
                         display: 'flex', justifyContent: 'center', alignItems: 'center', 
                         border: `1.5px solid ${comboCount > 50 ? '#f87171' : '#a855f7'}`
                     }}>
-                        <Flame size={22} color={comboCount > 50 ? "#f87171" : "#a855f7"} className={comboCount > 10 ? "anim-wobble" : ""} />
+                        <Flame size={18} color={comboCount > 50 ? "#f87171" : "#a855f7"} className={comboCount > 10 ? "anim-wobble" : ""} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                         <span style={{ color: comboCount > 50 ? '#fca5a5' : '#d8b4fe', fontSize: '0.55rem', fontWeight: '900', letterSpacing: '2px', whiteSpace: 'nowrap' }}>COMBO</span>
                         <span className={comboCount > 10 ? 'anim-epic-combo' : ''} style={{ 
                             color: comboCount > 50 ? '#f87171' : '#fff', 
-                            fontSize: comboCount > 99999 ? '1.2rem' : comboCount > 999 ? '1.5rem' : '1.8rem', 
+                            fontSize: comboCount > 99999 ? '1rem' : comboCount > 999 ? '1.2rem' : '1.45rem', 
                             fontWeight: '900', fontStyle: 'italic', lineHeight: '1', marginTop: '2px',
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                         }}>
@@ -1060,7 +1073,7 @@ export function GameHUD() {
                                 <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
                                     <span className="ranking-modal-lbl">TOTAL AURA</span>
                                     <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
-                                        <Sparkles size={16} color="#fcd34d" className="anim-pulse" /> {Math.floor(aura).toLocaleString()}
+                                        <Sparkles size={16} color="#fcd34d" className="anim-pulse" /> {formatGameNumber(aura)}
                                     </span>
                                 </div>
                             </div>
