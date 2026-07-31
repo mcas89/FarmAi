@@ -5,13 +5,14 @@ import { usePlayerSystem } from '../../systems/usePlayerSystem';
 import { useUISystem } from '../../systems/useUISystem';
 import { AuraSystem } from '../../systems/rhythm/AuraSystem';
 import { Joystick } from './Joystick';
+import { CHARACTERS } from './screens/CharacterScreen';
 
 export function MobileHUD() {
     const { aura, message, lastPoints } = useAuraSystem();
-    const { activeModel, setActiveModel, isDancing, advanceDance } = usePlayerSystem();
+    const { activeModel, setActiveModel, isDancing, advanceDance, unlockedCharacters } = usePlayerSystem();
     const farmMode = useUISystem(state => state.farmMode);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const characters = ['san.vrm', 'deric.vrm', 'carol.vrm', 'rafa.vrm', 'mary.vrm', 'eric.vrm'];
+    const characters = CHARACTERS.filter(char => unlockedCharacters.includes(char.file));
 
     const [progression, setProgression] = useState(null);
     useEffect(() => {
@@ -191,40 +192,31 @@ export function MobileHUD() {
                     </h2>
                     
                     <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '400px' }}>
-                        {characters.map((char) => {
-                            const CHAR_NAMES = {
-                                'san.vrm': 'Carol',
-                                'deric.vrm': 'Rafa',
-                                'carol.vrm': 'Kelly',
-                                'rafa.vrm': 'Dan',
-                                'mary.vrm': 'Mary',
-                                'eric.vrm': 'Eric'
-                            };
-                            return (
+                        {characters.map((charObj) => (
                             <button
-                                key={char}
+                                key={charObj.file}
                                 onClick={() => {
-                                    setActiveModel(char);
+                                    setActiveModel(charObj.file);
                                     setIsModalOpen(false);
                                 }}
                                 style={{
                                     padding: '15px 30px',
-                                    background: activeModel === char ? 'rgba(168, 85, 247, 0.9)' : 'rgba(0, 0, 0, 0.6)',
+                                    background: activeModel === charObj.file ? 'rgba(168, 85, 247, 0.9)' : 'rgba(0, 0, 0, 0.6)',
                                     color: 'white',
-                                    border: `2px solid ${activeModel === char ? '#d8b4fe' : 'rgba(168, 85, 247, 0.4)'}`,
+                                    border: `2px solid ${activeModel === charObj.file ? '#d8b4fe' : 'rgba(168, 85, 247, 0.4)'}`,
                                     borderRadius: '12px',
                                     fontWeight: 'bold',
                                     fontSize: '1.2rem',
                                     cursor: 'pointer',
                                     minWidth: '150px',
                                     textTransform: 'uppercase',
-                                    boxShadow: activeModel === char ? '0 0 15px rgba(168, 85, 247, 0.6)' : 'none',
+                                    boxShadow: activeModel === charObj.file ? '0 0 15px rgba(168, 85, 247, 0.6)' : 'none',
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                {CHAR_NAMES[char]}
+                                {charObj.name}
                             </button>
-                        )})}
+                        ))}
                     </div>
 
                     <button
