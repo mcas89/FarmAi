@@ -21,11 +21,27 @@ export const useDuelSystem = create((set, get) => ({
     sendInvite: async (targetUid, targetName) => {
         const myUid = useMultiplayerSystem.getState().mySessionId;
         if (!myUid) return;
-        const myName = useUISystem.getState().playerStats.nickname || 'Jogador';
+        const stats = useUISystem.getState().playerStats;
+        const myName = stats.nickname || 'Jogador';
+        
+        const betAmount = 10;
+        const currentAuracash = stats.diamonds || stats.auracash || 0;
+
+        if (currentAuracash < betAmount) {
+            alert("Você não tem AuraCash suficiente para duelar (Mínimo: 10)!");
+            return;
+        }
         
         set({ isSearching: true });
         
         try {
+            // Debita os 10 assim que solicita o combate
+            useUISystem.getState().updateStats({ 
+                diamonds: currentAuracash - betAmount,
+                auracash: currentAuracash - betAmount
+            });
+            console.log(`[Duelo] Taxa de convite de ${betAmount} AuraCash debitada.`);
+
             const inviteRef = doc(db, 'duel_invites', `${myUid}_${targetUid}`);
             await setDoc(inviteRef, {
                 fromUid: myUid,
@@ -34,7 +50,7 @@ export const useDuelSystem = create((set, get) => ({
                 toName: targetName,
                 status: 'pending',
                 createdAt: new Date().getTime(),
-                betAmount: 10 // Aposta Padrão Inicial
+                betAmount: betAmount
             });
             console.log("Convite de duelo enviado para", targetName);
         } catch (e) {
@@ -63,14 +79,27 @@ export const useDuelSystem = create((set, get) => ({
     respondToInvite: async (inviteId, accept) => {
         const inviteRef = doc(db, 'duel_invites', inviteId);
         if (accept) {
-            // Pega os dados ANTES de atualizar, senão o listener de pending remove ele!
             const inviteData = get().incomingInvites.find(i => i.id === inviteId);
-            await updateDoc(inviteRef, { status: 'accepted' });
-            
-            // Entrar na sala de duelo
-            if (inviteData) {
-                get().joinDuelRoom(inviteId, inviteData.betAmount);
+            if (!inviteData) return;
+
+            const stats = useUISystem.getState().playerStats;
+            const currentAuracash = stats.diamonds || stats.auracash || 0;
+            const betAmount = inviteData.betAmount || 10;
+
+            if (currentAuracash < betAmount) {
+                alert("Você não tem AuraCash suficiente para aceitar este duelo!");
+                return;
             }
+
+            // Debita se o adversário aceitar
+            useUISystem.getState().updateStats({ 
+                diamonds: currentAuracash - betAmount,
+                auracash: currentAuracash - betAmount
+            });
+            console.log(`[Duelo] Taxa de aceite de ${betAmount} AuraCash debitada.`);
+
+            await updateDoc(inviteRef, { status: 'accepted' });
+            get().joinDuelRoom(inviteId, betAmount);
         } else {
             await updateDoc(inviteRef, { status: 'declined' });
         }
@@ -89,11 +118,19 @@ export const useDuelSystem = create((set, get) => ({
                 if (data.status === 'accepted') {
                     set({ isSearching: false });
                     get().joinDuelRoom(inviteId, data.betAmount);
-                    // Opcional: apagar o convite do firestore depois de entrar
                     deleteDoc(inviteRef).catch(e => console.log(e));
                 } else if (data.status === 'declined') {
                     set({ isSearching: false });
-                    console.log(`${data.toName} recusou o duelo.`);
+                    console.log(`${data.toName} recusou o duelo. Reembolsando aposta.`);
+                    
+                    // Reembolso pois foi recusado
+                    const stats = useUISystem.getState().playerStats;
+                    const finalAuracash = stats.diamonds || stats.auracash || 0;
+                    useUISystem.getState().updateStats({ 
+                        diamonds: finalAuracash + (data.betAmount || 10),
+                        auracash: finalAuracash + (data.betAmount || 10)
+                    });
+                    
                     deleteDoc(inviteRef).catch(e => console.log(e));
                 }
             }
@@ -107,15 +144,7 @@ export const useDuelSystem = create((set, get) => ({
         }
 
         try {
-            const currentAuracash = useUISystem.getState().playerStats.auracash || 0;
             const actualBetAmount = betAmount || 10;
-            
-            // Validar se tem saldo antes de conectar
-            if (currentAuracash < actualBetAmount) {
-                alert("Você não tem AuraCash suficiente para este duelo!");
-                return;
-            }
-
             const myName = useUISystem.getState().playerStats.nickname || 'Jogador';
             const myModel = usePlayerSystem.getState().activeModel || 'san.vrm';
             
@@ -132,10 +161,6 @@ export const useDuelSystem = create((set, get) => ({
             // Muda a tela principal para o modo Duelo!
             useUISystem.getState().setScreen('DUEL');
 
-            // Debitar a aposta imediatamente ao entrar na sala (Taxa de entrada)
-            useUISystem.getState().updateStats({ auracash: currentAuracash - actualBetAmount });
-            console.log(`[Duelo] Aposta de ${actualBetAmount} AuraCash debitada.`);
-
             // Escutar estado
             room.onStateChange((state) => {
                 set({ duelState: { ...state } });
@@ -146,19 +171,26 @@ export const useDuelSystem = create((set, get) => ({
                 console.log("FIM DO DUELO!", data);
                 
                 const myId = room.sessionId;
-                const finalAuracash = useUISystem.getState().playerStats.auracash || 0;
+                const stats = useUISystem.getState().playerStats;
+                const finalAuracash = stats.diamonds || stats.auracash || 0;
                 
                 if (data.isDraw) {
                     // Empate: Reembolsa a aposta
-                    useUISystem.getState().updateStats({ auracash: finalAuracash + data.betAmount });
+                    useUISystem.getState().updateStats({ 
+                        diamonds: finalAuracash + data.betAmount,
+                        auracash: finalAuracash + data.betAmount
+                    });
                     console.log(`[Duelo] Empate! Aposta de ${data.betAmount} devolvida.`);
                 } else if (data.winnerSessionId === myId) {
                     // Vitória: Recebe o prêmio total (Sua aposta + Aposta do adversário)
                     const prize = data.betAmount * 2;
-                    useUISystem.getState().updateStats({ auracash: finalAuracash + prize });
+                    useUISystem.getState().updateStats({ 
+                        diamonds: finalAuracash + prize,
+                        auracash: finalAuracash + prize 
+                    });
                     console.log(`[Duelo] Vitória! Prêmio de ${prize} AuraCash recebido!`);
                 } else {
-                    // Derrota: Já foi debitado ao entrar, não faz nada
+                    // Derrota: Já foi debitado ao enviar/aceitar convite, não faz nada
                     console.log(`[Duelo] Derrota. Você perdeu ${data.betAmount} AuraCash.`);
                 }
             });
