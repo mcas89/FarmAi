@@ -26,24 +26,10 @@ export function AchievementsScreen() {
             const currentDiamonds = useUISystem.getState().playerStats.diamonds || 0;
             const newDiamonds = currentDiamonds + reward;
             updateStats({ diamonds: newDiamonds });
-            
             // Força o auto-save pra guardar a conquista imediatamente
-            Promise.all([
-                import('../../../systems/usePlayerSystem'),
-                import('../../../systems/useAuraSystem'),
-                import('../../../systems/useDatabaseSystem'),
-                import('../../../systems/useQuestSystem')
-            ]).then(([pSys, aSys, dbSys, qSys]) => {
-                const pos = pSys.usePlayerSystem.getState().position;
-                const model = pSys.usePlayerSystem.getState().activeModel;
-                const { comboCount, maxCombo, aura, weeklyAura } = aSys.useAuraSystem.getState();
-                const { dailyQuests, lastResetDate } = qSys.useQuestSystem.getState();
-                const achData = useAchievementSystem.getState().getSavableData();
-                
-                dbSys.useDatabaseSystem.getState().saveGameState(
-                    pos, comboCount, model, aura, newDiamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achData
-                );
-            });
+            if (window.executeGameSave) {
+                setTimeout(() => window.executeGameSave(), 100);
+            }
         }
     };
 
@@ -73,24 +59,24 @@ export function AchievementsScreen() {
                 
                 /* Estado: BLOQUEADO (Escuro) */
                 .ach-locked {
-                    background: rgba(255,255,255,0.02);
-                    border: 1px solid rgba(255,255,255,0.05);
-                    opacity: 0.6;
+                    background: rgba(168,85,247,0.1);
+                    border: 1px solid rgba(168,85,247,0.3);
+                    opacity: 0.95;
                 }
                 
                 /* Estado: PRONTO PARA COLETAR (Brilhante) */
                 .ach-ready {
-                    background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(107,33,168,0.15));
-                    border: 1px solid rgba(168,85,247,0.6);
+                    background: linear-gradient(135deg, rgba(168,85,247,0.25), rgba(107,33,168,0.25));
+                    border: 1px solid rgba(168,85,247,0.8);
                     animation: pulseGlow 2s infinite;
                     opacity: 1;
                 }
 
                 /* Estado: COLETADO (Verde translúcido) */
                 .ach-claimed {
-                    background: rgba(52,211,153,0.05);
-                    border: 1px solid rgba(52,211,153,0.2);
-                    opacity: 0.9;
+                    background: rgba(52,211,153,0.1);
+                    border: 1px solid rgba(52,211,153,0.4);
+                    opacity: 1;
                 }
 
                 .claim-btn {
@@ -104,8 +90,8 @@ export function AchievementsScreen() {
                 }
                 .claim-btn:active { transform: scale(0.95); }
 
-                .prog-bar { width: 100%; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; margin-top: 15px; overflow: hidden; }
-                .prog-fill { height: 100%; background: linear-gradient(90deg, #a855f7, #ec4899); transition: width 0.3s; }
+                .prog-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin-top: 15px; overflow: hidden; }
+                .prog-fill { height: 100%; background: linear-gradient(90deg, #d8b4fe, #f0abfc); transition: width 0.3s; }
                 
                 /* Scrollbar personalizada para a lista */
                 .ach-list::-webkit-scrollbar { width: 8px; }
@@ -120,7 +106,7 @@ export function AchievementsScreen() {
                         <h2 style={{ color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', fontSize: '1.8rem', textShadow: '0 0 10px rgba(168,85,247,0.5)' }}>
                             Conquistas
                         </h2>
-                        <div style={{ color: '#a855f7', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}>
+                        <div style={{ color: '#d8b4fe', fontSize: '0.8rem', fontWeight: 'bold', marginTop: '4px' }}>
                             DESBLOQUEIE MARCOS E GANHE AURACASH
                         </div>
                     </div>
@@ -130,9 +116,9 @@ export function AchievementsScreen() {
                             onClick={() => setActiveTab('PENDING')}
                             style={{
                                 padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
-                                background: activeTab === 'PENDING' ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.05)',
-                                color: activeTab === 'PENDING' ? '#fff' : '#888',
-                                border: activeTab === 'PENDING' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)'
+                                background: activeTab === 'PENDING' ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.1)',
+                                color: '#fff',
+                                border: activeTab === 'PENDING' ? '1px solid #d8b4fe' : '1px solid rgba(255,255,255,0.2)'
                             }}
                         >
                             PENDENTES
@@ -141,9 +127,9 @@ export function AchievementsScreen() {
                             onClick={() => setActiveTab('CLAIMED')}
                             style={{
                                 padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
-                                background: activeTab === 'CLAIMED' ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.05)',
-                                color: activeTab === 'CLAIMED' ? '#fff' : '#888',
-                                border: activeTab === 'CLAIMED' ? '1px solid #34d399' : '1px solid rgba(255,255,255,0.1)'
+                                background: activeTab === 'CLAIMED' ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.1)',
+                                color: '#fff',
+                                border: activeTab === 'CLAIMED' ? '1px solid #6ee7b7' : '1px solid rgba(255,255,255,0.2)'
                             }}
                         >
                             COLETADAS
@@ -154,12 +140,12 @@ export function AchievementsScreen() {
                 <button 
                     onClick={() => setScreen('MENU')}
                     style={{
-                        padding: '10px 25px', background: 'rgba(255,255,255,0.05)', color: '#fff',
-                        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', cursor: 'pointer',
+                        padding: '10px 25px', background: 'rgba(255,255,255,0.1)', color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', cursor: 'pointer',
                         fontWeight: 'bold', transition: 'all 0.2s', alignSelf: 'flex-start'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                 >
                     VOLTAR
                 </button>
@@ -184,15 +170,15 @@ export function AchievementsScreen() {
                             <div key={ach.id} className={`ach-card ${cardClass}`}>
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                        <div style={{ color: isReady ? '#d8b4fe' : isClaimed ? '#34d399' : '#fff', fontWeight: '900', fontSize: '1.1rem', paddingRight: '10px' }}>
+                                        <div style={{ color: '#fff', textShadow: '0 0 5px rgba(255,255,255,0.3)', fontWeight: '900', fontSize: '1.1rem', paddingRight: '10px' }}>
                                             {ach.title}
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.6)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)' }}>
                                             <span style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.9rem' }}>{ach.reward}</span>
                                             <AuracashIcon size={12} color="#fbbf24" />
                                         </div>
                                     </div>
-                                    <div style={{ color: '#aaa', fontSize: '0.85rem', lineHeight: '1.4', minHeight: '40px' }}>
+                                    <div style={{ color: '#f3f4f6', fontSize: '0.9rem', lineHeight: '1.4', minHeight: '40px', fontWeight: '500' }}>
                                         {ach.desc}
                                     </div>
                                 </div>

@@ -27,22 +27,9 @@ export function QuestsScreen() {
             updateStats({ diamonds: newDiamonds });
             
             // Força o auto-save pra guardar a missão imediatamente
-            Promise.all([
-                import('../../../systems/usePlayerSystem'),
-                import('../../../systems/useAuraSystem'),
-                import('../../../systems/useDatabaseSystem')
-            ]).then(([pSys, aSys, dbSys]) => {
-                const pos = pSys.usePlayerSystem.getState().position;
-                const model = pSys.usePlayerSystem.getState().activeModel;
-                const combo = aSys.useAuraSystem.getState().comboCount;
-                const maxC = aSys.useAuraSystem.getState().maxCombo;
-                const currAura = aSys.useAuraSystem.getState().aura;
-                const { dailyQuests, lastResetDate } = useQuestSystem.getState();
-                
-                dbSys.useDatabaseSystem.getState().saveGameState(
-                    pos, combo, model, currAura, newDiamonds, maxC, dailyQuests, lastResetDate
-                );
-            });
+            if (window.executeGameSave) {
+                setTimeout(() => window.executeGameSave(), 100);
+            }
         }
     };
 
@@ -70,13 +57,12 @@ export function QuestsScreen() {
                     justify-content: space-between;
                 }
                 
-                /* Estado: EM ANDAMENTO (Escuro) */
+                /* Estado: EM PROGRESSO (Escuro) */
                 .quest-progress {
-                    background: rgba(255,255,255,0.02);
-                    border: 1px solid rgba(255,255,255,0.05);
-                }
-                
-                /* Estado: PRONTO PARA COLETAR (Brilhante) */
+                    background: rgba(245, 158, 11, 0.1);
+                    border: 1px solid rgba(245, 158, 11, 0.3);
+                    opacity: 0.95;
+                }/* Estado: PRONTO PARA COLETAR (Brilhante) */
                 .quest-ready {
                     background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(180, 83, 9, 0.15));
                     border: 1px solid rgba(245, 158, 11, 0.6);
@@ -153,15 +139,15 @@ export function QuestsScreen() {
                             <div key={quest.id} className={`quest-card ${cardClass}`}>
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                        <div style={{ color: isReady ? '#fbbf24' : isClaimed ? '#34d399' : '#fff', fontWeight: '900', fontSize: '1.1rem', paddingRight: '10px' }}>
+                                        <div style={{ color: '#fff', textShadow: '0 0 5px rgba(255,255,255,0.3)', fontWeight: '900', fontSize: '1.1rem', paddingRight: '10px' }}>
                                             {quest.title}
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.6)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)' }}>
                                             <span style={{ color: '#fbbf24', fontWeight: '900', fontSize: '0.9rem' }}>{quest.reward}</span>
                                             <AuracashIcon size={12} color="#fbbf24" />
                                         </div>
                                     </div>
-                                    <div style={{ color: '#aaa', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                                    <div style={{ color: '#f3f4f6', fontSize: '0.9rem', lineHeight: '1.4', fontWeight: '500' }}>
                                         Recompensa de {quest.reward} AuraCash.
                                     </div>
                                 </div>
