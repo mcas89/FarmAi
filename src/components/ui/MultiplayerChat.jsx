@@ -87,13 +87,21 @@ export function MultiplayerChat() {
                     <div style={{
                         padding: '10px 14px',
                         borderBottom: '1px solid rgba(168,85,247,0.2)',
-                        display: 'flex', alignItems: 'center', gap: '8px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         background: 'rgba(168,85,247,0.1)'
                     }}>
-                        <MessageCircle size={14} color="#a855f7" />
-                        <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '1px' }}>
-                            CHAT DA SALA
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <MessageCircle size={14} color="#a855f7" />
+                            <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '1px' }}>
+                                CHAT DA SALA
+                            </span>
+                        </div>
+                        <button 
+                            onClick={() => setIsOpen(false)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                        >
+                            <X size={18} color="#94a3b8" />
+                        </button>
                     </div>
 
                     {/* Mensagens */}
