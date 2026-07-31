@@ -239,7 +239,7 @@ export function ProfileScreen() {
                         <div style={{ marginTop: '20px' }}>
                             <div style={{ color: '#888', fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '3px', marginBottom: '15px' }}>AURA ACUMULADA</div>
                             <div className="glow-text" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <AuracashIcon size={40} color="#a855f7" style={{ opacity: 0.8 }} />
+                                <Sparkles size={40} color="#a855f7" style={{ opacity: 0.8 }} />
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     {/* Usa compact notation (1.5B, 2T) para números grandes para não quebrar layout */}
                                     <span className="aura-compact-text">{compactAura}</span>
