@@ -125,25 +125,24 @@ export function GameHUD() {
         };
     }, []);
 
-    const handleLeftDown = (e) => {
-        if (useUISystem.getState().farmMode !== 'six_seven') return;
-        e.target.setPointerCapture(e.pointerId);
-        AuraSystem.setRawInput('left', true, e.isTrusted);
+    const handleFarmPointerDown = (side, e) => {
+        if (useUISystem.getState().farmMode === 'none') return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        e.currentTarget.dataset.pressed = 'true';
+        AuraSystem.setRawInput(side, true, e.isTrusted);
     };
-    const handleLeftUp = (e) => {
-        if (useUISystem.getState().farmMode !== 'six_seven') return;
-        e.target.releasePointerCapture(e.pointerId);
-        AuraSystem.setRawInput('left', false, e.isTrusted);
-    };
-    const handleRightDown = (e) => {
-        if (useUISystem.getState().farmMode !== 'six_seven') return;
-        e.target.setPointerCapture(e.pointerId);
-        AuraSystem.setRawInput('right', true, e.isTrusted);
-    };
-    const handleRightUp = (e) => {
-        if (useUISystem.getState().farmMode !== 'six_seven') return;
-        e.target.releasePointerCapture(e.pointerId);
-        AuraSystem.setRawInput('right', false, e.isTrusted);
+
+    const handleFarmPointerUp = (side, e) => {
+        if (useUISystem.getState().farmMode === 'none') return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.dataset.pressed = 'false';
+        if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+        AuraSystem.setRawInput(side, false, e.isTrusted);
     };
 
     let menuOpacity = 1;
@@ -255,6 +254,76 @@ export function GameHUD() {
                 .bottom-nav-btn:hover { color: #ccc; }
                 .bottom-nav-btn.active { color: #a855f7; }
                 .bottom-nav-lbl { font-size: 0.6rem; font-weight: bold; letter-spacing: 0.5px; }
+                
+                /* CONTROLES PREMIUM: MEIAS-LUAS DE FARM + JOYSTICK CENTRAL */
+                .farm-controls-layer {
+                    position: absolute; inset: 0; z-index: 8; pointer-events: none;
+                    transition: opacity 0.5s ease;
+                }
+
+                .farm-crescent {
+                    position: absolute;
+                    bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+                    width: clamp(92px, 11vw, 128px);
+                    height: clamp(150px, 23vh, 205px);
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    gap: 4px; overflow: hidden; pointer-events: auto; touch-action: none;
+                    user-select: none; -webkit-user-select: none; cursor: pointer;
+                    color: #fff; border: 1px solid rgba(255,255,255,0.18);
+                    background: radial-gradient(circle at center, rgba(168,85,247,0.28), rgba(20,12,38,0.9) 58%, rgba(7,5,15,0.97) 100%);
+                    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+                    transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.12s ease, opacity 0.2s ease;
+                    opacity: 0.72;
+                }
+
+                .farm-crescent:hover { opacity: 0.92; }
+                .farm-crescent-left {
+                    left: 0; border-left: none; border-radius: 0 100% 100% 0; padding-right: 20px;
+                    box-shadow: 10px 0 35px rgba(168,85,247,0.25), inset -7px 0 24px rgba(168,85,247,0.16);
+                }
+                .farm-crescent-right {
+                    right: 0; border-right: none; border-radius: 100% 0 0 100%; padding-left: 20px;
+                    box-shadow: -10px 0 35px rgba(251,191,36,0.22), inset 7px 0 24px rgba(251,191,36,0.14);
+                }
+                .farm-crescent::before {
+                    content: ''; position: absolute; inset: 8px; border-radius: inherit;
+                    border: 1px solid rgba(255,255,255,0.06); pointer-events: none;
+                }
+                .farm-crescent-number {
+                    position: relative; z-index: 1; font-size: clamp(2.2rem, 5vw, 3.2rem);
+                    font-weight: 950; line-height: 1; text-shadow: 0 3px 5px rgba(0,0,0,0.85), 0 0 24px currentColor;
+                }
+                .farm-crescent-left .farm-crescent-number { color: #c084fc; }
+                .farm-crescent-right .farm-crescent-number { color: #fbbf24; }
+                .farm-crescent-label {
+                    position: relative; z-index: 1; color: rgba(255,255,255,0.55);
+                    font-size: 0.46rem; font-weight: 900; letter-spacing: 1.5px;
+                }
+                .farm-crescent[data-pressed='true'] {
+                    transform: scaleX(0.91) scaleY(0.96); filter: brightness(1.45); opacity: 1;
+                }
+                .farm-crescent-left[data-pressed='true'] {
+                    box-shadow: 12px 0 42px rgba(168,85,247,0.55), inset -15px 0 45px rgba(168,85,247,0.5);
+                }
+                .farm-crescent-right[data-pressed='true'] {
+                    box-shadow: -12px 0 42px rgba(251,191,36,0.5), inset 15px 0 45px rgba(251,191,36,0.42);
+                }
+                .premium-joystick-area {
+                    position: absolute; left: 50%; bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+                    transform: translateX(-50%); width: clamp(105px, 15vw, 145px); height: clamp(105px, 15vw, 145px);
+                    display: flex; align-items: center; justify-content: center; pointer-events: auto; touch-action: none;
+                }
+
+                @media (max-width: 768px) {
+                    .farm-crescent {
+                        bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+                        width: 94px; height: min(175px, 25vh);
+                    }
+                    .premium-joystick-area {
+                        bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+                        width: 118px; height: 118px;
+                    }
+                }
                 
                 .collapse-btn {
                     width: 24px; height: 48px; background: rgba(10, 10, 15, 0.8);
@@ -664,43 +733,38 @@ export function GameHUD() {
 
             </div>
 
-            {/* BOTTOM AREA (Joystick + Botões 6 e 7) */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', padding: 'var(--bot-padding)', opacity: menuOpacity, transition: 'opacity 0.5s', zIndex: 5, marginBottom: '85px', gap: '20px' }}>
-                
+            {/* CONTROLES DE GAMEPLAY — MEIAS-LUAS LATERAIS + JOYSTICK CENTRAL */}
+            <div className="farm-controls-layer" style={{ opacity: menuOpacity }}>
                 {farmMode === 'six_seven' && (
-                    <div style={{ 
-                        width: '70px', height: '70px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.15)',
-                        display: 'flex', justifyContent: 'center', alignItems: 'center',
-                        fontSize: '2rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
-                        touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
-                        userSelect: 'none', marginBottom: '10px'
-                    }}
-                    onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleLeftDown(e); }}
-                    onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
-                    onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleLeftUp(e); }}
+                    <button
+                        type="button"
+                        className="farm-crescent farm-crescent-left"
+                        aria-label="Farmar aura com o botão 6"
+                        onPointerDown={(e) => handleFarmPointerDown('left', e)}
+                        onPointerUp={(e) => handleFarmPointerUp('left', e)}
+                        onPointerCancel={(e) => handleFarmPointerUp('left', e)}
                     >
-                        6
-                    </div>
+                        <span className="farm-crescent-number">6</span>
+                        <span className="farm-crescent-label">FARM</span>
+                    </button>
                 )}
 
-                <div style={{ position: 'relative', width: '45px', height: '45px', transform: 'scale(1.1)', transformOrigin: 'bottom center', pointerEvents: 'auto' }}>
+                <div className="premium-joystick-area">
                     <Joystick />
                 </div>
 
                 {farmMode === 'six_seven' && (
-                    <div style={{ 
-                        width: '70px', height: '70px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.15)',
-                        display: 'flex', justifyContent: 'center', alignItems: 'center',
-                        fontSize: '2rem', fontWeight: '900', color: 'rgba(255,255,255,0.2)',
-                        touchAction: 'none', pointerEvents: 'auto', background: 'rgba(255,255,255,0.02)',
-                        userSelect: 'none', marginBottom: '10px'
-                    }}
-                    onPointerDown={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; handleRightDown(e); }}
-                    onPointerUp={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
-                    onPointerCancel={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; handleRightUp(e); }}
+                    <button
+                        type="button"
+                        className="farm-crescent farm-crescent-right"
+                        aria-label="Farmar aura com o botão 7"
+                        onPointerDown={(e) => handleFarmPointerDown('right', e)}
+                        onPointerUp={(e) => handleFarmPointerUp('right', e)}
+                        onPointerCancel={(e) => handleFarmPointerUp('right', e)}
                     >
-                        7
-                    </div>
+                        <span className="farm-crescent-number">7</span>
+                        <span className="farm-crescent-label">FARM</span>
+                    </button>
                 )}
             </div>
 
@@ -966,9 +1030,9 @@ export function GameHUD() {
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', pointerEvents: 'none', zIndex: 4 }}>
                 {farmMode === 'free' ? (
                     <>
-                        <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={handleLeftDown} onPointerUp={handleLeftUp} onPointerCancel={handleLeftUp} />
+                        <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={(e) => handleFarmPointerDown('left', e)} onPointerUp={(e) => handleFarmPointerUp('left', e)} onPointerCancel={(e) => handleFarmPointerUp('left', e)} />
                         <div style={{ width: '40%', pointerEvents: 'none' }}></div>
-                        <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={handleRightDown} onPointerUp={handleRightUp} onPointerCancel={handleRightUp} />
+                        <div style={{ flex: 1, touchAction: 'none', pointerEvents: 'auto' }} onPointerDown={(e) => handleFarmPointerDown('right', e)} onPointerUp={(e) => handleFarmPointerUp('right', e)} onPointerCancel={(e) => handleFarmPointerUp('right', e)} />
                     </>
                 ) : null}
             </div>
