@@ -661,73 +661,93 @@ export function MainMenu() {
                     
                     <div className="ranking-modal" onClick={e => e.stopPropagation()}>
                         <div className="ranking-modal-content">
-                            <div className="ranking-modal-title">
-                                <Trophy size={24} style={{marginRight: '10px', verticalAlign: 'middle', paddingBottom: '4px'}} color="#fcd34d"/> 
-                                {rankingType === 'global' ? 'MEU RANKING GLOBAL' : 'MEU RANKING SEMANAL'}
-                            </div>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px' }}>
-                                <div className="ranking-modal-row">
-                                    <span className="ranking-modal-lbl">MINHA POSIÇÃO</span>
-                                    <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>
-                                        {isRankingLoading ? '...' : `#${useRankingSystem.getState().getMyPosition(rankingType === 'global' ? globalRanking : weeklyRanking)}`}
-                                    </span>
+                            {rankingType === 'weekly' ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', padding: '40px 10px' }}>
+                                    <Trophy size={56} color="#fcd34d" style={{ animation: 'pulse 2s infinite' }} />
+                                    <h3 style={{ color: '#fcd34d', fontWeight: '900', fontSize: '1.4rem', textAlign: 'center', margin: 0, textShadow: '0 0 10px rgba(252,211,77,0.5)' }}>RANKING SEMANAL<br/>EM MANUTENÇÃO</h3>
+                                    <p style={{ color: '#aaa', textAlign: 'center', fontSize: '0.95rem', lineHeight: 1.5, margin: 0 }}>
+                                        Estamos aprimorando o sistema de premiações para a próxima temporada. Aguarde as novidades!
+                                    </p>
+                                    <button 
+                                        onClick={() => setShowRankingModal(false)}
+                                        style={{
+                                            marginTop: 'auto', width: '100%', background: 'linear-gradient(90deg, rgba(168,85,247,0.2), rgba(216,180,254,0.2))',
+                                            border: '1px solid rgba(168,85,247,0.4)', color: '#fff', padding: '14px', borderRadius: '12px', 
+                                            fontWeight: '900', cursor: 'pointer', transition: 'all 0.3s', letterSpacing: '2px',
+                                            boxShadow: '0 5px 15px rgba(168,85,247,0.2)'
+                                        }}
+                                    >
+                                        VOLTAR
+                                    </button>
                                 </div>
-                                <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
-                                    <span className="ranking-modal-lbl">TOTAL AURA {rankingType === 'weekly' ? 'SEMANAL' : ''}</span>
-                                    <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
-                                        <Sparkles size={16} color="#fcd34d" /> 
-                                        {rankingType === 'global' ? Math.floor(aura).toLocaleString() : Math.floor(weeklyAura || 0).toLocaleString()}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>
-                                    {rankingType === 'global' ? 'TOP 50 GLOBAL' : 'TOP 50 SEMANAL'}
-                                </div>
-                                
-                                <div className="ranking-modal-scroll">
-                                    {isRankingLoading && <div style={{ textAlign: 'center', color: '#888', marginTop: '20px' }}>CARREGANDO DADOS...</div>}
-                                    {!isRankingLoading && (rankingType === 'global' ? globalRanking : weeklyRanking).map(player => (
-                                        <div key={player.rank} style={{
-                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
-                                            background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-                                            borderRadius: '8px'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                                <span style={{ 
-                                                    color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
-                                                    fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
-                                                    textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
-                                                }}>#{player.rank}</span>
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
-                                                    {rankingType === 'weekly' && player.rank <= 3 && (
-                                                        <span style={{ fontSize: '0.5rem', color: '#34d399', fontWeight: 'bold' }}>+{player.rank === 1 ? 100 : player.rank === 2 ? 50 : 20} AuraCash</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.score.toLocaleString()}</span>
-                                                <Sparkles size={10} color="#a855f7" />
-                                            </div>
+                            ) : (
+                                <>
+                                    <div className="ranking-modal-title">
+                                        <Trophy size={24} style={{marginRight: '10px', verticalAlign: 'middle', paddingBottom: '4px'}} color="#fcd34d"/> 
+                                        MEU RANKING GLOBAL
+                                    </div>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px' }}>
+                                        <div className="ranking-modal-row">
+                                            <span className="ranking-modal-lbl">MINHA POSIÇÃO</span>
+                                            <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>
+                                                {isRankingLoading ? '...' : `#${useRankingSystem.getState().getMyPosition(globalRanking)}`}
+                                            </span>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
+                                        <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
+                                            <span className="ranking-modal-lbl">TOTAL AURA</span>
+                                            <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
+                                                <Sparkles size={16} color="#fcd34d" /> 
+                                                {Math.floor(aura).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                            <button 
-                                onClick={() => setShowRankingModal(false)}
-                                style={{
-                                    marginTop: '20px', width: '100%', background: 'linear-gradient(90deg, rgba(168,85,247,0.2), rgba(216,180,254,0.2))',
-                                    border: '1px solid rgba(168,85,247,0.4)', color: '#fff', padding: '14px', borderRadius: '12px', 
-                                    fontWeight: '900', cursor: 'pointer', transition: 'all 0.3s', letterSpacing: '2px',
-                                    boxShadow: '0 5px 15px rgba(168,85,247,0.2)', flexShrink: 0
-                                }}
-                            >
-                                FECHAR
-                            </button>
+                                    <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                        <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>
+                                            TOP 50 GLOBAL
+                                        </div>
+                                        
+                                        <div className="ranking-modal-scroll">
+                                            {isRankingLoading && <div style={{ textAlign: 'center', color: '#888', marginTop: '20px' }}>CARREGANDO DADOS...</div>}
+                                            {!isRankingLoading && globalRanking.map(player => (
+                                                <div key={player.rank} style={{
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
+                                                    background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                                                    borderRadius: '8px'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                        <span style={{ 
+                                                            color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
+                                                            fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
+                                                            textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
+                                                        }}>#{player.rank}</span>
+                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.score.toLocaleString()}</span>
+                                                        <Sparkles size={10} color="#a855f7" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => setShowRankingModal(false)}
+                                        style={{
+                                            marginTop: '20px', width: '100%', background: 'linear-gradient(90deg, rgba(168,85,247,0.2), rgba(216,180,254,0.2))',
+                                            border: '1px solid rgba(168,85,247,0.4)', color: '#fff', padding: '14px', borderRadius: '12px', 
+                                            fontWeight: '900', cursor: 'pointer', transition: 'all 0.3s', letterSpacing: '2px',
+                                            boxShadow: '0 5px 15px rgba(168,85,247,0.2)', flexShrink: 0
+                                        }}
+                                    >
+                                        FECHAR
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
