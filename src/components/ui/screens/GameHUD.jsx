@@ -90,41 +90,8 @@ export function GameHUD() {
 
     useEffect(() => {
         if (showRankingModal) {
-            setIsLoadingRank(true);
-            const fetchRanking = async () => {
-                try {
-                    const q = query(collection(db, 'users'), orderBy('aura', 'desc'), limit(100));
-                    const snapshot = await getDocs(q);
-                    const rankData = [];
-                    let index = 1;
-                    let foundMyRank = false;
-                    
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        const pName = data.name ? data.name.split(' ')[0] : 'Jogador';
-                        const player = {
-                            id: doc.id,
-                            rank: index,
-                            name: pName,
-                            aura: data.aura || 0
-                        };
-                        rankData.push(player);
-                        if (pName === nickname) {
-                            setMyRank(index);
-                            foundMyRank = true;
-                        }
-                        index++;
-                    });
-                    
-                    setRealRanking(rankData);
-                    if (!foundMyRank) setMyRank('+100');
-                } catch (error) {
-                    console.error("Erro ao buscar ranking:", error);
-                } finally {
-                    setIsLoadingRank(false);
-                }
-            };
-            fetchRanking();
+            setIsLoadingRank(false);
+            // fetchRanking desativado temporariamente devido à manutenção.
         }
     }, [showRankingModal, nickname]);
 
@@ -1036,36 +1003,13 @@ export function GameHUD() {
                             <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                                 <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>TOP 100 GLOBAL</div>
                                 
-                                <div className="ranking-modal-scroll">
-                                    {isLoadingRank ? (
-                                        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
-                                            <Loader2 size={24} color="#a855f7" className="anim-spin" style={{ animation: 'spin 1s linear infinite' }} />
-                                        </div>
-                                    ) : (
-                                        realRanking.map(player => (
-                                            <div key={player.id} style={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
-                                                background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-                                                borderRadius: '8px',
-                                                border: player.name === nickname ? '1px solid rgba(168,85,247,0.5)' : 'none'
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                                    <span style={{ 
-                                                        color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
-                                                        fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
-                                                        textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
-                                                    }}>#{player.rank}</span>
-                                                    <span style={{ color: player.rank <= 3 ? '#fff' : (player.name === nickname ? '#a855f7' : '#ccc'), fontWeight: 'bold', fontSize: '0.9rem' }}>
-                                                        {player.name} {player.name === nickname && '(Você)'}
-                                                    </span>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <span style={{ color: '#a855f7', fontWeight: 'bold', fontSize: '0.85rem' }}>{Math.floor(player.aura).toLocaleString()}</span>
-                                                    <Sparkles size={10} color="#a855f7" />
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
+                                <div className="ranking-modal-scroll" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 10px', gap: '15px' }}>
+                                    <Settings size={48} color="#fcd34d" style={{ animation: 'spin 4s linear infinite' }} />
+                                    <h3 style={{ color: '#fcd34d', fontWeight: 'bold', fontSize: '1.2rem', textAlign: 'center' }}>SISTEMA EM MANUTENÇÃO</h3>
+                                    <p style={{ color: '#ccc', textAlign: 'center', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                        O ranking semanal está temporariamente desativado para melhorias na infraestrutura e redução de lag.<br/><br/>
+                                        Sua Aura continua sendo contabilizada normalmente no seu perfil. Voltaremos em breve!
+                                    </p>
                                 </div>
                             </div>
 
