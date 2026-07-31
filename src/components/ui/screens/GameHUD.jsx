@@ -844,9 +844,6 @@ export function GameHUD() {
                         <Swords size={22} color="#ef4444" />
                     </div>
                 )}
-
-                {/* Botão do Chat Multiplayer logo abaixo do Duelo */}
-                {isOnlineMode && <MultiplayerChat />}
             </div>
 
             {/* MODAL INVENTÁRIO DE POÇÕES */}

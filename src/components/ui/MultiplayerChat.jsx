@@ -38,21 +38,22 @@ export function MultiplayerChat() {
 
     return (
         <>
-            {/* Botão flutuante de chat */}
+            {/* Botão flutuante de chat (Lado Direito) */}
             <div
                 onClick={() => { setIsOpen(o => !o); setUnreadCount(0); }}
                 className="top-btn anim-float"
                 style={{
+                    position: 'fixed', right: '15px', top: '40%', transform: 'translateY(-50%)',
                     width: '45px', height: '45px', borderRadius: '50%',
                     background: isOpen ? 'rgba(168, 85, 247, 0.4)' : 'rgba(10, 10, 15, 0.4)',
                     border: isOpen ? '1px solid #a855f7' : '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: isOpen ? '0 0 15px rgba(168, 85, 247, 0.5)' : 'none',
+                    boxShadow: (!isOpen && unreadCount > 0) ? '0 0 20px rgba(236, 72, 153, 0.8)' : (isOpen ? '0 0 15px rgba(168, 85, 247, 0.5)' : 'none'),
                     display: 'flex', justifyContent: 'center', alignItems: 'center',
                     cursor: 'pointer', zIndex: 100, pointerEvents: 'auto',
-                    position: 'relative' // importante para o indicador de não lido
+                    animation: (!isOpen && unreadCount > 0) ? 'pulse 1s infinite' : 'none'
                 }}
             >
-                {isOpen ? <X size={18} color="#fff" /> : <MessageCircle size={18} color="#a855f7" />}
+                {isOpen ? <X size={18} color="#fff" /> : <MessageCircle size={18} color={(!isOpen && unreadCount > 0) ? "#ec4899" : "#a855f7"} />}
                 {!isOpen && unreadCount > 0 && (
                     <div style={{
                         position: 'absolute', top: '-4px', right: '-4px',
@@ -60,25 +61,25 @@ export function MultiplayerChat() {
                         fontSize: '0.6rem', fontWeight: '900',
                         width: '18px', height: '18px', borderRadius: '50%',
                         display: 'flex', justifyContent: 'center', alignItems: 'center',
-                        animation: 'pulse 1s infinite'
+                        boxShadow: '0 0 10px rgba(236, 72, 153, 0.8)'
                     }}>
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </div>
                 )}
             </div>
 
-            {/* Painel de chat */}
+            {/* Painel de chat (Meio da Tela) */}
             {isOpen && (
                 <div style={{
-                    position: 'fixed', bottom: '155px', right: '16px',
-                    width: '280px', height: '320px',
-                    background: 'rgba(10,10,20,0.85)',
+                    position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                    width: '320px', height: '400px', maxWidth: '90vw', maxHeight: '80vh',
+                    background: 'rgba(10,10,20,0.92)',
                     backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(168,85,247,0.3)',
+                    border: '1px solid rgba(168,85,247,0.4)',
                     borderRadius: '16px',
                     display: 'flex', flexDirection: 'column',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                    zIndex: 100,
+                    boxShadow: '0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(168,85,247,0.2)',
+                    zIndex: 105,
                     overflow: 'hidden',
                     pointerEvents: 'auto'
                 }}>
