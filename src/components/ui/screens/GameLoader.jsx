@@ -6,6 +6,7 @@ export function GameLoader() {
     const { active, progress, item, total, loaded } = useProgress();
     const [isVisible, setIsVisible] = useState(true);
     const [minTimePassed, setMinTimePassed] = useState(false);
+    const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
     
     // Garante que a tela de loading fique visível por pelo menos 2 segundos
     // para dar tempo do navegador decodificar os modelos e compilar os shaders.
@@ -15,17 +16,22 @@ export function GameLoader() {
     }, []);
 
     useEffect(() => {
+        if (hasFinishedInitialLoad) return; // Se já carregou a primeira vez, ignora!
+
         // Só esconde se o tempo mínimo passou E o loader do ThreeJS finalizou.
         // Consideramos finalizado se progress for 100% ou se não estiver mais ativo.
         if (minTimePassed && (!active || progress >= 100)) {
-            const t = setTimeout(() => setIsVisible(false), 500); // leve delay final
+            const t = setTimeout(() => {
+                setIsVisible(false);
+                setHasFinishedInitialLoad(true);
+            }, 500); // leve delay final
             return () => clearTimeout(t);
         } else {
             setIsVisible(true);
         }
-    }, [minTimePassed, active, progress]);
+    }, [minTimePassed, active, progress, hasFinishedInitialLoad]);
 
-    if (!isVisible) return null;
+    if (!isVisible || hasFinishedInitialLoad) return null;
 
     // Gera um texto descritivo baseado no progresso
     let statusText = "INICIALIZANDO MOTOR 3D...";
