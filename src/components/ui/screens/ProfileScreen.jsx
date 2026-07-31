@@ -1,12 +1,17 @@
 import { AuracashIcon } from '../AuracashIcon';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
+import { useQuestSystem } from '../../../systems/useQuestSystem';
+import { useAchievementSystem } from '../../../systems/useAchievementSystem';
 import { 
     User, ChevronLeft, Shield, Zap, Target, 
-    Clock, Trophy, Sparkles, Flame, Star, BarChart2
+    Clock, Trophy, Sparkles, Flame, Star, BarChart2, AlertTriangle, Loader2
 } from 'lucide-react';
+import { auth, db } from '../../../config/firebase';
+import { deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { doc, deleteDoc } from 'firebase/firestore';
 
 export function ProfileScreen() {
     const setScreen = useUISystem(state => state.setScreen);
@@ -15,9 +20,23 @@ export function ProfileScreen() {
     // Dados reais
     const { aura, comboCount } = useAuraSystem();
     const activeModel = usePlayerSystem(state => state.activeModel);
+    const unlockedCharacters = usePlayerSystem(state => state.unlockedCharacters);
+    
+    // Conquistas e Missões
+    const achievements = useAchievementSystem(state => state.achievements) || [];
+    const completedAchievements = achievements.filter(a => a.claimed).length;
+    
+    const dailyQuests = useQuestSystem(state => state.dailyQuests) || [];
+    const completedQuests = dailyQuests.filter(q => q.claimed).length;
 
-    const [progression, setProgression] = React.useState(null);
-    React.useEffect(() => {
+    // Estados para Exclusão de Conta
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deleteError, setDeleteError] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [progression, setProgression] = useState(null);
+    useEffect(() => {
         import('../../../systems/progressionRules').then(rules => {
             setProgression(rules);
         });
@@ -30,6 +49,41 @@ export function ProfileScreen() {
     const displayLevel = progression ? progression.getPlayerLevel(aura) : 1;
     const displayTitle = progression ? progression.getPlayerTitle(displayLevel) : 'Carregando...';
     const displayCombo = Math.max(comboCount, stats.maxCombo || 0);
+
+    const handleDeleteAccount = async () => {
+        setDeleteError('');
+        setIsDeleting(true);
+
+        try {
+            const currentUser = auth.currentUser;
+            if (!currentUser) throw new Error("Usuário não autenticado.");
+
+            // 1. Reautenticar para segurança (Exige senha)
+            const credential = EmailAuthProvider.credential(currentUser.email, deletePassword);
+            await reauthenticateWithCredential(currentUser, credential);
+
+            // 2. Deletar do Firestore
+            await deleteDoc(doc(db, 'users', currentUser.uid));
+
+            // 3. Deletar do Auth
+            await deleteUser(currentUser);
+
+            // 4. Limpar cache local e voltar para LOGIN
+            useAuraSystem.getState().spendAura(useAuraSystem.getState().aura); // Zera aura (hack rápido pra limpar ui)
+            setScreen('LOGIN');
+        } catch (error) {
+            console.error(error);
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                setDeleteError('Senha incorreta.');
+            } else if (error.code === 'auth/too-many-requests') {
+                setDeleteError('Muitas tentativas falhas. Tente novamente mais tarde.');
+            } else {
+                setDeleteError('Erro ao excluir conta. Verifique sua senha e conexão.');
+            }
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <div style={{
@@ -107,6 +161,57 @@ export function ProfileScreen() {
                 .panel-right { animation: slideInRight 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
             `}</style>
 
+            {/* Modal de Confirmação de Exclusão */}
+            {showDeleteModal && (
+                <div style={{
+                    position: 'absolute', inset: 0, zIndex: 10000,
+                    background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff'
+                }}>
+                    <div style={{ background: 'rgba(20,5,5,0.9)', padding: '30px', borderRadius: '20px', border: '1px solid #ef4444', maxWidth: '400px', width: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <AlertTriangle size={64} color="#ef4444" style={{ marginBottom: '15px' }} />
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#ef4444', marginBottom: '15px', textAlign: 'center' }}>ÁREA DE RISCO</h2>
+                        <p style={{ fontSize: '1rem', marginBottom: '20px', textAlign: 'center', color: '#ccc', lineHeight: '1.5' }}>
+                            Você está prestes a excluir sua conta permanentemente. Todo o seu progresso, conquistas e AuraCash serão <strong>perdidos para sempre</strong>.
+                        </p>
+                        
+                        <input 
+                            type="password" 
+                            placeholder="Digite sua senha para confirmar"
+                            value={deletePassword}
+                            onChange={(e) => setDeletePassword(e.target.value)}
+                            style={{
+                                width: '100%', padding: '15px', borderRadius: '10px', border: '1px solid #555',
+                                background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: '1rem', marginBottom: '10px'
+                            }}
+                        />
+
+                        {deleteError && (
+                            <div style={{ color: '#ef4444', fontSize: '0.9rem', marginBottom: '15px', fontWeight: 'bold' }}>{deleteError}</div>
+                        )}
+                        
+                        <div style={{ display: 'flex', gap: '15px', width: '100%', marginTop: '10px' }}>
+                            <button 
+                                onClick={() => { setShowDeleteModal(false); setDeleteError(''); setDeletePassword(''); }}
+                                style={{ flex: 1, padding: '15px', fontSize: '1rem', background: '#333', border: '1px solid #555', borderRadius: '10px', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
+                                disabled={isDeleting}
+                            >
+                                CANCELAR
+                            </button>
+                            
+                            <button 
+                                onClick={handleDeleteAccount}
+                                style={{ flex: 1, padding: '15px', fontSize: '1rem', background: '#ef4444', border: 'none', borderRadius: '10px', color: '#fff', cursor: 'pointer', fontWeight: 'bold', display: 'flex', justifyContent: 'center', gap: '8px', alignItems: 'center' }}
+                                disabled={isDeleting || !deletePassword}
+                            >
+                                {isDeleting ? <Loader2 size={18} className="anim-spin" style={{ animation: 'spin 1s linear infinite' }} /> : 'EXCLUIR CONTA'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="profile-bg"></div>
 
             <div className="profile-content-wrapper">
@@ -164,20 +269,36 @@ export function ProfileScreen() {
                             <div className="stat-value">{displayCombo.toLocaleString()}</div>
                         </div>
                         <div className="stat-row">
-                            <div className="stat-label"><Target size={20} color="#4ade80" /> Acertos Perfeitos</div>
-                            <div className="stat-value">{stats.perfectHits.toLocaleString()}</div>
+                            <div className="stat-label"><Trophy size={20} color="#fcd34d" /> Conquistas</div>
+                            <div className="stat-value">{completedAchievements}</div>
                         </div>
                         <div className="stat-row">
-                            <div className="stat-label"><Clock size={20} color="#60a5fa" /> Tempo Farmado</div>
-                            <div className="stat-value">{stats.timeFarmed}</div>
+                            <div className="stat-label"><Target size={20} color="#4ade80" /> Missões Coletadas</div>
+                            <div className="stat-value">{completedQuests}</div>
                         </div>
                         <div className="stat-row">
-                            <div className="stat-label"><Trophy size={20} color="#fcd34d" /> Ranking Global</div>
-                            <div className="stat-value" style={{ color: '#fcd34d' }}>#{stats.globalRanking || 42}</div>
+                            <div className="stat-label"><User size={20} color="#60a5fa" /> Avatares</div>
+                            <div className="stat-value">{unlockedCharacters?.length || 1}</div>
                         </div>
                         <div className="stat-row">
                             <div className="stat-label"><Star size={20} color="#f472b6" /> Personagem</div>
                             <div className="stat-value" style={{ fontSize: '1.1rem', color: '#fbcfe8' }}>{activeModel.replace('.vrm', '').toUpperCase()}</div>
+                        </div>
+
+                        <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button 
+                                onClick={() => setShowDeleteModal(true)}
+                                style={{ 
+                                    background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', 
+                                    color: '#ef4444', padding: '12px 20px', borderRadius: '10px', 
+                                    fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                    transition: 'all 0.2s', alignSelf: 'center'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                            >
+                                <AlertTriangle size={18} /> EXCLUIR CONTA
+                            </button>
                         </div>
                     </div>
                 </div>
