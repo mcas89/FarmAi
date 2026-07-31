@@ -6,11 +6,11 @@ import { CheckCircle, ShoppingCart, X } from 'lucide-react';
 
 export const CHARACTERS = [
     { file: 'Carol.vrm', name: 'Carol', image: '/images/characters/Carol.png', price: 0, level: 1, desc: 'Jardineira novata cheia de energia e vontade de cultivar a melhor fazenda.' },
-    { file: 'Eric.vrm',  name: 'Eric',  image: '/images/characters/Eric.png',  price: 0, level: 1, desc: 'Especialista em magias da terra e solo sagrado.' },
+    { file: 'rafa.vrm',  name: 'Rafa',  image: '/images/characters/Rafa.png',  price: 0, level: 1, desc: 'Especialista em magias da terra e solo sagrado.' },
     { file: 'dan.vrm',   name: 'Dan',   image: '/images/characters/Dan.png',   price: 1200, level: 2, desc: 'Veterano do campo. Carrega consigo a sabedoria das antigas gerações de fazendeiros.' },
     { file: 'cris.vrm',  name: 'Cris',  image: '/images/characters/Cris.png',  price: 1700, level: 3, desc: 'Um talento nato para o cultivo rápido e eficiente.' },
     { file: 'gui.vrm',   name: 'Gui',   image: '/images/characters/Gui.png',   price: 2000, level: 4, desc: 'Sempre focado e muito ágil. Gosta de planejar bem as plantações.' },
-    { file: 'rafa.vrm',  name: 'Rafa',  image: '/images/characters/Rafa.png',  price: 3000, level: 5, desc: 'Rápido e destemido. A lenda das colheitas de outono.' },
+    { file: 'mary.vrm',  name: 'Mary',  image: '/images/characters/Mary.png',  price: 3000, level: 5, desc: 'Rápida e destemida. A lenda das colheitas de outono.' },
     { file: 'jack.vrm',  name: 'Jack',  image: '/images/characters/Jack.png',  price: 3500, level: 6, desc: 'O mestre da colheita e lenda entre os jardineiros de elite.' },
     { file: 'kelly.vrm', name: 'Kelly', image: '/images/characters/Kelly.png', price: 3900, level: 7, desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
     { file: 'tio.vrm',   name: 'Tio',   image: '/images/characters/Tio.png',   price: 4000, level: 8, desc: 'Experiência inigualável. Consegue cultivar nas piores condições.' },

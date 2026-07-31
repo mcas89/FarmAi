@@ -15,13 +15,13 @@ export const usePlayerSystem = create((set) => ({
     rotation: [0, 0, 0],
     currentState: 'idle', // idle, walk, farm, duel, etc.
     activeModel: 'Carol.vrm', // modelo atual
-    unlockedCharacters: ['Carol.vrm', 'Eric.vrm'], // personagens desbloqueados
+    unlockedCharacters: ['Carol.vrm', 'rafa.vrm'], // personagens desbloqueados
     setPosition: (pos) => set({ position: pos }),
     setRotation: (rot) => set({ rotation: rot }),
     setState: (state) => set({ currentState: state }),
     setActiveModel: (model) => set({ activeModel: model }),
     setUnlockedCharacters: (chars) => {
-        const defaultChars = ['Carol.vrm', 'Eric.vrm'];
+        const defaultChars = ['Carol.vrm', 'rafa.vrm'];
         const merged = Array.from(new Set([...defaultChars, ...chars]));
         set({ unlockedCharacters: merged });
     }
