@@ -34,6 +34,8 @@ export function GameHUD() {
     const toggleMapMode = useUISystem(state => state.toggleMapMode);
     const isOnlineMode = useUISystem(state => state.isOnlineMode);
     const onlinePlayersCount = useMultiplayerSystem(state => state.players ? Object.keys(state.players).length : 0);
+    const isConnected = useMultiplayerSystem(state => state.isConnected);
+    const joinRoom = useMultiplayerSystem(state => state.joinRoom);
     const nickname = stats.nickname || 'Marcos';
     const isDancing = useDanceSystem(state => state.isDancing);
     const inventory = useUISystem(state => state.inventory || []);
@@ -405,6 +407,47 @@ export function GameHUD() {
                     .ranking-modal-lbl { font-size: 0.75rem; }
                 }
             `}</style>
+
+            {/* Modal de Desconexão / Sala Fantasma */}
+            {(isOnlineMode && !isConnected) && (
+                <div style={{
+                    position: 'absolute', inset: 0, zIndex: 10000,
+                    background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', pointerEvents: 'auto'
+                }}>
+                    <Loader2 size={64} color="#ef4444" className="animate-spin mb-4" />
+                    <h2 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ef4444', marginBottom: '10px' }}>CONEXÃO PERDIDA</h2>
+                    <p style={{ fontSize: '1.2rem', marginBottom: '30px', textAlign: 'center', maxWidth: '400px', color: '#ccc' }}>
+                        Você foi desconectado do servidor multiplayer. A sala pode ter sido fechada ou sua internet oscilou.
+                    </p>
+                    
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                        <button 
+                            onClick={() => {
+                                const stats = useUISystem.getState().playerStats;
+                                const aura = useAuraSystem.getState().aura;
+                                const activeModel = usePlayerSystem.getState().activeModel;
+                                joinRoom('farma_room', { name: stats.nickname || 'Jogador', aura: aura, model: activeModel });
+                            }}
+                            className="action-button"
+                            style={{ padding: '15px 30px', fontSize: '1.2rem', background: '#3b82f6', border: 'none', borderRadius: '10px', color: '#fff', cursor: 'pointer' }}
+                        >
+                            Reconectar
+                        </button>
+                        
+                        <button 
+                            onClick={() => {
+                                useUISystem.getState().toggleOnlineMode();
+                            }}
+                            className="action-button"
+                            style={{ padding: '15px 30px', fontSize: '1.2rem', background: '#333', border: '1px solid #555', borderRadius: '10px', color: '#fff', cursor: 'pointer' }}
+                        >
+                            Jogar Offline
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* ══════════ TOP BAR — GRID 3 COLUNAS FIXAS ══════════ */}
             <div style={{
