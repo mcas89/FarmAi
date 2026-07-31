@@ -44,11 +44,11 @@ export function MobileHUD() {
     }, []);
 
     // Triggers da Tela 
-    const handleLeftDown = (e) => { e.target.setPointerCapture(e.pointerId); AuraSystem.setRawInput('left', true); };
-    const handleLeftUp = (e) => { e.target.releasePointerCapture(e.pointerId); AuraSystem.setRawInput('left', false); };
+    const handleLeftDown = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); AuraSystem.setRawInput('left', true, e.isTrusted); };
+    const handleLeftUp = (e) => { if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); AuraSystem.setRawInput('left', false, e.isTrusted); };
     
-    const handleRightDown = (e) => { e.target.setPointerCapture(e.pointerId); AuraSystem.setRawInput('right', true); };
-    const handleRightUp = (e) => { e.target.releasePointerCapture(e.pointerId); AuraSystem.setRawInput('right', false); };
+    const handleRightDown = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); AuraSystem.setRawInput('right', true, e.isTrusted); };
+    const handleRightUp = (e) => { if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); AuraSystem.setRawInput('right', false, e.isTrusted); };
 
     const getRatingColor = () => {
         if (lastPoints >= 50) return '#a855f7'; // Roxo (Mestre)
@@ -176,7 +176,7 @@ export function MobileHUD() {
                 )}
             </div>
 
-            <Joystick />
+            <div style={{ position: 'absolute', left: '50%', bottom: '72px', transform: 'translateX(-50%)', width: '92px', height: '92px', pointerEvents: 'auto' }}><Joystick size={92} opacity={0.6} /></div>
 
             {/* Modal de Seleção de Personagens */}
             {isModalOpen && (
