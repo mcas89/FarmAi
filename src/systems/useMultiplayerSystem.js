@@ -49,7 +49,7 @@ export const useMultiplayerSystem = create((set, get) => ({
         try {
             const room = await client.joinOrCreate(ROOM_NAME, {
                 name: playerInfo?.name || 'Jogador',
-                model: playerInfo?.model || 'Carol.vrm',
+                model: playerInfo?.model || 'carol.vrm',
                 aura: playerInfo?.aura || 0,
             });
 
@@ -78,7 +78,7 @@ export const useMultiplayerSystem = create((set, get) => ({
                         newRemotePlayers[sessionId] = {
                             id: sessionId,
                             name: player.name,
-                            model: player.model || 'Carol.vrm',
+                            model: player.model || 'carol.vrm',
                             position: [player.x || 0, player.y || 0, player.z || 0],
                             rotation: player.rotation || 0,
                             animation: player.animation || 'idle',

@@ -89,7 +89,7 @@ export function LoginScreen() {
                     [`weeklyAura_${currentWeek}`]: 0,
                     dailyQuests: [],
                     lastResetDate: '',
-                    activeModel: 'Carol.vrm', // modelo padrão inicial
+                    activeModel: 'carol.vrm', // modelo padrão inicial
                     position: { x: 0, y: 0.1, z: 0 },
                     inventory: [],
                     createdAt: new Date()

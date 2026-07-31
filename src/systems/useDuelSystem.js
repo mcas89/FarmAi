@@ -146,7 +146,7 @@ export const useDuelSystem = create((set, get) => ({
         try {
             const actualBetAmount = betAmount || 10;
             const myName = useUISystem.getState().playerStats.nickname || 'Jogador';
-            const myModel = usePlayerSystem.getState().activeModel || 'Carol.vrm';
+            const myModel = usePlayerSystem.getState().activeModel || 'carol.vrm';
             
             const room = await colyseusClient.joinOrCreate("duel_room", {
                 duelId: duelId,
