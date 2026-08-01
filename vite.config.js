@@ -14,7 +14,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate', // Atualiza em background
+      registerType: 'prompt', // Mostra prompt de atualização
       includeAssets: ['**/*.glb', '**/*.vrm', '**/*.png', '**/*.jpg', '**/*.svg'],
       manifest: {
         name: 'FarmaAi Metaverse',

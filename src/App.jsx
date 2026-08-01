@@ -7,6 +7,7 @@ import { useAuraSystem } from './systems/useAuraSystem';
 import { useUISystem } from './systems/useUISystem';
 import { useQuestSystem } from './systems/useQuestSystem';
 import { useAchievementSystem } from './systems/useAchievementSystem';
+import { ReloadPrompt } from './components/ui/ReloadPrompt';
 import './index.css';
 
 // Error Boundary para capturar erros fatais (ex: 404 em modelos) e mostrar na tela
@@ -213,6 +214,8 @@ function App() {
             <Scene />
           </Suspense>
         )}
+        
+        <ReloadPrompt />
       </div>
     </ErrorBoundary>
   );
