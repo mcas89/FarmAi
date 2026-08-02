@@ -1,5 +1,10 @@
 import { create } from 'zustand';
 import { useAuraSystem } from './useAuraSystem';
+import { useUISystem } from './useUISystem';
+import {
+    cacheMapActivities,
+    readCachedMapActivities,
+} from '../utils/localGameCache';
 
 export const getTodayDateString = () => {
     const today = new Date();
@@ -127,14 +132,19 @@ function randomFountainTarget() {
 
 let persistTimer = null;
 function persistSoon() {
+    const payload = useMapActivitiesSystem.getState().getPersistable();
+    // Sync imediato no aparelho — sem esperar rede / sem travar o frame
+    cacheMapActivities(payload);
+
     if (persistTimer) clearTimeout(persistTimer);
     persistTimer = setTimeout(() => {
         persistTimer = null;
         import('./useDatabaseSystem').then((dbSys) => {
-            const payload = useMapActivitiesSystem.getState().getPersistable();
-            dbSys.useDatabaseSystem.getState().saveMapActivities(payload);
+            const latest = useMapActivitiesSystem.getState().getPersistable();
+            cacheMapActivities(latest);
+            dbSys.useDatabaseSystem.getState().saveMapActivities(latest);
         });
-    }, 400);
+    }, 1200);
 }
 
 export const CHEST_REWARD = 30;
@@ -343,8 +353,25 @@ export const useMapActivitiesSystem = create((set, get) => ({
         const dayId = getTodayDateString();
         const hourId = getHourBucket();
         const layout = buildDayLayout(dayId);
+        const localMap = readCachedMapActivities();
 
-        if (!saved || saved.dayId !== dayId) {
+        // Preferir cache local do mesmo dia/hora se tiver mais progresso (ex.: poções)
+        let effective = saved;
+        if (localMap && localMap.dayId === dayId) {
+            if (!saved || saved.dayId !== dayId) {
+                effective = localMap;
+            } else {
+                const localPotions = (localMap.potionsCollected || []).length;
+                const serverPotions = (saved.potionsCollected || []).length;
+                const localAhead =
+                    localPotions > serverPotions ||
+                    (!!localMap.keyFound && !saved.keyFound) ||
+                    (!!localMap.chestOpened && !saved.chestOpened);
+                if (localAhead) effective = { ...saved, ...localMap };
+            }
+        }
+
+        if (!effective || effective.dayId !== dayId) {
             set({
                 ready: true,
                 dayId,
@@ -363,11 +390,11 @@ export const useMapActivitiesSystem = create((set, get) => ({
             return;
         }
 
-        const sameHour = saved.potionHourId === hourId;
+        const sameHour = effective.potionHourId === hourId;
         const potions = sameHour
             ? pickPotionSpots(hourId).map((p) => ({
                   ...p,
-                  collected: (saved.potionsCollected || []).includes(p.id),
+                  collected: (effective.potionsCollected || []).includes(p.id),
               }))
             : pickPotionSpots(hourId);
 
@@ -375,10 +402,10 @@ export const useMapActivitiesSystem = create((set, get) => ({
         set({
             ready: true,
             dayId,
-            chestIndex: saved.chestIndex ?? layout.chestIndex,
-            keyIndex: saved.keyIndex ?? layout.keyIndex,
-            keyFound: !!saved.keyFound,
-            chestOpened: !!saved.chestOpened,
+            chestIndex: effective.chestIndex ?? layout.chestIndex,
+            keyIndex: effective.keyIndex ?? layout.keyIndex,
+            keyFound: !!effective.keyFound,
+            chestOpened: !!effective.chestOpened,
             fountainTarget: randomFountainTarget(),
             fountainState: 'idle',
             fountainPromptDismissed: false,
@@ -527,40 +554,12 @@ export const useMapActivitiesSystem = create((set, get) => ({
             ),
         });
 
-        import('./useUISystem').then((ui) => {
-            ui.useUISystem.getState().addPotionToInventory({
-                name: 'Poção 2x (Mapa)',
-                multiplier: 2,
-                price: 0,
-                source: 'map',
-            });
-            import('./useDatabaseSystem').then((dbSys) => {
-                import('./usePlayerSystem').then((pMod) => {
-                    import('./useAuraSystem').then((aMod) => {
-                        const pos = pMod.usePlayerSystem.getState().position;
-                        const model = pMod.usePlayerSystem.getState().activeModel;
-                        const { comboCount, maxCombo, aura, weeklyAura } =
-                            aMod.useAuraSystem.getState();
-                        const diamonds = ui.useUISystem.getState().playerStats.diamonds;
-                        const inventory = ui.useUISystem.getState().inventory;
-                        dbSys.useDatabaseSystem.getState().saveGameState(
-                            pos,
-                            comboCount,
-                            model,
-                            aura,
-                            diamonds,
-                            maxCombo,
-                            undefined,
-                            undefined,
-                            weeklyAura,
-                            undefined,
-                            undefined,
-                            undefined,
-                            inventory
-                        );
-                    });
-                });
-            });
+        // Inventário + cache local — sem saveGameState completo (evita freeze no useFrame)
+        useUISystem.getState().addPotionToInventory({
+            name: 'Poção 2x (Mapa)',
+            multiplier: 2,
+            price: 0,
+            source: 'map',
         });
 
         get().showToast('Poção 2x adicionada ao inventário!', 3500);

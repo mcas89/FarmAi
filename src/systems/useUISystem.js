@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 
-export const useUISystem = create((set) => ({
+import { cacheInventory } from '../utils/localGameCache';
+
+export const useUISystem = create((set, get) => ({
     currentScreen: 'LOGIN', // LOGIN, SPLASH, MENU, PROFILE, CHARACTERS, RANKING, ACHIEVEMENTS, GAME
     screenParams: null,
     
@@ -45,12 +47,25 @@ export const useUISystem = create((set) => ({
     
     // Inventário de Poções
     inventory: [],
-    addPotionToInventory: (potion) => set((state) => ({
-        inventory: [...state.inventory, { ...potion, instanceId: Date.now() + Math.random() }]
-    })),
-    removePotionFromInventory: (instanceId) => set((state) => ({
-        inventory: state.inventory.filter(p => p.instanceId !== instanceId)
-    })),
+    addPotionToInventory: (potion) => {
+        set((state) => {
+            const inventory = [...state.inventory, { ...potion, instanceId: Date.now() + Math.random() }];
+            cacheInventory(inventory);
+            return { inventory };
+        });
+    },
+    removePotionFromInventory: (instanceId) => {
+        set((state) => {
+            const inventory = state.inventory.filter(p => p.instanceId !== instanceId);
+            cacheInventory(inventory);
+            return { inventory };
+        });
+    },
+    setInventory: (inventory) => {
+        const next = Array.isArray(inventory) ? inventory : [];
+        cacheInventory(next);
+        set({ inventory: next });
+    },
 
     // Atualiza status mockados (ou carregados do Firebase)
     updateStats: (stats) => {

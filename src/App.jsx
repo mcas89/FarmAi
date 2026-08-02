@@ -8,6 +8,7 @@ import { useUISystem } from './systems/useUISystem';
 import { useQuestSystem } from './systems/useQuestSystem';
 import { useAchievementSystem } from './systems/useAchievementSystem';
 import { useMapActivitiesSystem } from './systems/useMapActivitiesSystem';
+import { pickInventory } from './utils/localGameCache';
 import { ReloadPrompt } from './components/ui/ReloadPrompt';
 import './index.css';
 
@@ -72,9 +73,7 @@ function App() {
               maxCombo: data.maxCombo || 0,
             });
 
-            if (data.inventory) {
-              useUISystem.setState({ inventory: data.inventory || [] });
-            }
+            useUISystem.getState().setInventory(pickInventory(data.inventory || []));
 
             useMapActivitiesSystem.getState().hydrate(data.mapActivities || null);
 
@@ -149,6 +148,7 @@ function App() {
       const lastResetDate = useQuestSystem.getState().lastResetDate;
       const achievements = useAchievementSystem.getState().getSavableData();
       const unlockedCharacters = usePlayerSystem.getState().unlockedCharacters;
+      const inventory = useUISystem.getState().inventory;
 
       useDatabaseSystem.getState().saveGameState(
         position,
@@ -162,7 +162,8 @@ function App() {
         weeklyAura,
         undefined,
         achievements,
-        unlockedCharacters
+        unlockedCharacters,
+        inventory
       );
     };
 

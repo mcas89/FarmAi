@@ -13,7 +13,7 @@ const POTION_URL = '/itens/' + encodeURIComponent('poção2x.glb');
 
 useGLTF.preload('/itens/bau.glb');
 useGLTF.preload('/itens/chave.glb');
-useGLTF.preload(POTION_URL);
+// poção2x.glb: só carrega sob demanda no Médio/Alto (Baixo/Mín. usam mesh leve)
 
 function PromptLabel({ children, color = '#a855f7' }) {
     return (
@@ -210,6 +210,7 @@ function FountainComboChallenge() {
 function HourlyMapPotions() {
     const potionSpawns = useMapActivitiesSystem((s) => s.potionSpawns);
     const hourTick = useRef(0);
+    const collectingRef = useRef(false);
 
     useFrame((_, delta) => {
         hourTick.current += delta;
@@ -218,13 +219,21 @@ function HourlyMapPotions() {
             useMapActivitiesSystem.getState().ensureActive();
         }
 
+        if (collectingRef.current) return;
+
         const player = usePlayerSystem.getState().position;
         const spawns = useMapActivitiesSystem.getState().potionSpawns;
         for (const p of spawns) {
             if (p.collected) continue;
             const d = Math.hypot(player[0] - p.x, player[2] - p.z);
             if (d < 1.7) {
+                collectingRef.current = true;
                 useMapActivitiesSystem.getState().collectPotion(p.id);
+                // Libera no próximo tick — evita double-collect no mesmo frame
+                queueMicrotask(() => {
+                    collectingRef.current = false;
+                });
+                break;
             }
         }
     });
@@ -242,6 +251,11 @@ function HourlyMapPotions() {
 
 function PotionPickup({ x, z }) {
     const ref = useRef();
+    const lite = useGraphicsSystem((s) => {
+        const tier = s.effectiveTier;
+        return tier === 'potato' || tier === 'low' || s.settings.particles === 'none' || s.settings.particles === 'reduced';
+    });
+
     useFrame((state, delta) => {
         if (!ref.current) return;
         ref.current.rotation.y += delta * 1.2;
@@ -250,8 +264,28 @@ function PotionPickup({ x, z }) {
 
     return (
         <group ref={ref} position={[x, 0.85, z]}>
-            <ClonedGLB url={POTION_URL} scale={0.7} />
-            <pointLight color="#38bdf8" intensity={0.4} distance={2.5} />
+            {lite ? (
+                // Mesh leve — evita GLB + pointLight em aparelhos fracos
+                <group>
+                    <mesh position={[0, 0.15, 0]}>
+                        <cylinderGeometry args={[0.12, 0.14, 0.35, 8]} />
+                        <meshBasicMaterial color="#38bdf8" />
+                    </mesh>
+                    <mesh position={[0, 0.38, 0]}>
+                        <cylinderGeometry args={[0.06, 0.08, 0.12, 6]} />
+                        <meshBasicMaterial color="#0ea5e9" />
+                    </mesh>
+                    <mesh position={[0, 0.48, 0]}>
+                        <sphereGeometry args={[0.08, 6, 6]} />
+                        <meshBasicMaterial color="#7dd3fc" />
+                    </mesh>
+                </group>
+            ) : (
+                <>
+                    <ClonedGLB url={POTION_URL} scale={0.7} />
+                    <pointLight color="#38bdf8" intensity={0.35} distance={2.2} />
+                </>
+            )}
         </group>
     );
 }

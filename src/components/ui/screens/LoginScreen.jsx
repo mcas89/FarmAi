@@ -149,7 +149,9 @@ export function LoginScreen() {
                     mDb.useDatabaseSystem.getState().markDataLoaded();
 
                     updateStats({ nickname: realName, diamonds: realDiamonds });
-                    useUISystem.setState({ inventory: data.inventory || [] });
+                    const { pickInventory } = await import('../../../utils/localGameCache');
+                    const inv = pickInventory(data.inventory || []);
+                    useUISystem.getState().setInventory(inv);
 
                     import('../../../systems/useFriendsSystem').then((m) => {
                         m.ensureSocialProfileFields().catch(() => {});
