@@ -573,7 +573,7 @@ export function DuelScreen() {
     }, [maxVisibleEffects]);
 
     const addImpact = useCallback((impact) => {
-        const maxImpacts = graphicsTier === 'low' ? 3 : graphicsTier === 'medium' ? 5 : 8;
+        const maxImpacts = graphicsTier === 'potato' ? 2 : graphicsTier === 'low' ? 3 : graphicsTier === 'medium' ? 5 : 8;
         setImpacts((current) => [...current.slice(-(maxImpacts - 1)), { ...impact, id: createEffectId(impact.type || 'impact') }]);
         if (impact.strong) setShakeSignal(v => v + 1);
     }, [graphicsTier]);
@@ -783,7 +783,6 @@ export function DuelScreen() {
             }}
         >
             <Canvas
-                key={`duel-${graphicsTier}`}
                 camera={{ position: [0, 1.25, 7], fov: 62 }}
                 dpr={graphicsSettings.dpr}
                 gl={{
@@ -812,7 +811,7 @@ export function DuelScreen() {
                     <meshStandardMaterial color="#020617" roughness={0.82} metalness={0.18} />
                 </mesh>
                 <gridHelper
-                    args={[22, graphicsTier === 'low' ? 14 : 28, '#334155', '#172554']}
+                    args={[22, graphicsTier === 'potato' || graphicsTier === 'low' ? 14 : 28, '#334155', '#172554']}
                     position={[0, 0.005, 0]}
                 />
 

@@ -16,6 +16,7 @@ import { DuelModal } from './DuelModal';
 import { DuelInvitePopup } from './DuelInvitePopup';
 import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 import { useRankingSystem } from '../../../systems/useRankingSystem';
+import { WEEKLY_TOP_REWARDS } from '../../../systems/useDatabaseSystem';
 import { useMapActivitiesSystem } from '../../../systems/useMapActivitiesSystem';
 import { MapTopBanner } from '../MapTopBanner';
 
@@ -1214,7 +1215,14 @@ export function GameHUD() {
                                                     fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
                                                     textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
                                                 }}>#{player.rank}</span>
-                                                <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                    <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
+                                                    {WEEKLY_TOP_REWARDS[player.rank] > 0 && (
+                                                        <span style={{ color: '#34d399', fontWeight: '800', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                            +{WEEKLY_TOP_REWARDS[player.rank]} <AuracashIcon size={9} color="#34d399" />
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <span style={{ color: '#d8b4fe', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.score.toLocaleString()}</span>

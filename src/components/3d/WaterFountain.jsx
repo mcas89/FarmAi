@@ -4,10 +4,13 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import { AmbientMagic } from './AmbientMagic';
+import { useGraphicsSystem } from '../../systems/useGraphicsSystem';
 
 export function WaterFountain(props) {
     const { scene } = useGLTF('/itens/fonte_agua.glb');
     const waterMaterials = useRef([]);
+    const showParticles = useGraphicsSystem((s) => (s.settings.particles || 'normal') !== 'none');
+    const particleScale = useGraphicsSystem((s) => (s.settings.particles === 'reduced' ? 0.5 : 1));
 
     // Usa useMemo para clonar a cena de forma segura uma única vez, antes do primeiro render
     const clonedScene = React.useMemo(() => {
@@ -72,7 +75,17 @@ export function WaterFountain(props) {
     return (
         <group {...props}>
             <primitive object={clonedScene} />
-            <AmbientMagic count={15} color="#38bdf8" radius={2.5} height={3} speed={0.4} size={0.3} position={[0, 0, 0]} />
+            {showParticles && (
+                <AmbientMagic
+                    count={Math.round(15 * particleScale)}
+                    color="#38bdf8"
+                    radius={2.5}
+                    height={3}
+                    speed={0.4}
+                    size={0.3}
+                    position={[0, 0, 0]}
+                />
+            )}
         </group>
     );
 }

@@ -8,10 +8,16 @@ import { AuraEffects } from './AuraEffects';
 import { Html } from '@react-three/drei';
 import { Sparkles } from 'lucide-react';
 import { getPlayerLevel, getPlayerTitle } from '../../systems/progressionRules';
+import { useGraphicsSystem } from '../../systems/useGraphicsSystem';
 
 export function RemotePlayer({ playerData }) {
   const [vrm, setVrm] = useState(null);
   const remoteComboRef = useRef(0);
+  const remoteAura = useGraphicsSystem((s) => s.settings.remoteAura !== false);
+  const liteNametag = useGraphicsSystem((s) => {
+    const tier = s.effectiveTier;
+    return tier === 'potato' || tier === 'low';
+  });
   
   const targetPos = useRef(new THREE.Vector3(
     playerData.position?.[0] || 0, 
@@ -67,10 +73,11 @@ export function RemotePlayer({ playerData }) {
       
       const vrmData = gltf.userData.vrm;
       
+      const castShadows = useGraphicsSystem.getState().settings.avatarCastShadows !== false;
       gltf.scene.traverse((child) => {
           if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
+              child.castShadow = castShadows;
+              child.receiveShadow = castShadows;
           }
       });
       
@@ -166,25 +173,28 @@ export function RemotePlayer({ playerData }) {
 
   return vrm ? (
     <group ref={groupRef}>
-        <AuraEffects 
-            isRemote={true} 
-            remoteComboRef={remoteComboRef} 
-        />
+        {remoteAura && (
+            <AuraEffects 
+                isRemote={true} 
+                remoteComboRef={remoteComboRef} 
+            />
+        )}
         <primitive object={vrm.scene} />
         
-        {/* CSS para Animação Flutuante */}
-        <Html>
-            <style>{`
-                @keyframes floatUp {
-                    0% { transform: scale(0.5) translateY(0); opacity: 0; }
-                    20% { transform: scale(1.2) translateY(-10px); opacity: 1; }
-                    80% { transform: scale(1) translateY(-30px); opacity: 1; }
-                    100% { transform: scale(0.8) translateY(-40px); opacity: 0; }
-                }
-            `}</style>
-        </Html>
+        {!liteNametag && (
+            <Html>
+                <style>{`
+                    @keyframes floatUp {
+                        0% { transform: scale(0.5) translateY(0); opacity: 0; }
+                        20% { transform: scale(1.2) translateY(-10px); opacity: 1; }
+                        80% { transform: scale(1) translateY(-30px); opacity: 1; }
+                        100% { transform: scale(0.8) translateY(-40px); opacity: 0; }
+                    }
+                `}</style>
+            </Html>
+        )}
 
-        {showAuraVfx && (
+        {showAuraVfx && !liteNametag && (
             <Html position={[0, 1.5, 0]} center style={{ pointerEvents: 'none', zIndex: 10 }}>
                 <div style={{
                     color: auraGain >= 50 ? '#a855f7' : '#4ade80', 
@@ -197,25 +207,32 @@ export function RemotePlayer({ playerData }) {
             </Html>
         )}
 
-        <Html position={[0, 3.2, 0]} center style={{ pointerEvents: 'none' }}>
+        <Html position={[0, liteNametag ? 2.6 : 3.2, 0]} center style={{ pointerEvents: 'none' }}>
             <div style={{
-                background: 'rgba(10, 10, 15, 0.75)', backdropFilter: 'blur(8px)',
-                padding: '4px 10px', borderRadius: '12px',
+                background: liteNametag ? 'rgba(10, 10, 15, 0.85)' : 'rgba(10, 10, 15, 0.75)',
+                backdropFilter: liteNametag ? 'none' : 'blur(8px)',
+                padding: liteNametag ? '2px 8px' : '4px 10px',
+                borderRadius: '12px',
                 border: '1px solid rgba(168,85,247,0.4)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.5)', whiteSpace: 'nowrap'
+                boxShadow: liteNametag ? 'none' : '0 4px 15px rgba(0,0,0,0.5)',
+                whiteSpace: 'nowrap'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ background: '#a855f7', color: '#fff', fontSize: '0.6rem', fontWeight: '900', padding: '1px 4px', borderRadius: '4px' }}>LV {level}</span>
-                    <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '900', textShadow: '0 0 5px rgba(255,255,255,0.5)' }}>{playerName}</span>
+                    <span style={{ color: '#fff', fontSize: liteNametag ? '0.75rem' : '0.9rem', fontWeight: '900' }}>{playerName}</span>
                 </div>
-                <div style={{ color: '#d8b4fe', fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
-                    {title}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                    <Sparkles size={10} color="#a855f7" />
-                    <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{Math.floor(aura).toLocaleString()}</span>
-                </div>
+                {!liteNametag && (
+                    <>
+                        <div style={{ color: '#d8b4fe', fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
+                            {title}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                            <Sparkles size={10} color="#a855f7" />
+                            <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{Math.floor(aura).toLocaleString()}</span>
+                        </div>
+                    </>
+                )}
             </div>
         </Html>
     </group>

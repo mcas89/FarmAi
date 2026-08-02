@@ -2,18 +2,52 @@ import { create } from 'zustand';
 import { detectGraphicsTier } from '../utils/graphicsDetection';
 
 const STORAGE_KEY = 'farmaai_graphics_mode';
-const TIER_ORDER = ['high', 'medium', 'low'];
+/** Mais pesado → mais leve (downgrade automático sobe o índice). */
+const TIER_ORDER = ['high', 'medium', 'low', 'potato'];
 const FPS_DOWNGRADE_THRESHOLD = 28;
 
 export const QUALITY_PRESETS = {
+    potato: {
+        dpr: [0.65, 0.75],
+        antialias: false,
+        shadows: false,
+        shadowMapSize: 256,
+        propCastShadows: false,
+        avatarCastShadows: false,
+        powerPreference: 'low-power',
+        particles: 'none',
+        auraMode: 'off', // off | lite | full
+        remoteAura: false,
+        parkTrees: 8,
+        parkBushes: 10,
+        parkPoles: 4,
+        plazaSegments: 24,
+        duelEnvironment: false,
+        duelMaxEffects: 2,
+        duelParticlesNormal: 6,
+        duelParticlesCombo: 10,
+        duelProjectileLights: false,
+        duelImpactLights: false,
+        duelArenaPulse: false,
+        duelSidePointLights: false,
+        duelExtraDirectional: false,
+        label: 'Mínimo',
+    },
     low: {
         dpr: 1,
         antialias: false,
-        shadows: true,
+        shadows: false, // fill-rate alto em mobile — off no Baixo
         shadowMapSize: 512,
         propCastShadows: false,
+        avatarCastShadows: false,
         powerPreference: 'low-power',
-        // Arena de duelo — corta custo GPU sem remover o visual de ataque
+        particles: 'reduced',
+        auraMode: 'lite',
+        remoteAura: false,
+        parkTrees: 14,
+        parkBushes: 16,
+        parkPoles: 6,
+        plazaSegments: 32,
         duelEnvironment: false,
         duelMaxEffects: 4,
         duelParticlesNormal: 12,
@@ -23,6 +57,7 @@ export const QUALITY_PRESETS = {
         duelArenaPulse: false,
         duelSidePointLights: false,
         duelExtraDirectional: false,
+        label: 'Baixo',
     },
     medium: {
         dpr: [1, 1.5],
@@ -30,7 +65,15 @@ export const QUALITY_PRESETS = {
         shadows: true,
         shadowMapSize: 1024,
         propCastShadows: true,
+        avatarCastShadows: true,
         powerPreference: 'high-performance',
+        particles: 'normal',
+        auraMode: 'full',
+        remoteAura: true,
+        parkTrees: 25,
+        parkBushes: 30,
+        parkPoles: 10,
+        plazaSegments: 64,
         duelEnvironment: false,
         duelMaxEffects: 6,
         duelParticlesNormal: 22,
@@ -40,6 +83,7 @@ export const QUALITY_PRESETS = {
         duelArenaPulse: true,
         duelSidePointLights: true,
         duelExtraDirectional: true,
+        label: 'Médio',
     },
     high: {
         dpr: [1, 2],
@@ -47,7 +91,15 @@ export const QUALITY_PRESETS = {
         shadows: true,
         shadowMapSize: 2048,
         propCastShadows: true,
+        avatarCastShadows: true,
         powerPreference: 'high-performance',
+        particles: 'full',
+        auraMode: 'full',
+        remoteAura: true,
+        parkTrees: 25,
+        parkBushes: 30,
+        parkPoles: 10,
+        plazaSegments: 64,
         duelEnvironment: true,
         duelMaxEffects: 10,
         duelParticlesNormal: 34,
@@ -57,11 +109,20 @@ export const QUALITY_PRESETS = {
         duelArenaPulse: true,
         duelSidePointLights: true,
         duelExtraDirectional: true,
+        label: 'Alto',
     },
 };
 
-const VALID_MODES = ['auto', 'low', 'medium', 'high'];
-const VALID_TIERS = ['low', 'medium', 'high'];
+/** Rótulos curtos para o menu (cabem no modal). */
+export const TIER_SHORT_LABEL = {
+    potato: 'MÍN.',
+    low: 'BAIXO',
+    medium: 'MÉDIO',
+    high: 'ALTO',
+};
+
+const VALID_MODES = ['auto', 'potato', 'low', 'medium', 'high'];
+const VALID_TIERS = ['potato', 'low', 'medium', 'high'];
 
 function readStoredMode() {
     try {
@@ -94,7 +155,7 @@ if (typeof window !== 'undefined') {
 let toastTimer = null;
 
 export const useGraphicsSystem = create((set, get) => ({
-    mode: initial.mode, // auto | low | medium | high
+    mode: initial.mode, // auto | potato | low | medium | high
     effectiveTier: initial.effectiveTier,
     settings: initial.settings,
     /** Evita downgrade repetido na mesma sessão (ex.: após remount do Canvas) */
@@ -103,7 +164,7 @@ export const useGraphicsSystem = create((set, get) => ({
 
     clearToast: () => set({ toast: null }),
 
-    /** Aplica modo (auto/low/medium/high), persiste e recalcula o tier efetivo */
+    /** Aplica modo, persiste e recalcula o tier efetivo */
     setMode: (mode) => {
         const nextMode = VALID_MODES.includes(mode) ? mode : 'auto';
         try {
@@ -117,7 +178,6 @@ export const useGraphicsSystem = create((set, get) => ({
             clearTimeout(toastTimer);
             toastTimer = null;
         }
-        // Ao mudar o modo, libera nova medição de FPS (só relevante se voltar para auto)
         set({ ...next, fpsAdaptedThisSession: false, toast: null });
     },
 
@@ -138,7 +198,6 @@ export const useGraphicsSystem = create((set, get) => ({
 
         if (mode !== 'auto' || fpsAdaptedThisSession) return false;
 
-        // Marca a sessão mesmo se não houver downgrade (evita re-medir após remount)
         set({ fpsAdaptedThisSession: true });
 
         const fps = Number(avgFps) || 0;
@@ -156,7 +215,8 @@ export const useGraphicsSystem = create((set, get) => ({
 
         const nextTier = TIER_ORDER[idx + 1];
         const settings = QUALITY_PRESETS[nextTier];
-        const toast = 'Gráficos reduzidos para melhorar o desempenho';
+        const label = settings?.label || nextTier;
+        const toast = `Gráficos reduzidos para ${label}`;
 
         console.log(`[Graphics] Downgrade automático: ${effectiveTier} → ${nextTier}`);
 

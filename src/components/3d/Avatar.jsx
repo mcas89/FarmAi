@@ -13,6 +13,7 @@ import { useAuraSystem } from '../../systems/useAuraSystem';
 import { useCollisionSystem } from '../../systems/useCollisionSystem';
 import { useUISystem } from '../../systems/useUISystem';
 import { useMultiplayerSystem } from '../../systems/useMultiplayerSystem';
+import { useGraphicsSystem } from '../../systems/useGraphicsSystem';
 
 // Decaimento exponencial independente de framerate.
 // Substitui lerp(a, b, fator_fixo), que varia com o FPS e pode "estourar" (overshoot)
@@ -36,6 +37,9 @@ export function Avatar({ url }) {
   const { camera } = useThree();
   const { joystick, isMoving } = useMovementSystem();
   const { setPosition } = usePlayerSystem();
+  const avatarCastShadows = useGraphicsSystem((s) => s.settings.avatarCastShadows !== false);
+  const posSyncAccum = useRef(0);
+  const lastSyncedPos = useRef([NaN, NaN, NaN]);
 
 
   useEffect(() => {
@@ -90,11 +94,12 @@ export function Avatar({ url }) {
       
       const vrmData = gltf.userData.vrm;
       
-      // Habilitar sombras no personagem
+      // Habilitar sombras no personagem (respeita tier gráfico)
+      const castShadows = useGraphicsSystem.getState().settings.avatarCastShadows !== false;
       gltf.scene.traverse((child) => {
           if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
+              child.castShadow = castShadows;
+              child.receiveShadow = castShadows;
           }
       });
       
@@ -349,8 +354,16 @@ export function Avatar({ url }) {
         vrm.scene.position.y = 0;
     }
 
-    // Atualiza posição global para câmera e auras
-    setPosition([vrm.scene.position.x, vrm.scene.position.y, vrm.scene.position.z]);
+    // Atualiza posição global ~15 Hz (câmera/aura/UI) — evita re-render React todo frame
+    posSyncAccum.current += delta;
+    if (posSyncAccum.current >= 0.066) {
+        posSyncAccum.current = 0;
+        const px = vrm.scene.position.x;
+        const py = vrm.scene.position.y;
+        const pz = vrm.scene.position.z;
+        lastSyncedPos.current = [px, py, pz];
+        setPosition([px, py, pz]);
+    }
     
     if (useUISystem.getState().isOnlineMode) {
         const { isLeftFarming, isRightFarming } = useFarmSystem.getState();
@@ -361,6 +374,17 @@ export function Avatar({ url }) {
         useMultiplayerSystem.getState().sendAnimation(newState, isLeftFarming, isRightFarming);
     }
   });
+
+  // Aplica mudança de sombra se o tier mudar após o load
+  useEffect(() => {
+    if (!vrm) return;
+    vrm.scene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = avatarCastShadows;
+        child.receiveShadow = avatarCastShadows;
+      }
+    });
+  }, [vrm, avatarCastShadows]);
 
   return vrm ? <primitive object={vrm.scene} /> : null;
 }

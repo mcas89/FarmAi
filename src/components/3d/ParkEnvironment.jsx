@@ -120,6 +120,7 @@ function SmokeEffect({ position }) {
 function ShopMachine({ position, rotation, scale = 1 }) {
     const { scene } = useGLTF('/itens/maquinaderefri.glb');
     const propCastShadows = useGraphicsSystem((state) => state.settings.propCastShadows);
+    const showSmoke = useGraphicsSystem((state) => (state.settings.particles || 'normal') !== 'none');
     const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
     const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
     const groupRef = useRef();
@@ -167,7 +168,7 @@ function ShopMachine({ position, rotation, scale = 1 }) {
             <primitive object={copiedScene} />
             
             {/* Fumaça indicativa na máquina */}
-            <SmokeEffect position={[0, 1.5, 0]} />
+            {showSmoke && <SmokeEffect position={[0, 1.5, 0]} />}
         </group>
     );
 }
@@ -225,6 +226,7 @@ function Playground() {
 function ScatteredTrees() {
     const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
     const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
+    const treeCount = useGraphicsSystem((state) => state.settings.parkTrees ?? 25);
 
     const trees = useMemo(() => {
         const generated = [];
@@ -256,8 +258,8 @@ function ScatteredTrees() {
                 scale: 0.8 + random() * 0.6 
             });
         }
-        return generated;
-    }, []);
+        return generated.slice(0, Math.max(0, treeCount));
+    }, [treeCount]);
 
     // Registra as árvores no Radar
     useEffect(() => {
@@ -290,12 +292,14 @@ function ScatteredTrees() {
 }
 
 function ScatteredBushes() {
+    const bushCount = useGraphicsSystem((state) => state.settings.parkBushes ?? 30);
+
     const bushes = useMemo(() => {
         const generated = [];
         const types = ['arbusto1', 'arbusto2', 'arbusto3'];
         const random = mulberry32(54321); // Seed fixa diferente das árvores
         
-        for (let i = 0; i < 30; i++) { // aumentamos a quantidade de arbustos
+        for (let i = 0; i < 30; i++) {
             let x, z;
             let isValid = false;
             
@@ -319,8 +323,8 @@ function ScatteredBushes() {
                 scale: 0.6 + random() * 0.5 
             });
         }
-        return generated;
-    }, []);
+        return generated.slice(0, Math.max(0, bushCount));
+    }, [bushCount]);
     
     return (
         <group>
@@ -341,6 +345,7 @@ function ScatteredBushes() {
 function ParkFurniture() {
     const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
     const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
+    const poleCount = useGraphicsSystem((state) => state.settings.parkPoles ?? 10);
 
     const furniture = useMemo(() => {
         const items = [];
@@ -383,11 +388,11 @@ function ParkFurniture() {
             colRadius: 1.5 
         });
 
-        // 3. Postes de Luz (10 postes ao redor da praça / vias)
-        const totalPoles = 10;
+        // 3. Postes de Luz ao redor da praça / vias
+        const totalPoles = Math.max(0, poleCount);
         for (let i = 0; i < totalPoles; i++) {
-            const angle = (Math.PI * 2 / totalPoles) * i;
-            const r = 24; // Um pouco mais afastados que a praça central
+            const angle = (Math.PI * 2 / Math.max(totalPoles, 1)) * i;
+            const r = 24;
             const x = Math.sin(angle) * r;
             const z = Math.cos(angle) * r;
             
@@ -395,14 +400,14 @@ function ParkFurniture() {
                 id: `pole_${i}`,
                 type: 'poste_luz',
                 position: [x, 0, z],
-                rotation: [0, angle + Math.PI, 0], // Luz virada pro centro
-                scale: 0.45, // Reduzido (estavam gigantes)
-                colRadius: 0.5 // Poste é fino
+                rotation: [0, angle + Math.PI, 0],
+                scale: 0.45,
+                colRadius: 0.5
             });
         }
 
         return items;
-    }, []);
+    }, [poleCount]);
 
     // Registra colisões
     useEffect(() => {
@@ -479,6 +484,7 @@ function CitySkyline() {
     const setWorldRadius = useCollisionSystem((state) => state.setWorldRadius);
     const fillMeshRef = useRef();
     const backMeshRef = useRef();
+    const effectiveTier = useGraphicsSystem((state) => state.effectiveTier);
 
     const PLAY_RADIUS = 48; // grama ~±50 — não deixa entrar nos prédios
 
@@ -487,11 +493,14 @@ function CitySkyline() {
         const pattern = ['predio1', 'predio3', 'predio1', 'predio4', 'predio2', 'predio3'];
         const jsColors = ['#808080', '#333333', '#b3b3b3', '#111111'];
 
-        // Poucos GLBs de detalhe — o anel contínuo vem das caixas (InstancedMesh)
+        const density =
+            effectiveTier === 'potato' ? { glb: 0, fill: 24, back: 16 }
+            : effectiveTier === 'low' ? { glb: 6, fill: 32, back: 24 }
+            : { glb: 12, fill: 48, back: 36 };
+
         const glbBuildings = [];
-        const totalGLB = 12;
-        for (let i = 0; i < totalGLB; i++) {
-            const angle = ((Math.PI * 2) / totalGLB) * i + 0.12;
+        for (let i = 0; i < density.glb; i++) {
+            const angle = ((Math.PI * 2) / Math.max(density.glb, 1)) * i + 0.12;
             const r = 84;
             glbBuildings.push({
                 id: `glb_building_${i}`,
@@ -503,10 +512,9 @@ function CitySkyline() {
             });
         }
 
-        // Anel frontal contínuo (fecha buracos) — altura similar à anterior (~6–13)
         const fill = [];
-        for (let i = 0; i < 48; i++) {
-            const angle = ((Math.PI * 2) / 48) * i;
+        for (let i = 0; i < density.fill; i++) {
+            const angle = ((Math.PI * 2) / density.fill) * i;
             const r = 82 + random() * 3;
             const w = 11 + random() * 5;
             const d = 9 + random() * 4;
@@ -521,10 +529,9 @@ function CitySkyline() {
             });
         }
 
-        // Fileira de fundo (silhueta)
         const back = [];
-        for (let i = 0; i < 36; i++) {
-            const angle = ((Math.PI * 2) / 36) * i + 0.08;
+        for (let i = 0; i < density.back; i++) {
+            const angle = ((Math.PI * 2) / density.back) * i + 0.08;
             const r = 92 + random() * 5;
             const w = 14 + random() * 8;
             const d = 10 + random() * 6;
@@ -540,7 +547,7 @@ function CitySkyline() {
         }
 
         return { glbBuildings, fill, back };
-    }, []);
+    }, [effectiveTier]);
 
     useEffect(() => {
         setWorldRadius(PLAY_RADIUS);
@@ -672,7 +679,11 @@ export function ParkEnvironment() {
     const settings = useGraphicsSystem((state) => state.settings);
     const shadowMapSize = settings.shadowMapSize;
     const lightCastShadow = settings.shadows;
-
+    const particles = settings.particles || 'normal';
+    const showAmbientMagic = particles !== 'none';
+    const ambientScale = particles === 'reduced' ? 0.45 : 1;
+    const plazaSegments = settings.plazaSegments ?? 64;
+    
     // Registra a fonte da praça central no Radar
     useEffect(() => {
         registerObstacle('main_fountain', 0, 0, 1.0); // Colisão menor ainda
@@ -683,7 +694,7 @@ export function ParkEnvironment() {
     const cityBlockGeo = useMemo(() => new THREE.PlaneGeometry(150, 150), []);
     const avenueGeo = useMemo(() => new THREE.PlaneGeometry(110, 110), []);
     const parkGrassGeo = useMemo(() => new THREE.PlaneGeometry(100, 100), []);
-    const plazaGeo = useMemo(() => new THREE.CircleGeometry(15, 64), []);
+    const plazaGeo = useMemo(() => new THREE.CircleGeometry(15, plazaSegments), [plazaSegments]);
     const streetGeo = useMemo(() => new THREE.PlaneGeometry(10, 35), []);
 
     // Texturas Dinâmicas (Estilo Anime)
@@ -811,12 +822,14 @@ export function ParkEnvironment() {
                 <MapActivities />
                 
                 {/* 8. Partículas mágicas (sem vapor/névoa na fonte) */}
-                <AmbientMagic count={50} color="#38bdf8" radius={3.0} height={4.0} speed={0.5} size={0.5} position={[0, 0, 0]} /> 
-
-                {/* Partículas pelo mapa */}
-                <AmbientMagic count={20} color="#a855f7" radius={6} height={6} speed={0.25} size={2.0} position={[18, 0, 18]} /> {/* Gramado NE */}
-                <AmbientMagic count={20} color="#4ade80" radius={6} height={6} speed={0.25} size={2.0} position={[-20, 0, 15]} /> {/* Gramado NO */}
-                <AmbientMagic count={20} color="#fbbf24" radius={6} height={6} speed={0.25} size={2.0} position={[15, 0, -20]} /> {/* Gramado SE */}
+                {showAmbientMagic && (
+                    <>
+                        <AmbientMagic count={Math.round(50 * ambientScale)} color="#38bdf8" radius={3.0} height={4.0} speed={0.5} size={0.5} position={[0, 0, 0]} />
+                        <AmbientMagic count={Math.round(20 * ambientScale)} color="#a855f7" radius={6} height={6} speed={0.25} size={2.0} position={[18, 0, 18]} />
+                        <AmbientMagic count={Math.round(20 * ambientScale)} color="#4ade80" radius={6} height={6} speed={0.25} size={2.0} position={[-20, 0, 15]} />
+                        <AmbientMagic count={Math.round(20 * ambientScale)} color="#fbbf24" radius={6} height={6} speed={0.25} size={2.0} position={[15, 0, -20]} />
+                    </>
+                )}
 
                 {/* 9. Paredão de Prédios e Borda (Skyline) */}
                 <CitySkyline />

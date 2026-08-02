@@ -7,7 +7,8 @@ import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { useAudioSystem } from '../../../systems/useAudioSystem';
 import { usePWASystem } from '../../../systems/usePWASystem';
-import { useGraphicsSystem } from '../../../systems/useGraphicsSystem';
+import { useGraphicsSystem, TIER_SHORT_LABEL } from '../../../systems/useGraphicsSystem';
+import { WEEKLY_TOP_REWARDS } from '../../../systems/useDatabaseSystem';
 import { 
     Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles, Volume2, VolumeX, Download, Flame, Monitor
 } from 'lucide-react';
@@ -26,7 +27,6 @@ export function MainMenu() {
     
     // Hooks devem sempre ser chamados no topo do componente
     const isMuted = useAudioSystem(state => state.isMuted);
-    const isInstallable = usePWASystem(state => state.isInstallable);
     const { globalRanking, comboRanking, weeklyRanking, isLoading: isRankingLoading } = useRankingSystem();
 
     const [dailyQuests, setDailyQuests] = useState([]);
@@ -38,10 +38,20 @@ export function MainMenu() {
     const [showLobbyModal, setShowLobbyModal] = useState(false);
     const [showGraphicsModal, setShowGraphicsModal] = useState(false);
     const [rankingType, setRankingType] = useState('global');
+    /** Fecha o FAB só nesta visita ao menu; ao voltar ao MENU, aparece de novo. */
+    const [installFabClosed, setInstallFabClosed] = useState(false);
+    const [showInstallTip, setShowInstallTip] = useState(false);
 
     const graphicsMode = useGraphicsSystem(state => state.mode);
     const graphicsTier = useGraphicsSystem(state => state.effectiveTier);
     const setGraphicsMode = useGraphicsSystem(state => state.setMode);
+    const isInstallable = usePWASystem(state => state.isInstallable);
+    const isInstalled = usePWASystem(state => state.isInstalled);
+    const showInstallFab = !isInstalled && !installFabClosed;
+
+    useEffect(() => {
+        usePWASystem.getState().refreshInstallState();
+    }, []);
     
     const { joinRoom, getGlobalOnlineCount } = useMultiplayerSystem();
     const [onlinePlayers, setOnlinePlayers] = useState(0);
@@ -210,6 +220,7 @@ export function MainMenu() {
             />
             <style>{`
                 .home-scroll { flex: 1; overflow-y: auto; padding-bottom: 75px; }
+                .home-scroll.has-install-fab { padding-bottom: 140px; }
                 .home-scroll::-webkit-scrollbar { display: none; }
                 
                 @keyframes floatAnim {
@@ -227,6 +238,15 @@ export function MainMenu() {
                 
                 .icon-circle.has-notif {
                     animation: notifPulse 1.5s infinite ease-in-out !important;
+                }
+                
+                @keyframes installFabIn {
+                    from { opacity: 0; transform: translateY(12px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes installFabFloat {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-4px); }
                 }
                 
                 .drawer {
@@ -411,8 +431,8 @@ export function MainMenu() {
                     <Monitor size={18} />
                     <span>
                         GRÁFICOS: {graphicsMode === 'auto'
-                            ? `AUTO (${graphicsTier === 'low' ? 'BAIXO' : graphicsTier === 'high' ? 'ALTO' : 'MÉDIO'})`
-                            : graphicsMode === 'low' ? 'BAIXO' : graphicsMode === 'high' ? 'ALTO' : 'MÉDIO'}
+                            ? `AUTO (${TIER_SHORT_LABEL[graphicsTier] || 'MÉDIO'})`
+                            : (TIER_SHORT_LABEL[graphicsMode] || 'MÉDIO')}
                     </span>
                 </div>
                 <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowAboutModal(true); }}>
@@ -433,7 +453,7 @@ export function MainMenu() {
             </div>
 
             {/* CONTEÚDO ROLÁVEL */}
-            <div className="home-scroll">
+            <div className={`home-scroll${showInstallFab ? ' has-install-fab' : ''}`}>
                 
                 {/* 1. CABEÇALHO */}
                 <div className="top-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingRight: '15px' }}>
@@ -681,6 +701,140 @@ export function MainMenu() {
                 </div>
             </div>
 
+            {/* FAB instalar PWA — fecha nesta visita; reaparece ao entrar no menu de novo */}
+            {showInstallFab && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: '12px',
+                        right: '12px',
+                        bottom: '62px',
+                        zIndex: 160,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        pointerEvents: 'none',
+                        animation: 'installFabIn 0.35s ease-out',
+                    }}
+                >
+                    <div
+                        style={{
+                            pointerEvents: 'auto',
+                            maxWidth: '420px',
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 12px 10px 12px',
+                            borderRadius: '16px',
+                            background: 'linear-gradient(135deg, rgba(22, 163, 74, 0.92), rgba(21, 128, 61, 0.95))',
+                            border: '1px solid rgba(134, 239, 172, 0.45)',
+                            boxShadow: '0 10px 28px rgba(0,0,0,0.45)',
+                            animation: 'installFabFloat 3s ease-in-out infinite',
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (isInstallable) {
+                                    usePWASystem.getState().installPWA();
+                                } else {
+                                    setShowInstallTip(true);
+                                }
+                            }}
+                            style={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                padding: 0,
+                            }}
+                        >
+                            <div style={{
+                                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                                background: 'rgba(255,255,255,0.18)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Download size={18} color="#fff" />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: 900, fontSize: '0.82rem', letterSpacing: '0.4px' }}>
+                                    Instale o FarmaAi
+                                </div>
+                                <div style={{ fontSize: '0.65rem', opacity: 0.9, marginTop: 2, lineHeight: 1.25 }}>
+                                    App instalado recebe atualizações e abre mais rápido
+                                </div>
+                            </div>
+                        </button>
+                        <button
+                            type="button"
+                            aria-label="Fechar"
+                            onClick={() => setInstallFabClosed(true)}
+                            style={{
+                                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                                background: 'rgba(0,0,0,0.25)', border: 'none',
+                                color: '#fff', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {showInstallTip && (
+                <div
+                    style={{
+                        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        zIndex: 400, pointerEvents: 'auto',
+                    }}
+                    onClick={() => setShowInstallTip(false)}
+                >
+                    <div
+                        style={{
+                            background: 'rgba(20, 18, 28, 0.96)',
+                            border: '1px solid rgba(74, 222, 128, 0.35)',
+                            borderRadius: 20, padding: 24, width: '90%', maxWidth: 360,
+                            boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                            <Download size={22} color="#4ade80" />
+                            <h2 style={{ margin: 0, color: '#fff', fontSize: '1.05rem', letterSpacing: '1px' }}>
+                                COMO INSTALAR
+                            </h2>
+                        </div>
+                        <p style={{ color: '#aaa', fontSize: '0.8rem', lineHeight: 1.5, margin: '0 0 14px' }}>
+                            No iPhone/iPad: toque em <strong style={{ color: '#fff' }}>Compartilhar</strong> e depois em{' '}
+                            <strong style={{ color: '#fff' }}>Adicionar à Tela de Início</strong>.
+                        </p>
+                        <p style={{ color: '#aaa', fontSize: '0.8rem', lineHeight: 1.5, margin: '0 0 18px' }}>
+                            No Android: use o menu do navegador → <strong style={{ color: '#fff' }}>Instalar app</strong> ou{' '}
+                            <strong style={{ color: '#fff' }}>Adicionar à tela inicial</strong>.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setShowInstallTip(false)}
+                            style={{
+                                width: '100%', border: 'none', borderRadius: 12, padding: 12,
+                                background: 'linear-gradient(90deg, #22c55e, #15803d)',
+                                color: '#fff', fontWeight: 900, cursor: 'pointer', letterSpacing: '1px',
+                            }}
+                        >
+                            ENTENDI
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* MODAL DE RANKING ORIGINAL RESTAURADO */}
             {showRankingModal && (
                 <div style={{
@@ -738,8 +892,13 @@ export function MainMenu() {
                                                             fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
                                                             textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
                                                         }}>#{player.rank}</span>
-                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                                             <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
+                                                            {WEEKLY_TOP_REWARDS[player.rank] > 0 && (
+                                                                <span style={{ color: '#34d399', fontWeight: '800', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                                    +{WEEKLY_TOP_REWARDS[player.rank]} <AuracashIcon size={9} color="#34d399" />
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1031,16 +1190,16 @@ export function MainMenu() {
                             <Monitor size={22} color="#a855f7" />
                             <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', letterSpacing: '2px' }}>GRÁFICOS</h2>
                         </div>
-                        <p style={{ color: '#888', fontSize: '0.75rem', margin: '0 0 18px 0', lineHeight: 1.5 }}>
-                            Ajuste o desempenho do FarmaAi. Em celulares fracos, use Baixo ou Automático.
-                            No Automático, o jogo pode reduzir os gráficos se o FPS ficar baixo.
+                        <p style={{ color: '#888', fontSize: '0.72rem', margin: '0 0 14px 0', lineHeight: 1.4 }}>
+                            Celulares fracos: use Mín. ou Auto. O Auto pode baixar sozinho se o FPS cair.
                         </p>
 
                         {[
-                            { id: 'auto', label: 'AUTOMÁTICO', desc: `Detecta o aparelho e ajusta pelo FPS (atual: ${graphicsTier === 'low' ? 'Baixo' : graphicsTier === 'high' ? 'Alto' : 'Médio'})` },
-                            { id: 'low', label: 'BAIXO', desc: 'Melhor FPS · DPR 1 · sombras leves' },
-                            { id: 'medium', label: 'MÉDIO', desc: 'Equilíbrio visual e desempenho' },
-                            { id: 'high', label: 'ALTO', desc: 'Máxima qualidade · mais exigente' },
+                            { id: 'auto', label: 'AUTO', desc: `Ajusta pelo aparelho/FPS · agora: ${TIER_SHORT_LABEL[graphicsTier] || 'MÉDIO'}` },
+                            { id: 'potato', label: 'MÍN.', desc: 'Sem sombras/aura · parque leve · máx. FPS' },
+                            { id: 'low', label: 'BAIXO', desc: 'Sem sombras · aura leve · bom FPS' },
+                            { id: 'medium', label: 'MÉDIO', desc: 'Equilíbrio visual / desempenho' },
+                            { id: 'high', label: 'ALTO', desc: 'Máxima qualidade' },
                         ].map((opt) => {
                             const selected = graphicsMode === opt.id;
                             return (
@@ -1048,15 +1207,15 @@ export function MainMenu() {
                                     key={opt.id}
                                     onClick={() => setGraphicsMode(opt.id)}
                                     style={{
-                                        width: '100%', textAlign: 'left', marginBottom: '10px',
-                                        padding: '12px 14px', borderRadius: '12px', cursor: 'pointer',
+                                        width: '100%', textAlign: 'left', marginBottom: '8px',
+                                        padding: '10px 12px', borderRadius: '12px', cursor: 'pointer',
                                         background: selected ? 'rgba(168,85,247,0.25)' : 'rgba(255,255,255,0.04)',
                                         border: selected ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.08)',
                                         color: '#fff',
                                     }}
                                 >
-                                    <div style={{ fontWeight: '900', fontSize: '0.85rem', letterSpacing: '1px' }}>{opt.label}</div>
-                                    <div style={{ color: '#aaa', fontSize: '0.7rem', marginTop: '4px' }}>{opt.desc}</div>
+                                    <div style={{ fontWeight: '900', fontSize: '0.8rem', letterSpacing: '1px' }}>{opt.label}</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.65rem', marginTop: '3px' }}>{opt.desc}</div>
                                 </button>
                             );
                         })}

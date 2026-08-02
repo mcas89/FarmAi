@@ -1,23 +1,38 @@
 import { create } from 'zustand';
 
+function detectStandalone() {
+    if (typeof window === 'undefined') return false;
+    try {
+        if (window.matchMedia('(display-mode: standalone)').matches) return true;
+        if (window.matchMedia('(display-mode: fullscreen)').matches) return true;
+        if (window.navigator.standalone === true) return true; // iOS Safari
+    } catch {
+        // ignore
+    }
+    return false;
+}
+
 export const usePWASystem = create((set, get) => ({
     deferredPrompt: null,
     isInstallable: false,
+    isInstalled: detectStandalone(),
 
     setPrompt: (prompt) => set({ deferredPrompt: prompt, isInstallable: true }),
-    
+
+    refreshInstallState: () => set({ isInstalled: detectStandalone() }),
+
     installPWA: async () => {
         const { deferredPrompt } = get();
-        if (!deferredPrompt) return;
-        
-        // Mostra o prompt nativo do navegador
+        if (!deferredPrompt) return false;
+
         deferredPrompt.prompt();
-        
-        // Aguarda a resposta do usuário
         const { outcome } = await deferredPrompt.userChoice;
         console.log(`PWA Installation: ${outcome}`);
-        
-        // Limpa o prompt pois só pode ser usado uma vez
+
         set({ deferredPrompt: null, isInstallable: false });
-    }
+        if (outcome === 'accepted') {
+            set({ isInstalled: true });
+        }
+        return outcome === 'accepted';
+    },
 }));

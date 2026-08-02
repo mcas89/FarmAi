@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
 import { useRankingSystem } from '../../../systems/useRankingSystem';
 import { useAuraSystem } from '../../../systems/useAuraSystem';
+import { WEEKLY_TOP_REWARDS } from '../../../systems/useDatabaseSystem';
+import { AuracashIcon } from '../AuracashIcon';
 import { Trophy } from 'lucide-react';
 
 export function RankingScreen() {
@@ -17,7 +19,7 @@ export function RankingScreen() {
     const myWeekly = useRankingSystem.getState().getMyPosition(weeklyRanking);
     const myGlobal = useRankingSystem.getState().getMyPosition(globalRanking);
 
-    const renderList = (list, color) => (
+    const renderList = (list, color, showPrizes = false) => (
         list.map(player => (
             <div key={`${color}-${player.rank}`} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -30,7 +32,14 @@ export function RankingScreen() {
                         color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
                         fontWeight: 900, width: 36, textAlign: 'center'
                     }}>#{player.rank}</span>
-                    <span style={{ color: '#eee', fontWeight: 'bold' }}>{player.name}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ color: '#eee', fontWeight: 'bold' }}>{player.name}</span>
+                        {showPrizes && WEEKLY_TOP_REWARDS[player.rank] > 0 && (
+                            <span style={{ color: '#34d399', fontWeight: 800, fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                +{WEEKLY_TOP_REWARDS[player.rank]} <AuracashIcon size={9} color="#34d399" />
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <span style={{ color, fontWeight: 'bold', fontSize: '0.9rem' }}>
                     {player.score.toLocaleString()}
@@ -66,7 +75,7 @@ export function RankingScreen() {
                     <h3 style={{ color: '#d8b4fe', marginTop: 0 }}>Semanal — você #{myWeekly} · {Math.floor(weeklyAura).toLocaleString()} aura</h3>
                     {isLoading && <p style={{ color: '#888' }}>Carregando...</p>}
                     {!isLoading && weeklyRanking.length === 0 && <p style={{ color: '#888' }}>Ninguém pontuou ainda.</p>}
-                    {!isLoading && renderList(weeklyRanking, '#d8b4fe')}
+                    {!isLoading && renderList(weeklyRanking, '#d8b4fe', true)}
                 </section>
                 <section>
                     <h3 style={{ color: '#fcd34d', marginTop: 0 }}>Global — você #{myGlobal} · {Math.floor(aura).toLocaleString()} aura</h3>

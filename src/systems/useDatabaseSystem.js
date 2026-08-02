@@ -3,6 +3,9 @@ import { db, auth } from '../config/firebase';
 import { doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs, increment } from 'firebase/firestore';
 import { getCurrentWeekString } from '../utils/dateUtils';
 
+/** Prêmios do Top 3 do ranking semanal (AuraCash). */
+export const WEEKLY_TOP_REWARDS = { 1: 300, 2: 100, 3: 50 };
+
 /** Garante snapshot imutável do top 3 da semana (first-writer-wins). */
 export async function ensureWeeklySnapshot(weekId) {
   if (!db || !weekId) return null;
@@ -11,7 +14,7 @@ export async function ensureWeeklySnapshot(weekId) {
   const existing = await getDoc(resultRef);
   if (existing.exists()) return existing.data();
 
-  const rewards = { 1: 1000, 2: 500, 3: 200 };
+  const rewards = WEEKLY_TOP_REWARDS;
   const usersRef = collection(db, 'users');
 
   const snapAll = await getDocs(query(usersRef, limit(200)));

@@ -12,7 +12,6 @@ import { useUISystem } from '../../systems/useUISystem';
 import { useMultiplayerSystem } from '../../systems/useMultiplayerSystem';
 import { useGraphicsSystem } from '../../systems/useGraphicsSystem';
 import { RemotePlayer } from './RemotePlayer';
-import { auth } from '../../config/firebase';
 import * as THREE from 'three';
 
 // Decaimento exponencial independente de framerate.
@@ -271,13 +270,10 @@ export function Scene() {
     const activeModel = usePlayerSystem(state => state.activeModel);
     const isOnlineMode = useUISystem(state => state.isOnlineMode);
     const remotePlayers = useMultiplayerSystem(state => state.remotePlayers);
-    const effectiveTier = useGraphicsSystem(state => state.effectiveTier);
     const settings = useGraphicsSystem(state => state.settings);
-    const myUid = auth?.currentUser?.uid;
 
     return (
         <Canvas
-            key={`scene-${effectiveTier}`}
             shadows={settings.shadows ? { type: THREE.PCFShadowMap } : false}
             dpr={settings.dpr}
             gl={{
@@ -287,19 +283,17 @@ export function Scene() {
             }}
             camera={{ position: [0, 5.5, -14], fov: 45, near: 0.1, far: 500 }}
         >
-            <ambientLight intensity={0.2} /> {/* Luz de preenchimento mínima extra */}
+            <ambientLight intensity={0.2} />
             <ParkEnvironment />
             
             <Avatar key={activeModel} url={`/models/${activeModel}`} />
             
-            {/* Renderiza os outros jogadores se estiver online */}
             {isOnlineMode && Object.entries(remotePlayers).map(([sessionId, data]) => {
-                if (sessionId === useMultiplayerSystem.getState().currentRoomId) return null; // Não renderizar a si mesmo
+                if (sessionId === useMultiplayerSystem.getState().currentRoomId) return null;
                 return <RemotePlayer key={sessionId} playerData={data} />;
             })}
             
             <AuraEffects />
-            {/* <MemoizedPostProcessing /> */}
             
             <CameraController />
             <FpsAdapter />

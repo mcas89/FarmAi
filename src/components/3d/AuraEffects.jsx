@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useAuraSystem } from '../../systems/useAuraSystem';
 import { usePlayerSystem } from '../../systems/usePlayerSystem';
+import { useGraphicsSystem } from '../../systems/useGraphicsSystem';
 import { Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -322,7 +323,7 @@ function KiAura({ comboCount, crashRef }) {
 // que a partir da Transcendência (700+) vira uma coluna ligando o chão
 // ao personagem já flutuando.
 // =========================================
-function GroundAura({ comboCount, floatHeight, crashRef }) {
+function GroundAura({ comboCount, floatHeight, crashRef, lite = false }) {
     const meshRef = useRef();
     const timeRef = useRef(0);
     const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -381,8 +382,10 @@ function GroundAura({ comboCount, floatHeight, crashRef }) {
 
         const k = 1 - Math.exp(-TRANSITION_RATE * delta);
         const s = smooth.current;
-        s.dustCount = THREE.MathUtils.lerp(s.dustCount, tier.dustCount, k);
-        s.intensity = THREE.MathUtils.lerp(s.intensity, tier.dustIntensity, k);
+        const targetDust = lite ? Math.min(tier.dustCount, 12) : tier.dustCount;
+        const targetIntensity = lite ? Math.min(tier.dustIntensity, 0.7) : tier.dustIntensity;
+        s.dustCount = THREE.MathUtils.lerp(s.dustCount, targetDust, k);
+        s.intensity = THREE.MathUtils.lerp(s.intensity, targetIntensity, k);
 
         const targetHex = tier.dynamic ? `hsl(${Math.floor(t * 150) % 360}, 100%, 70%)` : tier.colorHex;
         tempColor.set(targetHex);
@@ -390,7 +393,7 @@ function GroundAura({ comboCount, floatHeight, crashRef }) {
 
         const activeDust = Math.round(s.dustCount);
         const intensity = s.intensity;
-        const transcending = tier.transcend && !isCrashing;
+        const transcending = !lite && tier.transcend && !isCrashing;
 
         dustTint.copy(s.color).lerp(new THREE.Color('#d8c9a3'), 0.5);
 
@@ -548,32 +551,63 @@ export function AuraEffects({
     remoteMessage = '', 
     remotePosition = [0, 0, 0] 
 } = {}) {
-    const localAura = useAuraSystem();
+    const auraMode = useGraphicsSystem((s) => s.settings.auraMode || 'full');
+    const remoteAura = useGraphicsSystem((s) => s.settings.remoteAura !== false);
+    const comboCount = useAuraSystem((s) => s.comboCount);
+    const hitId = useAuraSystem((s) => s.hitId);
+    const lastPoints = useAuraSystem((s) => s.lastPoints);
+    const message = useAuraSystem((s) => s.message);
     const localPosition = usePlayerSystem((state) => state.position);
 
-    // Usa Ref se for remoto (para evitar re-renders no react tree) ou Zustand se for local
-    const comboCount = isRemote && remoteComboRef ? remoteComboRef.current : localAura.comboCount;
-    const hitId = isRemote ? remoteHitId : localAura.hitId;
-    const lastPoints = isRemote ? remoteLastPoints : localAura.lastPoints;
-    const message = isRemote ? remoteMessage : localAura.message;
+    // Remoto em tier fraco: sem aura 3D (só o avatar)
+    if (isRemote && !remoteAura) return null;
+    // Mínimo: sem efeitos de ki (popup local ainda pode aparecer via GameHUD)
+    if (!isRemote && auraMode === 'off') return null;
+
+    const resolvedCombo = isRemote && remoteComboRef ? remoteComboRef.current : comboCount;
+    const resolvedHitId = isRemote ? remoteHitId : hitId;
+    const resolvedLastPoints = isRemote ? remoteLastPoints : lastPoints;
+    const resolvedMessage = isRemote ? remoteMessage : message;
     const position = isRemote ? remotePosition : localPosition;
 
+    return (
+        <AuraEffectsInner
+            comboCount={resolvedCombo}
+            hitId={resolvedHitId}
+            lastPoints={resolvedLastPoints}
+            message={resolvedMessage}
+            position={position}
+            auraMode={auraMode}
+            remoteComboRef={isRemote ? remoteComboRef : null}
+        />
+    );
+}
+
+function AuraEffectsInner({
+    comboCount: comboCountProp,
+    hitId,
+    lastPoints,
+    message,
+    position,
+    auraMode,
+    remoteComboRef,
+}) {
+    // Se remoto, combo vem do ref (atualizado no useFrame do RemotePlayer)
+    const comboCount = remoteComboRef ? remoteComboRef.current : comboCountProp;
     const groupRef = useRef();
     const tier = getTier(comboCount);
-    const shakeMagnitude = tier.intensity * 0.018; // escala com o estágio, sem salto abrupto
+    const shakeMagnitude = auraMode === 'lite' ? 0 : tier.intensity * 0.018;
+    const showKi = auraMode === 'full';
+    const showNova = auraMode === 'full';
+    const showDust = auraMode === 'full' || auraMode === 'lite';
 
-    // Estado de "crash": detecta queda brusca de combo e conduz a dispersão das
-    // partículas (fade-out + explosão pra fora) em vez de sumir instantaneamente.
     const crashRef = useRef({ active: false, timer: 0, duration: CRASH_DURATION, tier: TIERS[0] });
     const prevComboRef = useRef(comboCount);
 
-    // Pop-up de Texto
     const textRef = useRef();
     const [popup, setPopup] = useState({ text: '', x: 0, y: 0, opacity: 0, scale: 0, isCombo: false });
 
     useEffect(() => {
-        // hitId === 0 é usado como sentinela de "nenhum hit ainda"; se o sistema
-        // de combate algum dia gerar hitId 0 como valor real, ajustar aqui.
         if (hitId !== 0 && lastPoints > 0) {
             const isCombo = lastPoints >= 50;
             const popupText = (message && message.trim() !== '') ? message : `+${lastPoints}`;
@@ -590,14 +624,14 @@ export function AuraEffects({
     }, [hitId, lastPoints, message]);
 
     useFrame((_, delta) => {
-        // Detecta crash: combo caiu bruscamente vindo de um valor "ativo"
+        const liveCombo = remoteComboRef ? remoteComboRef.current : comboCountProp;
         const prevCombo = prevComboRef.current;
-        if (comboCount < prevCombo && prevCombo >= CRASH_MIN_PREV_COMBO && comboCount <= CRASH_RESET_THRESHOLD) {
+        if (liveCombo < prevCombo && prevCombo >= CRASH_MIN_PREV_COMBO && liveCombo <= CRASH_RESET_THRESHOLD) {
             crashRef.current.active = true;
             crashRef.current.timer = 0;
             crashRef.current.tier = getTier(prevCombo);
         }
-        prevComboRef.current = comboCount;
+        prevComboRef.current = liveCombo;
 
         if (crashRef.current.active) {
             crashRef.current.timer += delta;
@@ -632,10 +666,10 @@ export function AuraEffects({
 
     const colorCombo  = useMemo(() => new THREE.Color('#d8b4fe').multiplyScalar(3.0), []);
     const colorNormal = useMemo(() => new THREE.Color('#86efac').multiplyScalar(3.0), []);
+    const liveCombo = remoteComboRef ? remoteComboRef.current : comboCountProp;
 
     return (
         <group ref={groupRef} position={[position[0], position[1], position[2]]}>
-            {/* Pop-up de pontos MENOR e SEMPRE NA FRENTE */}
             <Billboard position={[popup.x, popup.y + 1.2, 0.8]}>
                 <Text
                     ref={textRef}
@@ -654,14 +688,11 @@ export function AuraEffects({
                 </Text>
             </Billboard>
 
-            {/* Poeira/vento no chão (51+), vórtice de transcendência (700+) */}
-            <GroundAura comboCount={comboCount} floatHeight={position[1]} crashRef={crashRef} />
-
-            {/* Aura corporal difusa, halo e modos de faísca (101+) */}
-            <KiAura comboCount={comboCount} crashRef={crashRef} />
-
-            {/* Ondas de choque do Ápice (2000+) */}
-            <NovaShockwaves comboCount={comboCount} crashRef={crashRef} />
+            {showDust && (
+                <GroundAura comboCount={liveCombo} floatHeight={position[1]} crashRef={crashRef} lite={auraMode === 'lite'} />
+            )}
+            {showKi && <KiAura comboCount={liveCombo} crashRef={crashRef} />}
+            {showNova && <NovaShockwaves comboCount={liveCombo} crashRef={crashRef} />}
         </group>
     );
 }
