@@ -3,6 +3,10 @@ import { create } from 'zustand';
 // O "Radar" de física do jogo
 export const useCollisionSystem = create((set, get) => ({
     obstacles: [],
+    /** Raio máximo do mapa (parede invisível circular). null = sem limite. */
+    worldRadius: null,
+
+    setWorldRadius: (radius) => set({ worldRadius: radius }),
 
     // Registra um objeto sólido no mapa
     registerObstacle: (id, x, z, radius) => {
@@ -26,6 +30,6 @@ export const useCollisionSystem = create((set, get) => ({
 
     // Função auxiliar que limpa tudo (útil ao desmontar cena)
     clearObstacles: () => {
-        set({ obstacles: [] });
+        set({ obstacles: [], worldRadius: null });
     }
 }));

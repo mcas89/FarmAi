@@ -217,6 +217,28 @@ export function Avatar({ url }) {
             lastMoveDirRef.current = moveDir;
         }
 
+        // Gira ANTES de deslocar — evita "deslize lateral" (corpo ainda virando
+        // enquanto a posição já anda na direção do joystick).
+        if (isMoving) {
+            const targetAngle = Math.atan2(moveDir.x, moveDir.z);
+            const targetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
+
+            // Ângulo restante até o alvo (0..π) — curvas fechadas viram mais rápido.
+            const facing = new THREE.Vector3(0, 0, 1).applyQuaternion(vrm.scene.quaternion);
+            facing.y = 0;
+            if (facing.lengthSq() > 1e-6) facing.normalize();
+            const align = THREE.MathUtils.clamp(facing.dot(moveDir), -1, 1);
+            const angleGap = Math.acos(align);
+            const turnDecay = angleGap > 1.2 ? 36 : 24;
+            const t = 1 - Math.exp(-turnDecay * delta);
+            vrm.scene.quaternion.slerp(targetQuat, t);
+
+            // Yaw da câmera = orientação visual atual (não o alvo), senão a
+            // chase cam "pula" na frente do corpo no meio da curva.
+            const yawFacing = new THREE.Vector3(0, 0, 1).applyQuaternion(vrm.scene.quaternion);
+            usePlayerSystem.getState().setYaw(Math.atan2(yawFacing.x, yawFacing.z));
+        }
+
         // Aceleração/atrito: a velocidade acompanha o alvo (0 quando parado, senão
         // walk/run) com decaimento exponencial, em vez de ligar/desligar instantâneo.
         const targetSpeed = isMoving ? (isRunning ? 6.5 : 2.5) : 0;
@@ -224,7 +246,29 @@ export function Avatar({ url }) {
         currentSpeedRef.current = expDecay(currentSpeedRef.current, targetSpeed, accelRate, delta);
 
         if (currentSpeedRef.current > 0.001) {
-            const nextPosition = vrm.scene.position.clone().addScaledVector(moveDir, currentSpeedRef.current * delta);
+            // Com o tronco alinhado (hips/vida corrigidos), anda na direção do
+            // input; turnScale só freia durante a curva.
+            const facing = new THREE.Vector3(0, 0, 1).applyQuaternion(vrm.scene.quaternion);
+            facing.y = 0;
+            if (facing.lengthSq() > 1e-6) facing.normalize();
+            else facing.copy(moveDir);
+
+            const align = isMoving
+                ? THREE.MathUtils.clamp(facing.dot(moveDir), -1, 1)
+                : 1;
+            const turnScale = isMoving
+                ? THREE.MathUtils.clamp(0.25 + 0.75 * Math.max(0, align), 0.25, 1)
+                : 1;
+
+            // Mistura face→input: em curva segue o peito; em linha reta segue o stick.
+            const travelDir = isMoving
+                ? facing.clone().lerp(moveDir, THREE.MathUtils.smoothstep(align, 0.2, 0.92)).normalize()
+                : moveDir;
+
+            const nextPosition = vrm.scene.position.clone().addScaledVector(
+                travelDir,
+                currentSpeedRef.current * turnScale * delta
+            );
 
             // =====================================
             // FÍSICA DE COLISÃO DINÂMICA (Radar)
@@ -244,17 +288,18 @@ export function Avatar({ url }) {
                 }
             }
 
-            vrm.scene.position.copy(nextPosition);
-        }
+            // Parede invisível do mapa (anel) — 1 conta, zero custo extra de obstáculos
+            const worldRadius = useCollisionSystem.getState().worldRadius;
+            if (worldRadius != null) {
+                const distFromOrigin = Math.hypot(nextPosition.x, nextPosition.z);
+                if (distFromOrigin > worldRadius) {
+                    const s = worldRadius / distFromOrigin;
+                    nextPosition.x *= s;
+                    nextPosition.z *= s;
+                }
+            }
 
-        // Gira o personagem só quando há direção de input ativa (evita girar "sozinho"
-        // durante a desaceleração residual quando o joystick já foi solto).
-        if (isMoving) {
-            const turnDecay = 12; // quanto maior, mais rápido o personagem vira
-            const t = 1 - Math.exp(-turnDecay * delta);
-            const targetAngle = Math.atan2(moveDir.x, moveDir.z);
-            const targetQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
-            vrm.scene.quaternion.slerp(targetQuat, t);
+            vrm.scene.position.copy(nextPosition);
         }
     }
 

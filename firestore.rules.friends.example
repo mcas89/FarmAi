@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMe(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Perfis: leitura para busca de amigos; escrita só do próprio doc
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create, update: if isMe(userId);
+      allow delete: if isMe(userId);
+
+      match /friends/{friendId} {
+        allow read: if isMe(userId);
+        // Aceitar amizade: eu escrevo no meu doc e no do amigo
+        allow write: if isMe(userId) || isMe(friendId);
+      }
+
+      match /incoming/{fromId} {
+        allow read: if isMe(userId);
+        // Quem envia cria com o próprio uid como fromId
+        allow create: if signedIn() && request.auth.uid == fromId;
+        allow delete: if isMe(userId) || isMe(fromId);
+        allow update: if isMe(userId);
+      }
+
+      match /outgoing/{toId} {
+        allow read, write: if isMe(userId);
+      }
+    }
+
+    match /weekly_results/{weekId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn();
+    }
+  }
+}

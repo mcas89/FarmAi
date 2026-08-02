@@ -75,7 +75,11 @@ export function LoginScreen() {
                 const { getCurrentWeekString } = await import('../../../utils/dateUtils');
                 const currentWeek = getCurrentWeekString();
 
+                const DEFAULT_MODEL = 'carol.vrm';
+                const DEFAULT_UNLOCKED = ['carol.vrm', 'rafa.vrm'];
+
                 // Grava estado inicial no Firestore
+                const nick = name.split(' ')[0];
                 await setDoc(doc(db, 'users', user.uid), {
                     name: name,
                     email: email,
@@ -85,15 +89,37 @@ export function LoginScreen() {
                     comboCount: 0,
                     maxCombo: 0,
                     weeklyAura: 0,
+                    weekId: currentWeek,
                     lastWeeklyReset: currentWeek,
-                    [`weeklyAura_${currentWeek}`]: 0,
                     dailyQuests: [],
                     lastResetDate: '',
-                    activeModel: 'carol.vrm', // modelo padrão inicial
+                    activeModel: DEFAULT_MODEL,
+                    unlockedCharacters: DEFAULT_UNLOCKED,
                     position: { x: 0, y: 0.1, z: 0 },
                     inventory: [],
+                    nicknameLower: nick.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+                    friendCode: user.uid.slice(0, 6).toUpperCase(),
                     createdAt: new Date()
                 });
+
+                // Equipar personagem padrão localmente (evita entrar no jogo sem avatar)
+                const { usePlayerSystem } = await import('../../../systems/usePlayerSystem');
+                usePlayerSystem.setState({
+                    activeModel: DEFAULT_MODEL,
+                    unlockedCharacters: DEFAULT_UNLOCKED,
+                });
+
+                useAuraSystem.setState({
+                    aura: 0,
+                    weeklyAura: 0,
+                    comboCount: 0,
+                    maxCombo: 0,
+                });
+                const mDbReg = await import('../../../systems/useDatabaseSystem');
+                mDbReg.useDatabaseSystem.getState().markDataLoaded();
+
+                const mMapReg = await import('../../../systems/useMapActivitiesSystem');
+                mMapReg.useMapActivitiesSystem.getState().hydrate(null);
 
                 // Atualiza estado local
                 updateStats({ nickname: name.split(' ')[0], diamonds: 0 });
@@ -112,16 +138,35 @@ export function LoginScreen() {
                     const realName = data.name ? data.name.split(' ')[0] : 'Jogador';
                     const realAura = data.aura || 0;
                     const realDiamonds = data.auracash || 0;
-                    
-                    updateStats({ nickname: realName, diamonds: realDiamonds });
-                    useUISystem.setState({ inventory: data.inventory || [] });
-                    
+
+                    // Aura primeiro — depois diamantes (save só de auracash)
                     useAuraSystem.setState({ 
                         aura: realAura, 
                         weeklyAura: data.weeklyAura || 0,
                         comboCount: data.comboCount || 0, 
                         maxCombo: data.maxCombo || 0 
                     });
+                    mDb.useDatabaseSystem.getState().markDataLoaded();
+
+                    updateStats({ nickname: realName, diamonds: realDiamonds });
+                    useUISystem.setState({ inventory: data.inventory || [] });
+
+                    import('../../../systems/useFriendsSystem').then((m) => {
+                        m.ensureSocialProfileFields().catch(() => {});
+                    });
+
+                    const mMap = await import('../../../systems/useMapActivitiesSystem');
+                    mMap.useMapActivitiesSystem.getState().hydrate(data.mapActivities || null);
+
+                    if (data.claimWeek) {
+                        import('../../../systems/useRankingSystem').then(m => {
+                            m.useRankingSystem.getState().checkAndClaimWeeklyRewards(
+                                user.uid,
+                                data.claimWeek,
+                                realDiamonds
+                            );
+                        });
+                    }
                     
                     // Inicializa o sistema de Missões Diárias com os dados salvos
                     import('../../../systems/useQuestSystem').then(m => {
@@ -134,17 +179,17 @@ export function LoginScreen() {
                         });
                     }
 
-                    if (data.unlockedCharacters) {
-                        import('../../../systems/usePlayerSystem').then(m => {
-                            m.usePlayerSystem.setState({ unlockedCharacters: data.unlockedCharacters });
-                        });
-                    }
-                    // Restaura apenas o personagem ativo (ignora a posição salva para nascer na praça)
-                    if (data.activeModel) {
-                        import('../../../systems/usePlayerSystem').then(m => {
-                            m.usePlayerSystem.setState({ activeModel: data.activeModel });
-                        });
-                    }
+                    // Personagem padrão se o doc antigo não tiver modelo/unlocked
+                    const DEFAULT_MODEL = 'carol.vrm';
+                    const DEFAULT_UNLOCKED = ['carol.vrm', 'rafa.vrm'];
+                    const { usePlayerSystem } = await import('../../../systems/usePlayerSystem');
+                    const unlocked = (Array.isArray(data.unlockedCharacters) && data.unlockedCharacters.length > 0)
+                        ? data.unlockedCharacters
+                        : DEFAULT_UNLOCKED;
+                    usePlayerSystem.getState().setUnlockedCharacters(unlocked);
+                    usePlayerSystem.setState({
+                        activeModel: data.activeModel || DEFAULT_MODEL,
+                    });
                 }
                 
                 setScreen('SPLASH');

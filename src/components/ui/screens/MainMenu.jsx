@@ -7,8 +7,9 @@ import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
 import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { useAudioSystem } from '../../../systems/useAudioSystem';
 import { usePWASystem } from '../../../systems/usePWASystem';
+import { useGraphicsSystem } from '../../../systems/useGraphicsSystem';
 import { 
-    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles, Volume2, VolumeX, Download, Flame
+    Menu, User, Shield, ScrollText, Star, ShoppingCart, Play, Settings, Info, ShieldAlert, FileText, X, Globe, Trophy, Target, CheckCircle, LogOut, Users, Plus, Sparkles, Volume2, VolumeX, Download, Flame, Monitor
 } from 'lucide-react';
 import splashImg from '../../../assets/splash.png';
 import { auth } from '../../../config/firebase';
@@ -35,7 +36,12 @@ export function MainMenu() {
     const [showRankingModal, setShowRankingModal] = useState(false);
     const [showAboutModal, setShowAboutModal] = useState(false);
     const [showLobbyModal, setShowLobbyModal] = useState(false);
+    const [showGraphicsModal, setShowGraphicsModal] = useState(false);
     const [rankingType, setRankingType] = useState('global');
+
+    const graphicsMode = useGraphicsSystem(state => state.mode);
+    const graphicsTier = useGraphicsSystem(state => state.effectiveTier);
+    const setGraphicsMode = useGraphicsSystem(state => state.setMode);
     
     const { joinRoom, getGlobalOnlineCount } = useMultiplayerSystem();
     const [onlinePlayers, setOnlinePlayers] = useState(0);
@@ -157,9 +163,20 @@ export function MainMenu() {
             );
 
             await signOut(auth);
+            dbSys.useDatabaseSystem.getState().clearDataLoaded();
+            aSys.useAuraSystem.setState({
+                aura: 0,
+                weeklyAura: 0,
+                comboCount: 0,
+                maxCombo: 0,
+            });
             setScreen('LOGIN');
         } catch (error) {
             console.error('Erro ao sair:', error);
+            try {
+                const dbSys = await import('../../../systems/useDatabaseSystem');
+                dbSys.useDatabaseSystem.getState().clearDataLoaded();
+            } catch (_) { /* ignore */ }
             setScreen('LOGIN'); 
         }
     };
@@ -235,30 +252,35 @@ export function MainMenu() {
                 .drawer-btn:hover { background: rgba(168,85,247,0.2); color: #fff; transform: translateX(5px); }
 
                 .top-header {
-                    display: flex; align-items: center; gap: 8px; padding: 4px 15px 2px 15px;
-                    background: transparent;
-                    position: relative;
+                    display: flex; align-items: center; gap: 8px;
+                    padding: 10px 15px 12px 15px;
+                    background: #0a0812;
+                    position: sticky; top: 0; z-index: 20;
+                    border-bottom: 1px solid rgba(255,255,255,0.06);
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
                 }
 
                 .icon-row {
-                    display: flex; justify-content: space-between; padding: 0 10px; margin: 8px 0;
-                    overflow-x: auto; gap: 5px;
+                    display: flex; justify-content: space-between;
+                    padding: 14px 10px 6px 10px;
+                    margin: 18px 0 10px 0;
+                    overflow-x: auto; gap: 6px;
                 }
                 .icon-row::-webkit-scrollbar { display: none; }
                 
                 .icon-btn {
-                    display: flex; flex-direction: column; align-items: center; gap: 4px;
+                    display: flex; flex-direction: column; align-items: center; gap: 6px;
                     cursor: pointer; flex: 1; min-width: 0; text-align: center;
                 }
                 .icon-circle {
-                    width: 40px; height: 40px; border-radius: 12px;
+                    width: 52px; height: 52px; border-radius: 14px;
                     background: rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center;
                     border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s;
                     backdrop-filter: blur(8px);
                     animation: floatAnim 3s infinite ease-in-out;
                 }
                 .icon-btn:hover .icon-circle { background: rgba(168,85,247,0.2); border-color: #a855f7; transform: translateY(-3px) scale(1.1); }
-                .icon-label { font-size: 0.45rem; font-weight: 900; color: #aaa; letter-spacing: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; width: 100%; }
+                .icon-label { font-size: 0.5rem; font-weight: 900; color: #aaa; letter-spacing: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; width: 100%; }
 
                 .play-card {
                     margin: 0 15px 12px 15px; padding: 10px 15px; border-radius: 16px;
@@ -385,6 +407,14 @@ export function MainMenu() {
                     {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />} 
                     <span>{isMuted ? 'MÚSICA: DESLIGADA' : 'MÚSICA: LIGADA'}</span>
                 </div>
+                <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowGraphicsModal(true); }}>
+                    <Monitor size={18} />
+                    <span>
+                        GRÁFICOS: {graphicsMode === 'auto'
+                            ? `AUTO (${graphicsTier === 'low' ? 'BAIXO' : graphicsTier === 'high' ? 'ALTO' : 'MÉDIO'})`
+                            : graphicsMode === 'low' ? 'BAIXO' : graphicsMode === 'high' ? 'ALTO' : 'MÉDIO'}
+                    </span>
+                </div>
                 <div className="drawer-btn" onClick={() => { setIsMenuOpen(false); setShowAboutModal(true); }}>
                     <Info size={18} /> <span>SOBRE O GAME</span>
                 </div>
@@ -438,25 +468,25 @@ export function MainMenu() {
                 {/* 2. ÍCONES LADO A LADO */}
                 <div className="icon-row">
                     <div className="icon-btn" onClick={() => setScreen('CHARACTERS')}>
-                        <div className="icon-circle" style={{ animationDelay: '0s' }}><User size={20} color="#4ade80" /></div>
+                        <div className="icon-circle" style={{ animationDelay: '0s' }}><User size={24} color="#4ade80" /></div>
                         <span className="icon-label">PERSONAGENS</span>
                     </div>
                     <div className="icon-btn" onClick={() => setScreen('ACHIEVEMENTS')}>
                         <div className={`icon-circle ${hasUnclaimedAchievements ? 'has-notif' : ''}`} style={{ animationDelay: '0.2s' }}>
-                            <Shield size={20} color={hasUnclaimedAchievements ? '#fbbf24' : '#60a5fa'} />
+                            <Shield size={24} color={hasUnclaimedAchievements ? '#fbbf24' : '#60a5fa'} />
                         </div>
                         <span className="icon-label" style={{ color: hasUnclaimedAchievements ? '#fbbf24' : '#aaa' }}>CONQUISTAS</span>
                     </div>
                     <div className="icon-btn" onClick={() => setScreen('QUESTS')}>
-                        <div className="icon-circle" style={{ animationDelay: '0.4s' }}><ScrollText size={20} color="#fcd34d" /></div>
+                        <div className="icon-circle" style={{ animationDelay: '0.4s' }}><ScrollText size={24} color="#fcd34d" /></div>
                         <span className="icon-label">MISSÕES</span>
                     </div>
                     <div className="icon-btn">
-                        <div className="icon-circle" style={{ animationDelay: '0.6s' }}><Star size={20} color="#f43f5e" /></div>
+                        <div className="icon-circle" style={{ animationDelay: '0.6s' }}><Star size={24} color="#f43f5e" /></div>
                         <span className="icon-label">EVENTOS</span>
                     </div>
                     <div className="icon-btn" onClick={() => setScreen('STORE')}>
-                        <div className="icon-circle" style={{ animationDelay: '0.8s' }}><ShoppingCart size={20} color="#34d399" /></div>
+                        <div className="icon-circle" style={{ animationDelay: '0.8s' }}><ShoppingCart size={24} color="#34d399" /></div>
                         <span className="icon-label">LOJA</span>
                     </div>
                 </div>
@@ -662,24 +692,77 @@ export function MainMenu() {
                     <div className="ranking-modal" onClick={e => e.stopPropagation()}>
                         <div className="ranking-modal-content">
                             {rankingType === 'weekly' ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', padding: '40px 10px' }}>
-                                    <Trophy size={56} color="#fcd34d" style={{ animation: 'pulse 2s infinite' }} />
-                                    <h3 style={{ color: '#fcd34d', fontWeight: '900', fontSize: '1.4rem', textAlign: 'center', margin: 0, textShadow: '0 0 10px rgba(252,211,77,0.5)' }}>RANKING SEMANAL<br/>EM MANUTENÇÃO</h3>
-                                    <p style={{ color: '#aaa', textAlign: 'center', fontSize: '0.95rem', lineHeight: 1.5, margin: 0 }}>
-                                        Estamos aprimorando o sistema de premiações para a próxima temporada. Aguarde as novidades!
-                                    </p>
+                                <>
+                                    <div className="ranking-modal-title">
+                                        <Trophy size={24} style={{marginRight: '10px', verticalAlign: 'middle', paddingBottom: '4px'}} color="#fcd34d"/> 
+                                        MEU RANKING SEMANAL
+                                    </div>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px' }}>
+                                        <div className="ranking-modal-row">
+                                            <span className="ranking-modal-lbl">MINHA POSIÇÃO</span>
+                                            <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>
+                                                {isRankingLoading ? '...' : `#${useRankingSystem.getState().getMyPosition(weeklyRanking)}`}
+                                            </span>
+                                        </div>
+                                        <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
+                                            <span className="ranking-modal-lbl">AURA DA SEMANA</span>
+                                            <span className="ranking-modal-val" style={{ color: '#d8b4fe', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
+                                                <Sparkles size={16} color="#d8b4fe" /> 
+                                                {Math.floor(weeklyAura).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                        <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>
+                                            TOP 50 SEMANAL
+                                        </div>
+                                        
+                                        <div className="ranking-modal-scroll">
+                                            {isRankingLoading && <div style={{ textAlign: 'center', color: '#888', marginTop: '20px' }}>CARREGANDO DADOS...</div>}
+                                            {!isRankingLoading && weeklyRanking.length === 0 && (
+                                                <div style={{ textAlign: 'center', color: '#888', marginTop: '20px', fontSize: '0.85rem' }}>
+                                                    Ninguém pontuou nesta semana ainda. Seja o primeiro!
+                                                </div>
+                                            )}
+                                            {!isRankingLoading && weeklyRanking.map(player => (
+                                                <div key={player.rank} style={{
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
+                                                    background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                                                    borderRadius: '8px'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                        <span style={{ 
+                                                            color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
+                                                            fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
+                                                            textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
+                                                        }}>#{player.rank}</span>
+                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <span style={{ color: '#d8b4fe', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.score.toLocaleString()}</span>
+                                                        <Sparkles size={10} color="#d8b4fe" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
                                     <button 
                                         onClick={() => setShowRankingModal(false)}
                                         style={{
-                                            marginTop: 'auto', width: '100%', background: 'linear-gradient(90deg, rgba(168,85,247,0.2), rgba(216,180,254,0.2))',
+                                            marginTop: '20px', width: '100%', background: 'linear-gradient(90deg, rgba(168,85,247,0.2), rgba(216,180,254,0.2))',
                                             border: '1px solid rgba(168,85,247,0.4)', color: '#fff', padding: '14px', borderRadius: '12px', 
                                             fontWeight: '900', cursor: 'pointer', transition: 'all 0.3s', letterSpacing: '2px',
-                                            boxShadow: '0 5px 15px rgba(168,85,247,0.2)'
+                                            boxShadow: '0 5px 15px rgba(168,85,247,0.2)', flexShrink: 0
                                         }}
                                     >
-                                        VOLTAR
+                                        FECHAR
                                     </button>
-                                </div>
+                                </>
                             ) : (
                                 <>
                                     <div className="ranking-modal-title">
@@ -926,6 +1009,68 @@ export function MainMenu() {
                             onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                         >
                             INCRÍVEL!
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL GRÁFICOS */}
+            {showGraphicsModal && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)',
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 400, pointerEvents: 'auto'
+                }} onClick={() => setShowGraphicsModal(false)}>
+                    <div style={{
+                        background: 'rgba(20, 18, 28, 0.95)', border: '1px solid rgba(168, 85, 247, 0.4)',
+                        borderRadius: '24px', padding: '28px', width: '90%', maxWidth: '400px',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+                        animation: 'modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <Monitor size={22} color="#a855f7" />
+                            <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', letterSpacing: '2px' }}>GRÁFICOS</h2>
+                        </div>
+                        <p style={{ color: '#888', fontSize: '0.75rem', margin: '0 0 18px 0', lineHeight: 1.5 }}>
+                            Ajuste o desempenho do FarmaAi. Em celulares fracos, use Baixo ou Automático.
+                            No Automático, o jogo pode reduzir os gráficos se o FPS ficar baixo.
+                        </p>
+
+                        {[
+                            { id: 'auto', label: 'AUTOMÁTICO', desc: `Detecta o aparelho e ajusta pelo FPS (atual: ${graphicsTier === 'low' ? 'Baixo' : graphicsTier === 'high' ? 'Alto' : 'Médio'})` },
+                            { id: 'low', label: 'BAIXO', desc: 'Melhor FPS · DPR 1 · sombras leves' },
+                            { id: 'medium', label: 'MÉDIO', desc: 'Equilíbrio visual e desempenho' },
+                            { id: 'high', label: 'ALTO', desc: 'Máxima qualidade · mais exigente' },
+                        ].map((opt) => {
+                            const selected = graphicsMode === opt.id;
+                            return (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => setGraphicsMode(opt.id)}
+                                    style={{
+                                        width: '100%', textAlign: 'left', marginBottom: '10px',
+                                        padding: '12px 14px', borderRadius: '12px', cursor: 'pointer',
+                                        background: selected ? 'rgba(168,85,247,0.25)' : 'rgba(255,255,255,0.04)',
+                                        border: selected ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.08)',
+                                        color: '#fff',
+                                    }}
+                                >
+                                    <div style={{ fontWeight: '900', fontSize: '0.85rem', letterSpacing: '1px' }}>{opt.label}</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.7rem', marginTop: '4px' }}>{opt.desc}</div>
+                                </button>
+                            );
+                        })}
+
+                        <button
+                            onClick={() => setShowGraphicsModal(false)}
+                            style={{
+                                marginTop: '8px', width: '100%',
+                                background: 'linear-gradient(90deg, #a855f7, #6b21a8)',
+                                border: 'none', color: '#fff', padding: '12px', borderRadius: '12px',
+                                fontWeight: '900', cursor: 'pointer', letterSpacing: '1px',
+                            }}
+                        >
+                            CONFIRMAR
                         </button>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ import { useAuraSystem } from './systems/useAuraSystem';
 import { useUISystem } from './systems/useUISystem';
 import { useQuestSystem } from './systems/useQuestSystem';
 import { useAchievementSystem } from './systems/useAchievementSystem';
+import { useMapActivitiesSystem } from './systems/useMapActivitiesSystem';
 import { ReloadPrompt } from './components/ui/ReloadPrompt';
 import './index.css';
 
@@ -40,73 +41,102 @@ class ErrorBoundary extends Component {
 }
 
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './config/firebase';
+import { auth } from './config/firebase';
 import { usePaymentReturn } from './systems/usePaymentReturn';
+import { useGraphicsSystem } from './systems/useGraphicsSystem';
 
 function App() {
   const currentScreen = useUISystem(state => state.currentScreen);
   usePaymentReturn(); // Detecta retorno de pagamento InfinitePay
 
   useEffect(() => {
+    // Qualidade gráfica: aplica detecção / preset salvo (localStorage)
+    useGraphicsSystem.getState().detectAndApply();
+  }, []);
+
+  useEffect(() => {
     // 1. Escuta o estado de autenticação do Firebase para Persistência (Auto-Login)
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Usuário já estava logado (F5 na página)
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            
-            // Restaura nome e auracash
+          // Sempre via loadPlayerData (virada de semana + claimWeek)
+          const data = await useDatabaseSystem.getState().loadPlayerData();
+          if (data) {
             const realName = data.name ? data.name.split(' ')[0] : 'Jogador';
-            useUISystem.getState().updateStats({ nickname: realName, diamonds: data.auracash || 0 });
-            
-            // Restaura aura, weeklyAura e combo
-            useAuraSystem.setState({ 
-              aura: data.aura || 0, 
+
+            // Hidrata aura ANTES de qualquer updateStats (diamonds)
+            useAuraSystem.setState({
+              aura: data.aura || 0,
               weeklyAura: data.weeklyAura || 0,
-              comboCount: data.comboCount || 0, 
-              maxCombo: data.maxCombo || 0 
+              comboCount: data.comboCount || 0,
+              maxCombo: data.maxCombo || 0,
             });
-            
-            // Restaura apenas o personagem 3D (ignora a posição salva para nascer no centro)
-            if (data.activeModel) usePlayerSystem.setState({ activeModel: data.activeModel });
-            if (data.unlockedCharacters) usePlayerSystem.setState({ unlockedCharacters: data.unlockedCharacters });
-            
-            // Inicializa Missões Diárias e Conquistas
+
+            if (data.inventory) {
+              useUISystem.setState({ inventory: data.inventory || [] });
+            }
+
+            useMapActivitiesSystem.getState().hydrate(data.mapActivities || null);
+
+            useUISystem.getState().updateStats({
+              nickname: realName,
+              diamonds: data.auracash || 0,
+            });
+
+            const DEFAULT_MODEL = 'carol.vrm';
+            const DEFAULT_UNLOCKED = ['carol.vrm', 'rafa.vrm'];
+            const unlocked = (Array.isArray(data.unlockedCharacters) && data.unlockedCharacters.length > 0)
+              ? data.unlockedCharacters
+              : DEFAULT_UNLOCKED;
+            usePlayerSystem.getState().setUnlockedCharacters(unlocked);
+            usePlayerSystem.setState({
+              activeModel: data.activeModel || DEFAULT_MODEL,
+            });
+
             import('./systems/useQuestSystem').then(m => {
-                m.useQuestSystem.getState().initializeQuests(data.dailyQuests, data.lastResetDate);
+              m.useQuestSystem.getState().initializeQuests(data.dailyQuests, data.lastResetDate);
             });
             useAchievementSystem.getState().initializeAchievements(data.achievements);
 
-            // BUG #4 FIX: força sync retroativo das conquistas com os valores já salvos
-            // (garante que conquistas merecidas antes desta sessão sejam reconhecidas)
-            const loadedAura    = data.aura     || 0;
-            const loadedCombo   = data.maxCombo || 0;
-            if (loadedAura  > 0) useAchievementSystem.getState().updateProgress('aura',  loadedAura);
+            const loadedAura = data.aura || 0;
+            const loadedCombo = data.maxCombo || 0;
+            if (loadedAura > 0) useAchievementSystem.getState().updateProgress('aura', loadedAura);
             if (loadedCombo > 0) useAchievementSystem.getState().updateProgress('combo', loadedCombo);
 
+            // Libera saves completos só depois da hidratação
+            useDatabaseSystem.getState().markDataLoaded();
 
-            // Lógica de Premiação do Ranking Semanal
-            import('./systems/useRankingSystem').then(m => {
-                m.useRankingSystem.getState().checkAndClaimWeeklyRewards(user.uid, data.lastWeeklyReset, data.auracash || 0);
+            import('./systems/useFriendsSystem').then((m) => {
+              m.ensureSocialProfileFields().catch(() => {});
             });
-            
-            // Pula o login e vai direto pro menu via Splash
+
+            if (data.claimWeek) {
+              import('./systems/useRankingSystem').then(m => {
+                m.useRankingSystem.getState().checkAndClaimWeeklyRewards(
+                  user.uid,
+                  data.claimWeek,
+                  data.auracash || 0
+                );
+              });
+            }
+
             useUISystem.getState().setScreen('SPLASH');
           }
         } catch (error) {
-          console.error("Erro ao puxar dados persistentes:", error);
+          console.error('Erro ao puxar dados persistentes:', error);
         }
       } else {
-        // Se não tiver logado, garante que a tela fique no LOGIN
+        useDatabaseSystem.getState().clearDataLoaded();
         useUISystem.getState().setScreen('LOGIN');
       }
     });
 
     // 2. Função de salvamento estratégico
     const executeGameSave = () => {
+      if (!useDatabaseSystem.getState().isDataLoaded) {
+        console.warn('[AutoSave] Ignorado: hidratação pendente.');
+        return;
+      }
       const position = usePlayerSystem.getState().position;
       const activeModel = usePlayerSystem.getState().activeModel;
       const comboCount = useAuraSystem.getState().comboCount;
@@ -114,13 +144,26 @@ function App() {
       const aura = useAuraSystem.getState().aura;
       const weeklyAura = useAuraSystem.getState().weeklyAura;
       const diamonds = useUISystem.getState().playerStats.diamonds;
-      
+
       const dailyQuests = useQuestSystem.getState().dailyQuests;
       const lastResetDate = useQuestSystem.getState().lastResetDate;
       const achievements = useAchievementSystem.getState().getSavableData();
       const unlockedCharacters = usePlayerSystem.getState().unlockedCharacters;
-      
-      useDatabaseSystem.getState().saveGameState(position, comboCount, activeModel, aura, diamonds, maxCombo, dailyQuests, lastResetDate, weeklyAura, undefined, achievements, unlockedCharacters);
+
+      useDatabaseSystem.getState().saveGameState(
+        position,
+        comboCount,
+        activeModel,
+        aura,
+        diamonds,
+        maxCombo,
+        dailyQuests,
+        lastResetDate,
+        weeklyAura,
+        undefined,
+        achievements,
+        unlockedCharacters
+      );
     };
 
     // 3. Salvar ao fechar/sair do jogo (desktop)
@@ -130,12 +173,10 @@ function App() {
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     // 3b. Salvar quando o app vai para background (mobile PWA / trocar de aba)
-    // CRÍTICO: Em mobile, o beforeunload não dispara — este é o save mais importante!
     const handleVisibilityChange = () => {
       if (document.hidden) {
         const screen = useUISystem.getState().currentScreen;
-        // Só salva se o jogador estiver logado (não na tela de login)
-        if (screen && screen !== 'LOGIN') {
+        if (screen && screen !== 'LOGIN' && screen !== 'SPLASH') {
           console.log('[AutoSave] App foi para background, salvando...');
           executeGameSave();
         }
@@ -143,25 +184,25 @@ function App() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-
     // Efeito de clique global
     const handleGlobalClick = (e) => {
       const target = e.target;
-      const isClickable = target.tagName === 'BUTTON' || 
-                          target.tagName === 'A' || 
-                          target.closest('button') || 
-                          target.closest('.icon-btn') ||
-                          target.closest('.action-button') ||
-                          window.getComputedStyle(target).cursor === 'pointer';
-                          
+      const isClickable =
+        target.tagName === 'BUTTON' ||
+        target.tagName === 'A' ||
+        target.closest('button') ||
+        target.closest('.icon-btn') ||
+        target.closest('.action-button') ||
+        window.getComputedStyle(target).cursor === 'pointer';
+
       if (isClickable) {
-          import('./systems/useAudioSystem').then(m => {
-              m.useAudioSystem.getState().playSFX('click');
-          });
+        import('./systems/useAudioSystem').then(m => {
+          m.useAudioSystem.getState().playSFX('click');
+        });
       }
     };
     window.addEventListener('click', handleGlobalClick);
-    
+
     // PWA Install Prompt Listener
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
@@ -183,8 +224,12 @@ function App() {
 
   // 4. Salvar quando o jogador abrir telas estratégicas
   useEffect(() => {
-    if (window.executeGameSave && ['STORE', 'RANKING', 'ACHIEVEMENTS', 'CHARACTERS'].includes(currentScreen)) {
-        window.executeGameSave();
+    if (
+      window.executeGameSave &&
+      useDatabaseSystem.getState().isDataLoaded &&
+      ['STORE', 'RANKING', 'ACHIEVEMENTS', 'CHARACTERS'].includes(currentScreen)
+    ) {
+      window.executeGameSave();
     }
   }, [currentScreen]);
 

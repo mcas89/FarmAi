@@ -1,7 +1,9 @@
 export const Poses = {
     // Pose base (neutra/descanso) - Importada do calibrador
+    // hips.y = 0: o valor antigo (-0.27) torcia o tronco ~15° e, somado à
+    // animação de vida no walk, causava deslize lateral permanente.
     arms_down_pose: {
-        hips: { x: 0, y: -0.27, z: 0 },
+        hips: { x: 0, y: 0, z: 0 },
         chest: { x: 0.0045, y: 0, z: 0 },
         leftShoulder: { x: 0, y: 0, z: -0.0524 },
         leftUpperArm: { x: 0, y: 0, z: -1.309 },
@@ -15,7 +17,7 @@ export const Poses = {
 
     // Six Seven: Frame 01
     six_seven_ready_pose: {
-        hips: { x: 0.18, y: -0.27, z: 0 },
+        hips: { x: 0.18, y: 0, z: 0 },
         leftShoulder: { x: -1.59 },
         rightShoulder: { x: -1.85 },
         leftUpperArm: { y: 1.25 },
@@ -27,7 +29,7 @@ export const Poses = {
 
     // Six Seven: Frame 02 (mocked values)
     six_seven_left_arm_high_pose: {
-        hips: { x: 0.18, y: -0.27, z: 0 },
+        hips: { x: 0.18, y: 0, z: 0 },
         leftShoulder: { x: -1.7 },
         rightShoulder: { x: -1.85 },
         leftUpperArm: { y: 1.25, z: 0.5 },
@@ -39,7 +41,7 @@ export const Poses = {
 
     // Six Seven: Frame 03
     six_seven_cross_limit_pose: {
-        hips: { x: 0.18, y: -0.27, z: 0 },
+        hips: { x: 0.18, y: 0, z: 0 },
         leftShoulder: { x: -1.5 },
         rightShoulder: { x: -1.5 },
         leftUpperArm: { y: 0.5 },
@@ -51,7 +53,7 @@ export const Poses = {
 
     // Six Seven: Frame 04
     six_seven_reverse_limit_pose: {
-        hips: { x: 0.18, y: -0.27, z: 0 },
+        hips: { x: 0.18, y: 0, z: 0 },
         leftShoulder: { x: -1.9 },
         rightShoulder: { x: -1.9 },
         leftUpperArm: { y: 1.8 },
@@ -96,7 +98,7 @@ export const Poses = {
     // FASE 4 – Primeiros sinais de cansaço
     // -------------------------------------------------
     tired_pose: {
-        hips: { y: -0.29 },
+        hips: { y: -0.02 },
         spine: { x: 0.12 },
         chest: { x: 0.10 },
         neck: { x: 0.15 }
@@ -148,7 +150,7 @@ export const Poses = {
     // FASE 8 – Primeiro agachamento (leve)
     // -------------------------------------------------
     squat_light: {
-        hips: { y: -0.34 },
+        hips: { y: -0.07 },
         leftUpperLeg: { x: -0.14 },
         rightUpperLeg: { x: -0.14 },
         leftLowerLeg: { x: 0.13 },
@@ -160,7 +162,7 @@ export const Poses = {
     // FASE 9 – Agachamento de esforço extremo (pose de luta)
     // -------------------------------------------------
     fight_squat_extreme: {
-        hips: { y: -0.48 },
+        hips: { y: -0.21 },
         leftUpperLeg: { x: -0.42, z: -0.12 },
         rightUpperLeg: { x: -0.42, z: 0.12 },
         leftLowerLeg: { x: 0.38 },
@@ -175,7 +177,7 @@ export const Poses = {
     // FASE 10 – Recuperação / Esticamento
     // -------------------------------------------------
     recovery_pose: {
-        hips: { y: -0.27 },
+        hips: { y: 0 },
         leftUpperLeg: { x: -0.12 },
         rightUpperLeg: { x: -0.12 },
         leftLowerLeg: { x: 0.10 },
@@ -183,7 +185,7 @@ export const Poses = {
         spine: { x: 0.06 }
     },
     full_stretch_pose: {
-        hips: { y: -0.27 },
+        hips: { y: 0 },
         spine: { x: -0.22 },
         chest: { x: -0.22 },
         neck: { x: -0.10 },

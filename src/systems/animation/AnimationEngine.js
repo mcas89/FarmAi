@@ -52,6 +52,10 @@ export const AnimationEngine = {
         // PRIO 4: A Vida oscila de forma autônoma
         const lifeOffsets = LifeAnimation.getOffsets(delta, brainOffsets.breathMultiplier, isIdle);
 
+        // Idle "vida" e walk ambos subtraem a pose base — somar os dois no
+        // movimento gira o quadril/pernas (~15°) e parece deslize lateral.
+        const lifeFade = 1 - (walkData?.weight || 0);
+
         const applyBone = (boneName, axes, side, lerpOverride) => {
             const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
             if (!bone) return;
@@ -109,9 +113,9 @@ export const AnimationEngine = {
                     }
                 }
 
-                // [PRIO 4] - Puxa a oscilação ininterrupta de vida
+                // [PRIO 4] - Vida (some ao andar para não brigar com o walk)
                 const lifeOffset = (lifeOffsets[boneName] && lifeOffsets[boneName][axis] !== undefined) 
-                    ? lifeOffsets[boneName][axis] 
+                    ? lifeOffsets[boneName][axis] * lifeFade
                     : 0;
 
                 // A MATEMÁTICA FINAL ACUMULATIVA (Nenhuma camada apaga a outra)

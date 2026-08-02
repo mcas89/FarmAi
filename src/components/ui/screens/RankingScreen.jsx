@@ -1,9 +1,43 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useUISystem } from '../../../systems/useUISystem';
-import { Settings } from 'lucide-react';
+import { useRankingSystem } from '../../../systems/useRankingSystem';
+import { useAuraSystem } from '../../../systems/useAuraSystem';
+import { Trophy } from 'lucide-react';
 
 export function RankingScreen() {
     const setScreen = useUISystem(state => state.setScreen);
+    const { weeklyRanking, globalRanking, isLoading, fetchRankings } = useRankingSystem();
+    const weeklyAura = useAuraSystem(s => s.weeklyAura);
+    const aura = useAuraSystem(s => s.aura);
+
+    useEffect(() => {
+        fetchRankings();
+    }, [fetchRankings]);
+
+    const myWeekly = useRankingSystem.getState().getMyPosition(weeklyRanking);
+    const myGlobal = useRankingSystem.getState().getMyPosition(globalRanking);
+
+    const renderList = (list, color) => (
+        list.map(player => (
+            <div key={`${color}-${player.rank}`} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 14px',
+                background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
+                borderRadius: '8px'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <span style={{
+                        color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
+                        fontWeight: 900, width: 36, textAlign: 'center'
+                    }}>#{player.rank}</span>
+                    <span style={{ color: '#eee', fontWeight: 'bold' }}>{player.name}</span>
+                </div>
+                <span style={{ color, fontWeight: 'bold', fontSize: '0.9rem' }}>
+                    {player.score.toLocaleString()}
+                </span>
+            </div>
+        ))
+    );
 
     return (
         <div style={{
@@ -12,12 +46,11 @@ export function RankingScreen() {
             display: 'flex', flexDirection: 'column',
             animation: 'fadeIn 0.3s ease'
         }}>
-            {/* Header */}
-            <div style={{ padding: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>
-                <h2 style={{ color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', fontSize: '2rem' }}>
-                    Top 100 Farmadores
+            <div style={{ padding: '24px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(168, 85, 247, 0.2)' }}>
+                <h2 style={{ color: '#fff', margin: 0, textTransform: 'uppercase', letterSpacing: '2px', fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Trophy color="#fcd34d" /> Rankings
                 </h2>
-                <button 
+                <button
                     onClick={() => setScreen('MENU')}
                     style={{
                         padding: '10px 30px', background: 'transparent', color: '#fff',
@@ -28,22 +61,19 @@ export function RankingScreen() {
                 </button>
             </div>
 
-            {/* Maintenance Message */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '30px', textAlign: 'center' }}>
-                <Settings size={64} color="#a855f7" style={{ marginBottom: '20px', animation: 'spin 4s linear infinite' }} />
-                <h3 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '10px', fontWeight: 'bold' }}>
-                    SISTEMA DE RANKING EM MANUTENÇÃO
-                </h3>
-                <p style={{ color: '#aaa', fontSize: '1rem', maxWidth: '500px', lineHeight: '1.5' }}>
-                    Estamos atualizando nossa infraestrutura de banco de dados para suportar a alta quantidade de jogadores. 
-                    <br/><br/>
-                    O Ranking Global retornará em breve com os dados reais de todos os Caçadores de Aura!
-                </p>
+            <div style={{ flex: 1, overflow: 'auto', padding: '20px 30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+                <section>
+                    <h3 style={{ color: '#d8b4fe', marginTop: 0 }}>Semanal — você #{myWeekly} · {Math.floor(weeklyAura).toLocaleString()} aura</h3>
+                    {isLoading && <p style={{ color: '#888' }}>Carregando...</p>}
+                    {!isLoading && weeklyRanking.length === 0 && <p style={{ color: '#888' }}>Ninguém pontuou ainda.</p>}
+                    {!isLoading && renderList(weeklyRanking, '#d8b4fe')}
+                </section>
+                <section>
+                    <h3 style={{ color: '#fcd34d', marginTop: 0 }}>Global — você #{myGlobal} · {Math.floor(aura).toLocaleString()} aura</h3>
+                    {isLoading && <p style={{ color: '#888' }}>Carregando...</p>}
+                    {!isLoading && renderList(globalRanking, '#a855f7')}
+                </section>
             </div>
-
-            <style>{`
-                @keyframes spin { 100% { transform: rotate(360deg); } }
-            `}</style>
         </div>
     );
 }

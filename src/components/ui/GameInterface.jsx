@@ -1,6 +1,7 @@
 import React from 'react';
 import { useUISystem } from '../../systems/useUISystem';
 import { ShopModal } from './ShopModal';
+import { GraphicsToast } from './GraphicsToast';
 
 // Import Screens
 import { SplashScreen } from './screens/SplashScreen';
@@ -59,6 +60,7 @@ export function GameInterface() {
             <div style={{ pointerEvents: 'auto' }}>
                 <ShopModal />
             </div>
+            <GraphicsToast />
         </div>
     );
 }

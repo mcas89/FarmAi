@@ -50,7 +50,8 @@ const getBonusForCombo = (comboCount) => {
 
     const baseAura = (comboCount % 10 === 0) ? 10 : 0;
     const isMilestone = (comboCount > 0 && comboCount % 100 === 0);
-    const bonusAura = isMilestone ? (comboCount * comboCount) / 1000 : 0;
+    // Milestone mais suave (antes /1000)
+    const bonusAura = isMilestone ? (comboCount * comboCount) / 2000 : 0;
 
     const baseAuraFinal = Math.round(baseAura * currentMultiplier);
     const bonusAuraFinal = Math.round(bonusAura * currentMultiplier);
@@ -75,6 +76,8 @@ const saveOnComboBreak = () => {
     ]).then(([pSys, dbSys, qSys, achSys, uiSys]) => {
         const screen = uiSys.useUISystem.getState().currentScreen;
         if (!screen || screen === 'LOGIN' || screen === 'SPLASH') return;
+        const dbState = dbSys.useDatabaseSystem.getState();
+        if (!dbState.isDataLoaded) return;
         const pos = pSys.usePlayerSystem.getState().position;
         const model = pSys.usePlayerSystem.getState().activeModel;
         const unlockedCharacters = pSys.usePlayerSystem.getState().unlockedCharacters;

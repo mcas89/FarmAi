@@ -689,7 +689,7 @@ export const WalkAnimation = {
             return { weight: 0, offsets: {} };
         }
 
-        const speedMultiplier = 1.0 + (inst.runWeight * 0.5);
+        const speedMultiplier = 1.25 + (inst.runWeight * 0.55);
         inst.walkTime += delta * speedMultiplier;
 
         const getLerpedFrame = (animData, time, cycleDuration) => {
@@ -746,11 +746,17 @@ export const WalkAnimation = {
             };
         };
 
+        const hips = lerpBone('hips');
+        const chest = lerpBone('chest');
+        // Suaviza torção Y do tronco no passo (evita "andar de lado")
+        hips.y *= 0.35;
+        chest.y *= 0.35;
+
         return {
             weight: inst.blendWeight,
             offsets: {
                 spine: lerpBone('spine'),
-                chest: lerpBone('chest'),
+                chest,
                 head: lerpBone('head'),
                 leftShoulder: lerpBone('leftShoulder'),
                 leftUpperArm: lerpBone('leftUpperArm'),
@@ -766,7 +772,7 @@ export const WalkAnimation = {
                 rightUpperLeg: lerpBone('rightUpperLeg'),
                 rightLowerLeg: lerpBone('rightLowerLeg'),
                 rightFoot: lerpBone('rightFoot'),
-                hips: lerpBone('hips'),
+                hips,
                 hipsPosition: lerpBone('hipsPosition')
             }
         };

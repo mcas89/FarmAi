@@ -7,16 +7,17 @@ import { AuraSystem } from '../../../systems/rhythm/AuraSystem';
 import { DanceSystem, useDanceSystem } from '../../../systems/animation/DanceSystem';
 import { Joystick } from '../Joystick';
 import { 
-    Settings, Trophy, Crown, Swords,
+    Trophy, Crown, Swords,
     BarChart2, Shield, ScrollText, Gift, Briefcase, ShoppingCart, 
     Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map, FlaskConical, Pickaxe
 } from 'lucide-react';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
 import { MultiplayerChat } from '../MultiplayerChat';
 import { DuelModal } from './DuelModal';
 import { DuelInvitePopup } from './DuelInvitePopup';
 import { useMultiplayerSystem } from '../../../systems/useMultiplayerSystem';
+import { useRankingSystem } from '../../../systems/useRankingSystem';
+import { useMapActivitiesSystem } from '../../../systems/useMapActivitiesSystem';
+import { MapTopBanner } from '../MapTopBanner';
 
 const formatGameNumber = (value = 0) => {
     const number = Number(value) || 0;
@@ -32,12 +33,13 @@ const formatGameNumber = (value = 0) => {
 };
 
 export function GameHUD() {
-    const { aura, message, lastPoints, comboCount, maxCombo, hitId, isMilestone, hitSide, auraMultiplier, multiplierEndTime } = useAuraSystem();
+    const { aura, message, lastPoints, comboCount, maxCombo, hitId, isMilestone, hitSide, auraMultiplier, multiplierEndTime, weeklyAura } = useAuraSystem();
     const stats = useUISystem(state => state.playerStats);
     const setScreen = useUISystem(state => state.setScreen);
     
     // Garante que a posição é resetada para a praça toda vez que o jogador SAIR do jogo
     useEffect(() => {
+        useMapActivitiesSystem.getState().ensureActive({ resetFountain: true });
         return () => {
             usePlayerSystem.getState().setPosition(getSafeRandomSpawn());
         };
@@ -97,16 +99,14 @@ export function GameHUD() {
     
     // Estados do Ranking
     const [showRankingModal, setShowRankingModal] = useState(false);
-    const [realRanking, setRealRanking] = useState([]);
-    const [myRank, setMyRank] = useState(null);
-    const [isLoadingRank, setIsLoadingRank] = useState(false);
+    const { weeklyRanking, isLoading: isLoadingRank } = useRankingSystem();
+    const myRank = useRankingSystem.getState().getMyPosition(weeklyRanking);
 
     useEffect(() => {
         if (showRankingModal) {
-            setIsLoadingRank(false);
-            // fetchRanking desativado temporariamente devido à manutenção.
+            useRankingSystem.getState().fetchRankings();
         }
-    }, [showRankingModal, nickname]);
+    }, [showRankingModal]);
 
     useEffect(() => {
         if (aura > 0) {
@@ -373,18 +373,36 @@ export function GameHUD() {
                     0%, 100% { box-shadow: 0 -5px 30px rgba(248,113,113,0.3); border-top-color: rgba(248,113,113,0.4); }
                     50% { box-shadow: 0 -15px 50px rgba(248,113,113,0.6); border-top-color: rgba(248,113,113,0.8); }
                 }
-                @keyframes epicPopup {
-                    0% { opacity: 0; transform: scale(0.5) translateY(20px); filter: blur(4px); }
-                    20% { opacity: 1; transform: scale(1.2) translateY(-5px); filter: blur(0px); text-shadow: 0 0 30px rgba(255,255,255,1); }
-                    40% { transform: scale(1) translateY(0); text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
-                    80% { opacity: 1; transform: scale(1) translateY(-10px); }
-                    100% { opacity: 0; transform: scale(0.8) translateY(-30px); filter: blur(2px); }
-                }
                 @keyframes floatUp {
-                    0% { opacity: 0; transform: translateY(0); }
-                    20% { opacity: 1; transform: translateY(-10px); }
-                    80% { opacity: 1; transform: translateY(-30px); }
-                    100% { opacity: 0; transform: translateY(-40px); }
+                    0% { opacity: 0; transform: translate(-50%, -50%) translateY(8px) scale(0.7); filter: blur(2px); }
+                    18% { opacity: 1; transform: translate(-50%, -50%) translateY(-6px) scale(1.15); filter: blur(0); }
+                    45% { transform: translate(-50%, -50%) translateY(-18px) scale(1); }
+                    75% { opacity: 1; transform: translate(-50%, -50%) translateY(-36px) scale(1.02); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) translateY(-52px) scale(0.9); filter: blur(1px); }
+                }
+                @keyframes auraGainPop {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(-6deg); filter: blur(4px); }
+                    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.28) rotate(2deg); filter: blur(0); }
+                    35% { transform: translate(-50%, -50%) scale(0.96) rotate(0deg); }
+                    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) translateY(-12px); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85) translateY(-48px); filter: blur(2px); }
+                }
+                @keyframes auraGainGlow {
+                    0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.8); }
+                    40% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.35); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
+                }
+                @keyframes auraSpark {
+                    0% { opacity: 0; transform: translate(0, 0) scale(0.2); }
+                    20% { opacity: 1; transform: translate(calc(var(--sx) * 0.35), calc(var(--sy) * 0.35)) scale(1); }
+                    100% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(0.35); }
+                }
+                @keyframes epicPopup {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.45); filter: blur(6px); }
+                    18% { opacity: 1; transform: translate(-50%, -50%) scale(1.22); filter: blur(0); }
+                    40% { transform: translate(-50%, -50%) scale(1); }
+                    75% { opacity: 1; transform: translate(-50%, -50%) scale(1.04) translateY(-14px); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.88) translateY(-56px); filter: blur(3px); }
                 }
                 @keyframes screenShake {
                     0% { transform: translate(0, 0); }
@@ -456,6 +474,8 @@ export function GameHUD() {
                     .ranking-modal-lbl { font-size: 0.75rem; }
                 }
             `}</style>
+
+            <MapTopBanner />
 
             {/* Modal de Desconexão / Sala Fantasma */}
             {(isOnlineMode && !isConnected) && (
@@ -709,31 +729,126 @@ export function GameHUD() {
                 </button>
             </div>
 
-            {/* Popups de Acerto */}
+            {/* Popups de Acerto (+Aura) */}
             {message && !isMilestone && (
-                <div key={`small-${hitId}`} style={{
-                    position: 'absolute',
-                    top: '40%',
-                    left: hitSide === 'left' ? '30%' : '70%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 6,
-                    animation: 'floatUp 0.6s ease forwards',
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    pointerEvents: 'none',
-                    textShadow: '0 2px 5px rgba(0,0,0,0.5)'
-                }}>
-                    {message}
+                <div
+                    key={`small-${hitId}`}
+                    style={{
+                        position: 'absolute',
+                        top: '42%',
+                        left: hitSide === 'left' ? '28%' : '72%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 6,
+                        animation: 'auraGainPop 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+                        pointerEvents: 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                    }}
+                >
+                    <div
+                        style={{
+                            position: 'absolute',
+                            width: 72,
+                            height: 72,
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, rgba(52,211,153,0.45) 0%, transparent 70%)',
+                            animation: 'auraGainGlow 0.85s ease-out forwards',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                        }}
+                    />
+                    <span
+                        style={{
+                            position: 'relative',
+                            color: '#ecfdf5',
+                            fontSize: '1.15rem',
+                            fontWeight: 900,
+                            letterSpacing: '0.5px',
+                            textShadow:
+                                '0 0 12px rgba(52,211,153,0.9), 0 0 28px rgba(16,185,129,0.55), 0 2px 6px rgba(0,0,0,0.65)',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        {message}
+                    </span>
                 </div>
             )}
 
             {message && isMilestone && (
-                <div key={`mile-${hitId}`} style={{
-                    position: 'absolute', top: '25%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 6, pointerEvents: 'none',
-                    animation: 'epicPopup 1.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards', display: 'flex', gap: '6px', alignItems: 'baseline'
-                }}>
-                    <span style={{ color: lastPoints >= 50 ? '#a855f7' : '#fcd34d', fontWeight: '900', fontSize: '2.2rem', fontStyle: 'italic', letterSpacing: '2px', textShadow: '0 0 15px rgba(252,211,77,0.8)' }}>
+                <div
+                    key={`mile-${hitId}`}
+                    style={{
+                        position: 'absolute',
+                        top: '28%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 7,
+                        pointerEvents: 'none',
+                        animation: 'epicPopup 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                    }}
+                >
+                    <div
+                        style={{
+                            position: 'absolute',
+                            width: 160,
+                            height: 160,
+                            borderRadius: '50%',
+                            background:
+                                lastPoints >= 50
+                                    ? 'radial-gradient(circle, rgba(168,85,247,0.5) 0%, transparent 68%)'
+                                    : 'radial-gradient(circle, rgba(252,211,77,0.5) 0%, transparent 68%)',
+                            animation: 'auraGainGlow 1.5s ease-out forwards',
+                            left: '50%',
+                            top: '50%',
+                        }}
+                    />
+                    {[
+                        { x: -42, y: -38, d: '0s' },
+                        { x: 48, y: -28, d: '0.05s' },
+                        { x: -36, y: 34, d: '0.1s' },
+                        { x: 40, y: 30, d: '0.08s' },
+                        { x: 0, y: -52, d: '0.12s' },
+                        { x: 8, y: 46, d: '0.15s' },
+                    ].map((sp, i) => (
+                        <span
+                            key={i}
+                            style={{
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                width: 7,
+                                height: 7,
+                                marginLeft: -3.5,
+                                marginTop: -3.5,
+                                borderRadius: '50%',
+                                background: lastPoints >= 50 ? '#c084fc' : '#fde68a',
+                                boxShadow: `0 0 10px ${lastPoints >= 50 ? '#a855f7' : '#fbbf24'}`,
+                                ['--sx']: `${sp.x}px`,
+                                ['--sy']: `${sp.y}px`,
+                                animation: `auraSpark 1.1s ease-out ${sp.d} forwards`,
+                            }}
+                        />
+                    ))}
+                    <span
+                        style={{
+                            position: 'relative',
+                            color: lastPoints >= 50 ? '#e9d5ff' : '#fef3c7',
+                            fontWeight: 900,
+                            fontSize: 'clamp(1.6rem, 5vw, 2.35rem)',
+                            fontStyle: 'italic',
+                            letterSpacing: '1.5px',
+                            textShadow:
+                                lastPoints >= 50
+                                    ? '0 0 18px rgba(168,85,247,0.95), 0 0 40px rgba(126,34,206,0.6), 0 4px 12px rgba(0,0,0,0.7)'
+                                    : '0 0 18px rgba(252,211,77,0.95), 0 0 40px rgba(245,158,11,0.55), 0 4px 12px rgba(0,0,0,0.7)',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
                         {message}
                     </span>
                 </div>
@@ -1059,32 +1174,54 @@ export function GameHUD() {
                         <div className="ranking-modal-content">
                             <div className="ranking-modal-title">
                                 <Trophy size={24} style={{marginRight: '10px', verticalAlign: 'middle', paddingBottom: '4px'}} className="anim-wobble" color="#fcd34d"/> 
-                                MEU RANKING
+                                RANKING SEMANAL
                             </div>
                             
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px' }}>
                                 <div className="ranking-modal-row">
                                     <span className="ranking-modal-lbl">MINHA POSIÇÃO</span>
-                                    <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>{myRank ? `#${myRank}` : '...'}</span>
+                                    <span className="ranking-modal-val" style={{ color: '#fcd34d' }}>
+                                        {isLoadingRank ? '...' : `#${myRank || '?'}`}
+                                    </span>
                                 </div>
                                 <div className="ranking-modal-row" style={{ borderBottom: 'none', paddingBottom: '0' }}>
-                                    <span className="ranking-modal-lbl">TOTAL AURA</span>
-                                    <span className="ranking-modal-val" style={{ color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
-                                        <Sparkles size={16} color="#fcd34d" className="anim-pulse" /> {formatGameNumber(aura)}
+                                    <span className="ranking-modal-lbl">AURA DA SEMANA</span>
+                                    <span className="ranking-modal-val" style={{ color: '#d8b4fe', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '1.2rem' }}>
+                                        <Sparkles size={16} color="#d8b4fe" className="anim-pulse" /> {formatGameNumber(weeklyAura)}
                                     </span>
                                 </div>
                             </div>
 
                             <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>TOP 100 GLOBAL</div>
+                                <div style={{ color: '#888', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px', textAlign: 'center', letterSpacing: '2px' }}>TOP 50 SEMANAL</div>
                                 
-                                <div className="ranking-modal-scroll" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 10px', gap: '15px' }}>
-                                    <Settings size={48} color="#fcd34d" style={{ animation: 'spin 4s linear infinite' }} />
-                                    <h3 style={{ color: '#fcd34d', fontWeight: 'bold', fontSize: '1.2rem', textAlign: 'center' }}>SISTEMA EM MANUTENÇÃO</h3>
-                                    <p style={{ color: '#ccc', textAlign: 'center', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                                        O ranking semanal está temporariamente desativado para melhorias na infraestrutura e redução de lag.<br/><br/>
-                                        Sua Aura continua sendo contabilizada normalmente no seu perfil. Voltaremos em breve!
-                                    </p>
+                                <div className="ranking-modal-scroll">
+                                    {isLoadingRank && <div style={{ textAlign: 'center', color: '#888', marginTop: '20px' }}>CARREGANDO...</div>}
+                                    {!isLoadingRank && weeklyRanking.length === 0 && (
+                                        <div style={{ textAlign: 'center', color: '#888', marginTop: '20px', fontSize: '0.85rem' }}>
+                                            Ninguém pontuou nesta semana ainda.
+                                        </div>
+                                    )}
+                                    {!isLoadingRank && weeklyRanking.map(player => (
+                                        <div key={player.rank} style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px',
+                                            background: player.rank % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                                            borderRadius: '8px'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                <span style={{ 
+                                                    color: player.rank === 1 ? '#ffd700' : player.rank === 2 ? '#c0c0c0' : player.rank === 3 ? '#cd7f32' : '#888',
+                                                    fontWeight: '900', fontSize: '1.1rem', width: '35px', textAlign: 'center',
+                                                    textShadow: player.rank <= 3 ? '0 0 10px currentColor' : 'none'
+                                                }}>#{player.rank}</span>
+                                                <span style={{ color: player.rank <= 3 ? '#fff' : '#ccc', fontWeight: 'bold', fontSize: '0.9rem' }}>{player.name}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <span style={{ color: '#d8b4fe', fontWeight: 'bold', fontSize: '0.85rem' }}>{player.score.toLocaleString()}</span>
+                                                <Sparkles size={10} color="#d8b4fe" />
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 

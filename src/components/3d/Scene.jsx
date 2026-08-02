@@ -10,6 +10,7 @@ import { useAuraSystem } from '../../systems/useAuraSystem';
 import { useFarmSystem } from '../../systems/useFarmSystem';
 import { useUISystem } from '../../systems/useUISystem';
 import { useMultiplayerSystem } from '../../systems/useMultiplayerSystem';
+import { useGraphicsSystem } from '../../systems/useGraphicsSystem';
 import { RemotePlayer } from './RemotePlayer';
 import { auth } from '../../config/firebase';
 import * as THREE from 'three';
@@ -21,141 +22,271 @@ function expDecay(current, target, decay, dt) {
     return target + (current - target) * Math.exp(-decay * dt);
 }
 
-// Câmera que segue a personagem (Estilo Aventura 3D Profissional)
+function shortestAngleDelta(from, to) {
+    let d = to - from;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    return d;
+}
+
+/**
+ * Câmera chase (atrás do personagem) ao andar/correr.
+ * No idle/farm, libera OrbitControls para o jogador girar livremente.
+ */
 function CameraController() {
     const controlsRef = useRef();
     const { camera } = useThree();
     
-    // Alvo fantasma para criar o "Smooth Follow" (Atraso natural elástico)
     const cameraTarget = useRef(new THREE.Vector3(0, 1.5, 0));
+    const smoothedYaw = useRef(null);
+    const idleTimer = useRef(999);
     const isMapMode = useUISystem((state) => state.isMapMode);
     
     useFrame((state, delta) => {
         if (!controlsRef.current) return;
+        const controls = controlsRef.current;
+        const dt = Math.min(delta, 0.05);
         
         if (isMapMode) {
-            // ==========================================
-            // MODO MAPA: Visão aérea de toda a cidade
-            // ==========================================
             const centerTarget = new THREE.Vector3(0, 0, 0);
-            cameraTarget.current.x = expDecay(cameraTarget.current.x, centerTarget.x, 3.0, delta);
-            cameraTarget.current.y = expDecay(cameraTarget.current.y, centerTarget.y, 3.0, delta);
-            cameraTarget.current.z = expDecay(cameraTarget.current.z, centerTarget.z, 3.0, delta);
+            cameraTarget.current.x = expDecay(cameraTarget.current.x, centerTarget.x, 3.0, dt);
+            cameraTarget.current.y = expDecay(cameraTarget.current.y, centerTarget.y, 3.0, dt);
+            cameraTarget.current.z = expDecay(cameraTarget.current.z, centerTarget.z, 3.0, dt);
             
-            camera.fov = expDecay(camera.fov, 45, 2.0, delta);
+            camera.fov = expDecay(camera.fov, 45, 2.0, dt);
             camera.updateProjectionMatrix();
             
-            controlsRef.current.minDistance = expDecay(controlsRef.current.minDistance || 3.5, 30, 2.0, delta);
-            controlsRef.current.maxDistance = 250;
-            controlsRef.current.autoRotate = true;
-            controlsRef.current.autoRotateSpeed = 0.5;
-            
-            controlsRef.current.target.copy(cameraTarget.current);
+            controls.minDistance = expDecay(controls.minDistance || 3.5, 30, 2.0, dt);
+            controls.maxDistance = 250;
+            controls.enableRotate = true;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+            controls.target.copy(cameraTarget.current);
             return;
         }
 
         const pos = usePlayerSystem.getState().position;
+        const yaw = usePlayerSystem.getState().yaw || 0;
         const currentState = usePlayerSystem.getState().currentState;
         const comboCount = useAuraSystem.getState().comboCount;
         const isFarming = useFarmSystem.getState().isLeftFarming || useFarmSystem.getState().isRightFarming;
-        
-        // ==========================================
-        // 1. ZOOM FLUIDO E SEGURO (FOV Adaptativo)
-        // ==========================================
-        // Usar FOV para dar a sensação de espaço ao correr/farmar, pois modificar a distância 
-        // fisicamente entra em conflito com as equações esféricas do OrbitControls.
-        let targetFov = 35; 
-        if (currentState === 'levitating') targetFov = 65; 
-        else if (currentState === 'run') targetFov = 55; // Abre a lente para dar velocidade
-        else if (isFarming) targetFov = 48; // Abre para ver o personagem farmando
-        else if (currentState === 'walk') targetFov = 42; 
-        
-        camera.fov = expDecay(camera.fov, targetFov, 2.0, delta);
-        camera.updateProjectionMatrix();
+        const isChasing = currentState === 'walk' || currentState === 'run' || currentState === 'levitating';
 
-        // ==========================================
-        // 2. Rotação Cinemática (Apenas em Idle + Aura Alta)
-        // ==========================================
-        let targetAutoRotateSpeed = 0;
-        if (comboCount >= 1000) targetAutoRotateSpeed = 1.5;
-        else if (comboCount >= 700 && currentState === 'levitating') targetAutoRotateSpeed = 0.5;
-        
-        if (targetAutoRotateSpeed > 0) {
-            controlsRef.current.autoRotate = true;
-            controlsRef.current.autoRotateSpeed = expDecay(controlsRef.current.autoRotateSpeed || 0, targetAutoRotateSpeed, 3.0, delta);
-        } else {
-            controlsRef.current.autoRotate = false;
+        // Inicializa yaw suavizado a partir do offset atual da câmera
+        if (smoothedYaw.current === null) {
+            const ox = camera.position.x - pos[0];
+            const oz = camera.position.z - pos[2];
+            // offset câmera = atrás do personagem → yaw = atan2(-ox, -oz)
+            smoothedYaw.current = Math.atan2(-ox, -oz);
         }
 
-        // ==========================================
-        // 3. Tremor de Poder e Efeito Breathing (Respiração)
-        // ==========================================
         let shakeX = 0, shakeY = 0, shakeZ = 0;
         if (comboCount >= 400) {
-            const shakeIntensity = comboCount >= 500 ? 0.04 : 0.01;
+            const shakeIntensity = comboCount >= 500 ? 0.035 : 0.01;
             shakeX = (Math.random() - 0.5) * shakeIntensity;
             shakeY = (Math.random() - 0.5) * shakeIntensity;
             shakeZ = (Math.random() - 0.5) * shakeIntensity;
         }
 
-        let breathY = 0;
-        if (currentState === 'idle' && comboCount < 700) {
-            breathY = Math.sin(state.clock.elapsedTime * 1.5) * 0.03; 
+        if (isChasing) {
+            idleTimer.current = 0;
+            controls.enableRotate = false;
+            controls.autoRotate = false;
+
+            const yawDelta = shortestAngleDelta(smoothedYaw.current, yaw);
+            const yawFollow = currentState === 'run' ? 6.5 : 5.0;
+            smoothedYaw.current += yawDelta * (1 - Math.exp(-yawFollow * dt));
+
+            let dist = 5.8;
+            let height = 2.55;
+            let lookAhead = 1.15;
+            let lookHeight = 1.55;
+            let targetFov = 42;
+            let posDecay = 5.2;
+
+            if (currentState === 'run') {
+                dist = 7.0;
+                height = 2.85;
+                lookAhead = 1.85;
+                lookHeight = 1.5;
+                targetFov = 50;
+                posDecay = 6.8;
+            } else if (currentState === 'levitating') {
+                dist = 7.4;
+                height = 3.25;
+                lookAhead = 1.25;
+                lookHeight = 1.9;
+                targetFov = 58;
+                posDecay = 4.2;
+            }
+
+            const shoulder = 0.12;
+            const sy = smoothedYaw.current;
+            // Atrás do personagem + bias de ombro
+            const behindX = -Math.sin(sy) * dist + Math.cos(sy) * shoulder;
+            const behindZ = -Math.cos(sy) * dist - Math.sin(sy) * shoulder;
+
+            const desiredX = pos[0] + behindX + shakeX;
+            const desiredY = pos[1] + height + shakeY;
+            const desiredZ = pos[2] + behindZ + shakeZ;
+
+            camera.position.x = expDecay(camera.position.x, desiredX, posDecay, dt);
+            camera.position.y = expDecay(camera.position.y, desiredY, posDecay, dt);
+            camera.position.z = expDecay(camera.position.z, desiredZ, posDecay, dt);
+
+            const idealTarget = new THREE.Vector3(
+                pos[0] + Math.sin(sy) * lookAhead + shakeX * 0.3,
+                pos[1] + lookHeight,
+                pos[2] + Math.cos(sy) * lookAhead + shakeZ * 0.3
+            );
+
+            cameraTarget.current.x = expDecay(cameraTarget.current.x, idealTarget.x, 7.5, dt);
+            cameraTarget.current.y = expDecay(cameraTarget.current.y, idealTarget.y, 7.5, dt);
+            cameraTarget.current.z = expDecay(cameraTarget.current.z, idealTarget.z, 7.5, dt);
+
+            camera.fov = expDecay(camera.fov, targetFov, 2.2, dt);
+            camera.updateProjectionMatrix();
+
+            controls.minDistance = dist * 0.8;
+            controls.maxDistance = 15;
+            controls.target.copy(cameraTarget.current);
+            controls.update();
+            return;
         }
 
         // ==========================================
-        // 4. Smooth Follow Target (Foco Elástico)
+        // IDLE / FARM: orbit livre (após breve delay)
         // ==========================================
-        // O alvo foi subido para 1.8 (mais alto, força a câmera a se manter alta olhando levemente pra baixo)
-        const idealTarget = new THREE.Vector3(pos[0] + shakeX, pos[1] + 1.8 + shakeY + breathY, pos[2] + shakeZ);
-        
-        const followSpeed = currentState === 'run' ? 4.0 : 6.0; 
-        cameraTarget.current.x = expDecay(cameraTarget.current.x, idealTarget.x, followSpeed, delta);
-        cameraTarget.current.y = expDecay(cameraTarget.current.y, idealTarget.y, followSpeed, delta);
-        cameraTarget.current.z = expDecay(cameraTarget.current.z, idealTarget.z, followSpeed, delta);
-        
-        // ==========================================
-        // 5. Auto-Zoom Dinâmico (Restaurar Visão)
-        // ==========================================
-        // Permite zoom gigante (1.2) apenas quando parado. Se andar ou farmar, 
-        // a distância mínima empurra a câmera suavemente para trás.
-        const isAction = currentState !== 'idle' || isFarming;
-        const targetMinDist = isAction ? 4.5 : 1.2;
-        controlsRef.current.minDistance = expDecay(controlsRef.current.minDistance || 3.5, targetMinDist, 2.0, delta);
-        controlsRef.current.maxDistance = 15; // Volta ao normal se sair do modo mapa
-        
-        // Passamos o alvo para o OrbitControls
-        controlsRef.current.target.copy(cameraTarget.current);
+        idleTimer.current += dt;
+        if (idleTimer.current > 0.4) {
+            controls.enableRotate = true;
+        }
+
+        // Mantém yaw alinhado ao ângulo atual da orbit (entrada suave no próximo chase)
+        {
+            const ox = camera.position.x - cameraTarget.current.x;
+            const oz = camera.position.z - cameraTarget.current.z;
+            if (ox * ox + oz * oz > 0.01) {
+                smoothedYaw.current = Math.atan2(-ox, -oz);
+            }
+        }
+
+        let targetFov = 35;
+        if (isFarming) targetFov = 46;
+        camera.fov = expDecay(camera.fov, targetFov, 2.0, dt);
+        camera.updateProjectionMatrix();
+
+        let targetAutoRotateSpeed = 0;
+        if (comboCount >= 1000) targetAutoRotateSpeed = 1.5;
+        else if (comboCount >= 700 && currentState === 'levitating') targetAutoRotateSpeed = 0.5;
+
+        if (targetAutoRotateSpeed > 0 && idleTimer.current > 0.4) {
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = expDecay(controls.autoRotateSpeed || 0, targetAutoRotateSpeed, 3.0, dt);
+        } else {
+            controls.autoRotate = false;
+        }
+
+        let breathY = 0;
+        if (currentState === 'idle' && comboCount < 700) {
+            breathY = Math.sin(state.clock.elapsedTime * 1.5) * 0.03;
+        }
+
+        const idealTarget = new THREE.Vector3(
+            pos[0] + shakeX,
+            pos[1] + 1.7 + shakeY + breathY,
+            pos[2] + shakeZ
+        );
+
+        cameraTarget.current.x = expDecay(cameraTarget.current.x, idealTarget.x, 6.0, dt);
+        cameraTarget.current.y = expDecay(cameraTarget.current.y, idealTarget.y, 6.0, dt);
+        cameraTarget.current.z = expDecay(cameraTarget.current.z, idealTarget.z, 6.0, dt);
+
+        const targetMinDist = isFarming ? 4.2 : 1.4;
+        controls.minDistance = expDecay(controls.minDistance || 3.5, targetMinDist, 2.0, dt);
+        controls.maxDistance = 15;
+        controls.target.copy(cameraTarget.current);
     });
     
-    // Recalcula enablePan e outras props via componente para reatividade rápida
     const isMapModeState = useUISystem((state) => state.isMapMode);
     
     return <OrbitControls 
         ref={controlsRef} 
         enablePan={isMapModeState} 
         makeDefault 
-        minDistance={1.2} // Valor inicial, será substituído no useFrame
+        minDistance={1.2}
         maxDistance={isMapModeState ? 250 : 15} 
-        maxPolarAngle={Math.PI / 2 - 0.15} 
-        minPolarAngle={0.1} 
-        // O damping nativo do OrbitControls foi desligado de propósito: a suavização já
-        // é feita manualmente acima via expDecay (cameraTarget). Manter os dois juntos
-        // empilha dois smoothings, o que causava aquela sensação de câmera "atrasada"/borrachuda.
+        maxPolarAngle={Math.PI / 2 - 0.12} 
+        minPolarAngle={0.15} 
         enableDamping={false} 
     />;
 }
 
 const MemoizedPostProcessing = React.memo(PostProcessingEffects);
 
+const FPS_WARMUP_MS = 2500;
+const FPS_SAMPLE_MS = 10000;
+
+/**
+ * Mede FPS no mundo e, em modo Automático, rebaixa o tier se estiver lento.
+ * Roda uma vez por sessão (controlado pelo useGraphicsSystem).
+ */
+function FpsAdapter() {
+    const samplesRef = useRef([]);
+    const startRef = useRef(null);
+    const doneRef = useRef(false);
+
+    useFrame((_state, delta) => {
+        if (doneRef.current) return;
+
+        const gfx = useGraphicsSystem.getState();
+        if (gfx.mode !== 'auto' || gfx.fpsAdaptedThisSession) {
+            doneRef.current = true;
+            return;
+        }
+
+        const now = performance.now();
+        if (startRef.current === null) startRef.current = now;
+        const elapsed = now - startRef.current;
+
+        // Ignora os primeiros segundos (shader compile / loading)
+        if (elapsed < FPS_WARMUP_MS) return;
+
+        const fps = delta > 0 ? (1 / delta) : 60;
+        samplesRef.current.push(Math.min(Math.max(fps, 1), 120));
+
+        if (elapsed >= FPS_WARMUP_MS + FPS_SAMPLE_MS) {
+            doneRef.current = true;
+            const samples = samplesRef.current;
+            if (samples.length === 0) return;
+            const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+            useGraphicsSystem.getState().adaptFromFps(avg);
+        }
+    });
+
+    return null;
+}
+
 export function Scene() {
     const activeModel = usePlayerSystem(state => state.activeModel);
     const isOnlineMode = useUISystem(state => state.isOnlineMode);
     const remotePlayers = useMultiplayerSystem(state => state.remotePlayers);
+    const effectiveTier = useGraphicsSystem(state => state.effectiveTier);
+    const settings = useGraphicsSystem(state => state.settings);
     const myUid = auth?.currentUser?.uid;
 
     return (
-        <Canvas shadows={{ type: THREE.PCFShadowMap }} camera={{ position: [0, 5.5, -14], fov: 45 }}>
+        <Canvas
+            key={`scene-${effectiveTier}`}
+            shadows={settings.shadows ? { type: THREE.PCFShadowMap } : false}
+            dpr={settings.dpr}
+            gl={{
+                antialias: settings.antialias,
+                powerPreference: settings.powerPreference,
+                stencil: false,
+            }}
+            camera={{ position: [0, 5.5, -14], fov: 45, near: 0.1, far: 500 }}
+        >
             <ambientLight intensity={0.2} /> {/* Luz de preenchimento mínima extra */}
             <ParkEnvironment />
             
@@ -171,6 +302,7 @@ export function Scene() {
             {/* <MemoizedPostProcessing /> */}
             
             <CameraController />
+            <FpsAdapter />
         </Canvas>
     );
 }

@@ -2,6 +2,8 @@ import React from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { RefreshCw, X } from 'lucide-react';
 
+const UPDATE_CHECK_MS = 30 * 60 * 1000; // 30 minutos
+
 export function ReloadPrompt() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -9,6 +11,12 @@ export function ReloadPrompt() {
   } = useRegisterSW({
     onRegistered(r) {
       console.log('SW Registered:', r);
+      // Checagem leve a cada 30 min — só compara o SW; download só se houver update.
+      if (r) {
+        setInterval(() => {
+          r.update();
+        }, UPDATE_CHECK_MS);
+      }
     },
     onRegisterError(error) {
       console.log('SW registration error', error);

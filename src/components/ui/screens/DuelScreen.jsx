@@ -6,13 +6,13 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { useDuelSystem } from '../../../systems/useDuelSystem';
+import { useGraphicsSystem } from '../../../systems/useGraphicsSystem';
 import { sixSevenFrames } from '../../3d/avatar/animations/farmSixSeven';
 
 const BLUE = '#3b82f6';
 const BLUE_LIGHT = '#93c5fd';
 const RED = '#ef4444';
 const RED_LIGHT = '#fca5a5';
-const MAX_VISIBLE_EFFECTS = 10;
 const NORMAL_SHOT_COOLDOWN_MS = 210;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -76,6 +76,7 @@ function ImpactBurst({ position, color, scale = 1, onComplete }) {
     const slashA = useRef();
     const slashB = useRef();
     const time = useRef(0);
+    const enableLights = useGraphicsSystem((s) => s.settings.duelImpactLights);
 
     useFrame((_, delta) => {
         time.current += delta * 3.8;
@@ -106,11 +107,11 @@ function ImpactBurst({ position, color, scale = 1, onComplete }) {
     return (
         <group ref={group} position={position}>
             <mesh ref={ringA} rotation={[0, 0, Math.PI / 2]}>
-                <torusGeometry args={[0.22, 0.035, 8, 48]} />
+                <torusGeometry args={[0.22, 0.035, 6, 24]} />
                 <meshBasicMaterial color={color} transparent depthWrite={false} toneMapped={false} />
             </mesh>
             <mesh ref={ringB} rotation={[Math.PI / 2, 0, 0]}>
-                <torusGeometry args={[0.34, 0.018, 8, 48]} />
+                <torusGeometry args={[0.34, 0.018, 6, 24]} />
                 <meshBasicMaterial color="#ffffff" transparent depthWrite={false} toneMapped={false} />
             </mesh>
             <mesh ref={slashA} rotation={[0, 0, Math.PI / 4]} scale={[0.5, 1, 1]}>
@@ -121,7 +122,7 @@ function ImpactBurst({ position, color, scale = 1, onComplete }) {
                 <planeGeometry args={[1.2, 0.055]} />
                 <meshBasicMaterial color="#ffffff" transparent side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
             </mesh>
-            <pointLight color={color} intensity={8 * scale} distance={6} />
+            {enableLights && <pointLight color={color} intensity={8 * scale} distance={6} />}
         </group>
     );
 }
@@ -132,6 +133,7 @@ function CenterExplosion({ position, onComplete }) {
     const vertical = useRef();
     const horizontal = useRef();
     const time = useRef(0);
+    const enableLights = useGraphicsSystem((s) => s.settings.duelImpactLights);
 
     useFrame((_, delta) => {
         time.current += delta * 2.7;
@@ -157,7 +159,7 @@ function CenterExplosion({ position, onComplete }) {
     return (
         <group ref={group} position={position}>
             <mesh ref={ring} rotation={[Math.PI / 2, 0, 0]}>
-                <torusGeometry args={[0.42, 0.08, 12, 64]} />
+                <torusGeometry args={[0.42, 0.08, 8, 32]} />
                 <meshBasicMaterial color="#c084fc" transparent side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
             </mesh>
             <mesh ref={vertical}>
@@ -169,14 +171,14 @@ function CenterExplosion({ position, onComplete }) {
                 <meshBasicMaterial color="#ffffff" transparent side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
             </mesh>
             <mesh position={[-0.34, 0, 0]} scale={[0.7, 1, 1]}>
-                <coneGeometry args={[0.22, 0.9, 24, 1, true]} />
+                <coneGeometry args={[0.22, 0.9, 12, 1, true]} />
                 <meshBasicMaterial color={BLUE} transparent opacity={0.7} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
             </mesh>
             <mesh position={[0.34, 0, 0]} rotation={[0, 0, Math.PI]} scale={[0.7, 1, 1]}>
-                <coneGeometry args={[0.22, 0.9, 24, 1, true]} />
+                <coneGeometry args={[0.22, 0.9, 12, 1, true]} />
                 <meshBasicMaterial color={RED} transparent opacity={0.7} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
             </mesh>
-            <pointLight color="#c084fc" intensity={14} distance={9} decay={2} />
+            {enableLights && <pointLight color="#c084fc" intensity={14} distance={9} decay={2} />}
         </group>
     );
 }
@@ -219,11 +221,15 @@ function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnreg
     const particles = useRef();
     const progressRef = useRef(0);
     const glowTexture = useGlowTexture();
+    const gfx = useGraphicsSystem((s) => s.settings);
 
     const { startX, endX, color, power = 1, type = 'normal', id } = effect;
     const direction = Math.sign(endX - startX) || 1;
     const speed = type === 'combo' ? 1.75 : 2.45;
-    const particleCount = type === 'combo' ? 54 : 34;
+    const particleCount = type === 'combo'
+        ? (gfx.duelParticlesCombo ?? 54)
+        : (gfx.duelParticlesNormal ?? 34);
+    const enableProjectileLight = gfx.duelProjectileLights !== false;
 
     const particleData = useMemo(() => {
         const positions = new Float32Array(particleCount * 3);
@@ -338,7 +344,7 @@ function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnreg
 
             {/* Núcleo quase invisível, apenas para dar força ao Ki */}
             <mesh ref={coreBeam} rotation={[0, 0, -direction * Math.PI / 2]}>
-                <cylinderGeometry args={[1, 1, 1, 10, 1, true]} />
+                <cylinderGeometry args={[1, 1, 1, particleCount > 20 ? 10 : 6, 1, true]} />
                 <meshBasicMaterial
                     color="#ffffff"
                     transparent
@@ -385,13 +391,15 @@ function EnergyProjectile({ effect, onImpact, onComplete, onRegisterRef, onUnreg
                 />
             </sprite>
 
-            <pointLight
-                position={[startX, 0, 0.2]}
-                color={color}
-                intensity={type === 'combo' ? 9 : 5}
-                distance={5}
-                decay={2}
-            />
+            {enableProjectileLight && (
+                <pointLight
+                    position={[startX, 0, 0.2]}
+                    color={color}
+                    intensity={type === 'combo' ? 9 : 5}
+                    distance={5}
+                    decay={2}
+                />
+            )}
         </group>
     );
 }
@@ -514,6 +522,9 @@ export function DuelScreen() {
         leaveDuel,
         sendDuelHit,
     } = useDuelSystem();
+    const graphicsSettings = useGraphicsSystem(state => state.settings);
+    const graphicsTier = useGraphicsSystem(state => state.effectiveTier);
+    const maxVisibleEffects = graphicsSettings.duelMaxEffects ?? 10;
 
     const [p1Progress, setP1Progress] = useState(50);
     const [targetP1Progress, setTargetP1Progress] = useState(50);
@@ -558,13 +569,14 @@ export function DuelScreen() {
     }, [targetP1Progress]);
 
     const addEffect = useCallback((effect) => {
-        setEffects((current) => [...current.slice(-(MAX_VISIBLE_EFFECTS - 1)), { ...effect, id: createEffectId(effect.type || 'effect') }]);
-    }, []);
+        setEffects((current) => [...current.slice(-(maxVisibleEffects - 1)), { ...effect, id: createEffectId(effect.type || 'effect') }]);
+    }, [maxVisibleEffects]);
 
     const addImpact = useCallback((impact) => {
-        setImpacts((current) => [...current.slice(-7), { ...impact, id: createEffectId(impact.type || 'impact') }]);
+        const maxImpacts = graphicsTier === 'low' ? 3 : graphicsTier === 'medium' ? 5 : 8;
+        setImpacts((current) => [...current.slice(-(maxImpacts - 1)), { ...impact, id: createEffectId(impact.type || 'impact') }]);
         if (impact.strong) setShakeSignal(v => v + 1);
-    }, []);
+    }, [graphicsTier]);
 
     const handleScreenClick = useCallback((event, buttonId) => {
         const now = Date.now();
@@ -771,27 +783,45 @@ export function DuelScreen() {
             }}
         >
             <Canvas
+                key={`duel-${graphicsTier}`}
                 camera={{ position: [0, 1.25, 7], fov: 62 }}
-                dpr={[1, 1.5]}
-                gl={{ antialias: true, powerPreference: 'high-performance' }}
+                dpr={graphicsSettings.dpr}
+                gl={{
+                    antialias: graphicsSettings.antialias,
+                    powerPreference: graphicsSettings.powerPreference,
+                    stencil: false,
+                }}
                 style={{ position: 'absolute', inset: 0, zIndex: 1 }}
             >
                 <CameraRig shakeSignal={shakeSignal} />
-                <ambientLight intensity={0.42} />
+                <ambientLight intensity={graphicsSettings.duelEnvironment ? 0.42 : 0.65} />
                 <directionalLight position={[-4, 5, 4]} intensity={2.2} color={BLUE_LIGHT} />
-                <directionalLight position={[4, 5, 4]} intensity={2.2} color={RED_LIGHT} />
-                <pointLight position={[-2, 1.6, 1]} intensity={3} distance={5} color={BLUE} />
-                <pointLight position={[2, 1.6, 1]} intensity={3} distance={5} color={RED} />
-                <Environment preset="night" />
+                {graphicsSettings.duelExtraDirectional !== false && (
+                    <directionalLight position={[4, 5, 4]} intensity={2.2} color={RED_LIGHT} />
+                )}
+                {graphicsSettings.duelSidePointLights !== false && (
+                    <>
+                        <pointLight position={[-2, 1.6, 1]} intensity={3} distance={5} color={BLUE} />
+                        <pointLight position={[2, 1.6, 1]} intensity={3} distance={5} color={RED} />
+                    </>
+                )}
+                {graphicsSettings.duelEnvironment && <Environment preset="night" />}
 
                 <mesh position={[0, -0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                     <planeGeometry args={[22, 22]} />
                     <meshStandardMaterial color="#020617" roughness={0.82} metalness={0.18} />
                 </mesh>
-                <gridHelper args={[22, 28, '#334155', '#172554']} position={[0, 0.005, 0]} />
+                <gridHelper
+                    args={[22, graphicsTier === 'low' ? 14 : 28, '#334155', '#172554']}
+                    position={[0, 0.005, 0]}
+                />
 
-                <ArenaPulse color={BLUE} side="left" />
-                <ArenaPulse color={RED} side="right" />
+                {graphicsSettings.duelArenaPulse !== false && (
+                    <>
+                        <ArenaPulse color={BLUE} side="left" />
+                        <ArenaPulse color={RED} side="right" />
+                    </>
+                )}
 
                 <mesh position={[0, 1.1, -0.8]}>
                     <planeGeometry args={[0.025, 3.4]} />

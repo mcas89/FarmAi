@@ -13,11 +13,14 @@ export const getSafeRandomSpawn = () => {
 export const usePlayerSystem = create((set) => ({
     position: getSafeRandomSpawn(),
     rotation: [0, 0, 0],
+    /** Yaw em radianos (rotação Y do personagem) — usado pela câmera chase */
+    yaw: 0,
     currentState: 'idle', // idle, walk, farm, duel, etc.
     activeModel: 'carol.vrm', // modelo atual
     unlockedCharacters: ['carol.vrm', 'rafa.vrm'], // personagens desbloqueados
     setPosition: (pos) => set({ position: pos }),
     setRotation: (rot) => set({ rotation: rot }),
+    setYaw: (yaw) => set({ yaw }),
     setState: (state) => set({ currentState: state }),
     setActiveModel: (model) => set({ activeModel: model }),
     setUnlockedCharacters: (chars) => {
