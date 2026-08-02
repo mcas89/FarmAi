@@ -15,7 +15,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt', // Mostra prompt de atualização
-      includeAssets: ['**/*.glb', '**/*.vrm', '**/*.png', '**/*.jpg', '**/*.svg'],
+      // Não force precache de todos os 3D no install (deixa o update lento/travado)
+      includeAssets: ['favicon.svg', 'manifest.json'],
       manifest: {
         name: 'FarmaAi Metaverse',
         short_name: 'FarmaAi',
@@ -38,10 +39,27 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // PRECISA incluir glb e vrm no globPatterns para o Service Worker engolir
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,glb,vrm,jpg}'],
-        // Aumentando o limite para 50MB, já que nossos VRMs tem ~20MB
-        maximumFileSizeToCacheInBytes: 50 * 1024 * 1024 
+        // App shell leve no precache — GLB/VRM vão para cache em runtime
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,webp}'],
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: /\.(?:glb|vrm)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'farmaai-3d-assets',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       }
     })
   ],
