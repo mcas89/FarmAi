@@ -9,7 +9,7 @@ import { useCollisionSystem } from '../../systems/useCollisionSystem';
 import { useMapActivitiesSystem, MAGE_TABLE_POS } from '../../systems/useMapActivitiesSystem';
 import { AuraCashGem } from './AuraCashGem';
 
-const CHEST_URL = '/itens/bau.glb';
+const CHEST_URL = '/itens/bau2.glb';
 const KEY_URL = '/itens/chave.glb';
 
 useGLTF.preload(CHEST_URL);
