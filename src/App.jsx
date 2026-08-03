@@ -10,6 +10,7 @@ import { useAchievementSystem } from './systems/useAchievementSystem';
 import { useMapActivitiesSystem } from './systems/useMapActivitiesSystem';
 import { pickInventory } from './utils/localGameCache';
 import { ReloadPrompt } from './components/ui/ReloadPrompt';
+import { FriendOnlineToast } from './components/ui/FriendOnlineToast';
 import './index.css';
 
 // Error Boundary para capturar erros fatais (ex: 404 em modelos) e mostrar na tela
@@ -107,6 +108,11 @@ function App() {
 
             import('./systems/useFriendsSystem').then((m) => {
               m.ensureSocialProfileFields().catch(() => {});
+              m.useFriendsSystem.getState().refresh().catch(() => {});
+            });
+            import('./systems/usePresenceSystem').then((m) => {
+              const nick = useUISystem.getState().playerStats?.nickname || realName;
+              m.usePresenceSystem.getState().startMyPresence(nick);
             });
 
             if (data.claimWeek) {
@@ -126,6 +132,9 @@ function App() {
         }
       } else {
         useDatabaseSystem.getState().clearDataLoaded();
+        import('./systems/usePresenceSystem').then((m) => {
+          m.usePresenceSystem.getState().stopMyPresence();
+        });
         useUISystem.getState().setScreen('LOGIN');
       }
     });
@@ -181,6 +190,11 @@ function App() {
           console.log('[AutoSave] App foi para background, salvando...');
           executeGameSave();
         }
+      } else if (auth.currentUser && useDatabaseSystem.getState().isDataLoaded) {
+        const nick = useUISystem.getState().playerStats?.nickname || 'Jogador';
+        import('./systems/usePresenceSystem').then((m) => {
+          m.usePresenceSystem.getState().startMyPresence(nick);
+        });
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -262,6 +276,7 @@ function App() {
         )}
         
         <ReloadPrompt />
+        <FriendOnlineToast />
       </div>
     </ErrorBoundary>
   );

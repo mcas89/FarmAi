@@ -286,7 +286,7 @@ export const useMapActivitiesSystem = create((set, get) => ({
         }
 
         const orbsLeftToday = Math.max(0, MAP_ORB_DAILY_CAP - (s.orbsCollectedToday || 0));
-        if (orbsLeftToday > 0) {
+        if (orbsLeftToday > 0 && useUISystem.getState().isOnlineMode) {
             tips.push({
                 id: 'orbs',
                 color: '#f87171',

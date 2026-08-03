@@ -121,6 +121,11 @@ export const useFriendsSystem = create((set, get) => ({
         myFriendCode: social?.friendCode || '',
         loading: false,
       });
+
+      // Presence: observar quem está online no app
+      import('./usePresenceSystem').then((m) => {
+        m.usePresenceSystem.getState().watchFriends(enriched);
+      });
     } catch (e) {
       console.error('[Friends] refresh:', e);
       set({ loading: false, error: 'Não foi possível carregar amigos.' });

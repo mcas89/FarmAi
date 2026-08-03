@@ -5,6 +5,7 @@ import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { useQuestSystem } from '../../../systems/useQuestSystem';
 import { useAchievementSystem } from '../../../systems/useAchievementSystem';
 import { useFriendsSystem } from '../../../systems/useFriendsSystem';
+import { usePresenceSystem } from '../../../systems/usePresenceSystem';
 import {
     User, ChevronLeft, Target, Trophy, Sparkles, Flame, Star, BarChart2,
     AlertTriangle, Loader2, Users, UserPlus, Copy, Check, X, Search, Trash2
@@ -50,6 +51,7 @@ export function ProfileScreen() {
     const myFriendCode = useFriendsSystem((s) => s.myFriendCode);
     const searchQuery = useFriendsSystem((s) => s.searchQuery);
     const viewingFriend = useFriendsSystem((s) => s.viewingFriend);
+    const onlineByUid = usePresenceSystem((s) => s.onlineByUid);
 
     useEffect(() => {
         if (tab === 'friends') {
@@ -733,7 +735,27 @@ export function ProfileScreen() {
                                     onClick={() => useFriendsSystem.getState().openFriendProfile(f.uid)}
                                 >
                                     <div>
-                                        <div style={{ color: '#fff', fontWeight: 800 }}>{f.name || 'Jogador'}</div>
+                                        <div style={{ color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span
+                                                title={onlineByUid[f.uid]?.online ? 'Online' : 'Offline'}
+                                                style={{
+                                                    width: 9,
+                                                    height: 9,
+                                                    borderRadius: '50%',
+                                                    flexShrink: 0,
+                                                    background: onlineByUid[f.uid]?.online ? '#22c55e' : '#64748b',
+                                                    boxShadow: onlineByUid[f.uid]?.online
+                                                        ? '0 0 8px rgba(34, 197, 94, 0.85)'
+                                                        : 'none',
+                                                }}
+                                            />
+                                            {f.name || 'Jogador'}
+                                            {onlineByUid[f.uid]?.online && (
+                                                <span style={{ color: '#4ade80', fontSize: '0.65rem', fontWeight: 700 }}>
+                                                    ONLINE
+                                                </span>
+                                            )}
+                                        </div>
                                         <div style={{ color: '#888', fontSize: '0.7rem', display: 'flex', gap: 10 }}>
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                                                 <Sparkles size={11} color="#a855f7" /> {fmt(f.aura)}

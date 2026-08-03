@@ -399,7 +399,7 @@ export function MapActivities({ isOnlineMode = false }) {
             <FountainComboChallenge />
             <HourlyMapPotions />
             <RedMapOrbs isOnlineMode={isOnlineMode} />
-            <MageTableSensor />
+            {isOnlineMode && <MageTableSensor />}
         </group>
     );
 }

@@ -22,7 +22,7 @@ useGLTF.preload('/itens/arbusto2.glb');
 useGLTF.preload('/itens/arbusto3.glb');
 useGLTF.preload('/itens/mesa_piquinique.glb');
 useGLTF.preload('/itens/poste_luz.glb');
-useGLTF.preload('/itens/mesa_mago.glb');
+useGLTF.preload('/itens/mesa_mago1.glb');
 useGLTF.preload('/itens/pipoqueiro.glb');
 useGLTF.preload('/itens/predio1.glb');
 useGLTF.preload('/itens/predio2.glb');
@@ -357,8 +357,8 @@ function ScatteredBushes() {
     );
 }
 
-// Mobília do Parque (Mesas, Foodtruck, Postes)
-function ParkFurniture() {
+// Mobília do Parque (Mesas, Mesa do Mago, Postes)
+function ParkFurniture({ isOnlineMode = false }) {
     const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
     const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
     const poleCount = useGraphicsSystem((state) => state.settings.parkPoles ?? 10);
@@ -385,15 +385,17 @@ function ParkFurniture() {
             });
         });
 
-        // 2. Mesa do Mago (orbes) e Pipoqueiro
-        items.push({
-            id: 'mesa_mago',
-            type: 'mesa_mago',
-            position: [-30, 0, 30],
-            rotation: [0, Math.PI / 2, 0],
-            scale: 1.15,
-            colRadius: 2.2,
-        });
+        // 2. Mesa do Mago só no multiplayer + Pipoqueiro
+        if (isOnlineMode) {
+            items.push({
+                id: 'mesa_mago1',
+                type: 'mesa_mago1',
+                position: [-30, 0, 30],
+                rotation: [0, Math.PI / 2, 0],
+                scale: 1.15,
+                colRadius: 2.2,
+            });
+        }
 
         items.push({
             id: 'pipoqueiro',
@@ -423,7 +425,7 @@ function ParkFurniture() {
         }
 
         return items;
-    }, [poleCount]);
+    }, [poleCount, isOnlineMode]);
 
     // Registra colisões
     useEffect(() => {
@@ -444,7 +446,7 @@ function ParkFurniture() {
                     position={item.position} 
                     rotation={item.rotation} 
                     scale={item.scale}
-                    sitOnGround={item.type === 'mesa_mago'}
+                    sitOnGround={item.type === 'mesa_mago1'}
                 />
             ))}
         </group>
@@ -824,7 +826,7 @@ export function ParkEnvironment({ isOnlineMode = false }) {
                 <ScatteredBushes />
 
                 {/* 6.3 Mobiliário do Parque (Bancos, Foodtruck, Postes) */}
-                <ParkFurniture />
+                <ParkFurniture isOnlineMode={isOnlineMode} />
 
                 {/* 6.5 Parquinho Infantil (Gramado Nordeste) */}
                 <Playground />
