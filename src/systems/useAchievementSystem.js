@@ -126,21 +126,22 @@ export const useAchievementSystem = create((set, get) => ({
     },
 
     // Atualiza o progresso baseado no tipo (ex: 'combo', 'aura', 'level')
-    updateProgress: (type, newValue) => {
+            updateProgress: (type, newValue) => {
         set((state) => {
+            let changed = false;
             const updated = state.achievements.map(ach => {
                 if (ach.type === type && !ach.completed) {
-                    // Atualiza apenas se o novo valor for maior que o progresso atual
                     if (newValue > ach.progress) {
                         const newProgress = Math.min(newValue, ach.target);
                         const isCompleted = newProgress >= ach.target;
+                        changed = true;
                         return { ...ach, progress: newProgress, completed: isCompleted };
                     }
                 }
                 return ach;
             });
 
-            return { achievements: updated };
+            return changed ? { achievements: updated } : state;
         });
     },
 

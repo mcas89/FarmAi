@@ -5,7 +5,7 @@ import { usePlayerSystem } from '../../../systems/usePlayerSystem';
 import { useQuestSystem } from '../../../systems/useQuestSystem';
 import { useAchievementSystem } from '../../../systems/useAchievementSystem';
 import { useFriendsSystem } from '../../../systems/useFriendsSystem';
-import { usePresenceSystem } from '../../../systems/usePresenceSystem';
+import { usePresenceSystem, selectOnlineByUid } from '../../../systems/usePresenceSystem';
 import {
     User, ChevronLeft, Target, Trophy, Sparkles, Flame, Star, BarChart2,
     AlertTriangle, Loader2, Users, UserPlus, Copy, Check, X, Search, Trash2
@@ -51,7 +51,7 @@ export function ProfileScreen() {
     const myFriendCode = useFriendsSystem((s) => s.myFriendCode);
     const searchQuery = useFriendsSystem((s) => s.searchQuery);
     const viewingFriend = useFriendsSystem((s) => s.viewingFriend);
-    const onlineByUid = usePresenceSystem((s) => s.onlineByUid || {});
+    const onlineByUid = usePresenceSystem(selectOnlineByUid);
 
     useEffect(() => {
         if (tab === 'friends') {

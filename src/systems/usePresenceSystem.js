@@ -9,11 +9,13 @@ import {
 import { auth, rtdb } from '../config/firebase';
 
 const TOAST_MS = 4500;
+const EMPTY_TOASTS = Object.freeze([]);
+const EMPTY_ONLINE = Object.freeze({});
 
 let myPresenceRef = null;
 let friendUnsubs = [];
-/** Evita toast na primeira leitura (amigo já estava online). */
-const knownOnline = new Map(); // uid -> boolean
+const knownOnline = new Map();
+let presenceBlocked = false; // true após 403 (regras RTDB)
 
 function clearFriendWatchers() {
   for (const unsub of friendUnsubs) {
@@ -24,25 +26,39 @@ function clearFriendWatchers() {
   friendUnsubs = [];
 }
 
+function isPermissionError(e) {
+  const code = e?.code || e?.message || '';
+  return String(code).includes('PERMISSION_DENIED') || String(code) === '403' || e?.code === 403;
+}
+
+function blockPresence(reason) {
+  if (presenceBlocked) return;
+  presenceBlocked = true;
+  clearFriendWatchers();
+  console.warn('[Presence] Desativado (sem permissão RTDB). Publique as rules. Motivo:', reason);
+}
+
 export const usePresenceSystem = create((set, get) => ({
-  /** { [uid]: { online: boolean, name: string } } */
-  onlineByUid: {},
-  /** Cards flutuantes: { id, name, until } */
-  toasts: [],
+  onlineByUid: EMPTY_ONLINE,
+  toasts: EMPTY_TOASTS,
+  enabled: true,
 
   isFriendOnline: (uid) => !!(get().onlineByUid?.[uid]?.online),
 
   dismissToast: (id) => {
-    set((s) => ({
-      toasts: (Array.isArray(s.toasts) ? s.toasts : []).filter((t) => t.id !== id),
-    }));
+    set((s) => {
+      const prev = Array.isArray(s.toasts) ? s.toasts : EMPTY_TOASTS;
+      const next = prev.filter((t) => t.id !== id);
+      return { toasts: next.length ? next : EMPTY_TOASTS };
+    });
   },
 
   pushOnlineToast: (name) => {
+    if (presenceBlocked) return;
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const until = Date.now() + TOAST_MS;
     set((s) => {
-      const prev = Array.isArray(s.toasts) ? s.toasts : [];
+      const prev = Array.isArray(s.toasts) ? s.toasts : EMPTY_TOASTS;
       return {
         toasts: [...prev.slice(-4), { id, name: name || 'Um amigo', until }],
       };
@@ -52,9 +68,8 @@ export const usePresenceSystem = create((set, get) => ({
     }, TOAST_MS + 50);
   },
 
-  /** Marca o jogador local como online (app inteiro). Não limpa watchers de amigos. */
   startMyPresence: async (displayName) => {
-    if (!rtdb || !auth?.currentUser) return;
+    if (presenceBlocked || !rtdb || !auth?.currentUser) return;
     const uid = auth.currentUser.uid;
     const name = String(
       displayName || auth.currentUser.displayName || 'Jogador'
@@ -75,23 +90,30 @@ export const usePresenceSystem = create((set, get) => ({
 
     try {
       await set(myPresenceRef, payload);
-      await onDisconnect(myPresenceRef).set({
-        online: false,
-        name,
-        lastSeen: serverTimestamp(),
-      });
+      try {
+        await onDisconnect(myPresenceRef).set({
+          online: false,
+          name,
+          lastSeen: serverTimestamp(),
+        });
+      } catch (e) {
+        if (isPermissionError(e)) blockPresence(e?.code || e);
+      }
     } catch (e) {
-      // 403 = regras do RTDB ainda não publicadas
-      console.warn('[Presence] startMyPresence:', e?.code || e?.message || e);
+      if (isPermissionError(e)) {
+        blockPresence(e?.code || e);
+        set({ enabled: false });
+      } else {
+        console.warn('[Presence] startMyPresence:', e?.code || e?.message || e);
+      }
     }
   },
 
-  /** Logout / sair do app: zera presence e para de ouvir amigos. */
   stopMyPresence: async () => {
     clearFriendWatchers();
     knownOnline.clear();
 
-    if (myPresenceRef && rtdb && auth?.currentUser) {
+    if (myPresenceRef && rtdb && auth?.currentUser && !presenceBlocked) {
       try {
         await onDisconnect(myPresenceRef).cancel();
       } catch (_) { /* ignore */ }
@@ -104,15 +126,11 @@ export const usePresenceSystem = create((set, get) => ({
       } catch (_) { /* ignore */ }
     }
     myPresenceRef = null;
-    set({ onlineByUid: {}, toasts: [] });
+    set({ onlineByUid: EMPTY_ONLINE, toasts: EMPTY_TOASTS });
   },
 
-  /**
-   * Observa presence dos amigos.
-   * Toast só quando muda de offline → online (não na 1ª leitura).
-   */
   watchFriends: (friends = []) => {
-    if (!rtdb) return;
+    if (presenceBlocked || !rtdb) return;
     clearFriendWatchers();
 
     const list = Array.isArray(friends) ? friends : [];
@@ -125,16 +143,24 @@ export const usePresenceSystem = create((set, get) => ({
 
       const pref = ref(rtdb, `presence/${uid}`);
       const handler = (snap) => {
+        if (presenceBlocked) return;
         const data = snap.val() || {};
         const online = !!data.online;
         const name = data.name || f.name || 'Amigo';
         const prev = knownOnline.get(uid);
+        const prevEntry = get().onlineByUid?.[uid];
+
+        // Evita set() se nada mudou (quebra loop de re-render)
+        if (prevEntry && prevEntry.online === online && prevEntry.name === name) {
+          knownOnline.set(uid, online);
+          return;
+        }
 
         knownOnline.set(uid, online);
 
         set((s) => ({
           onlineByUid: {
-            ...(s.onlineByUid || {}),
+            ...(s.onlineByUid || EMPTY_ONLINE),
             [uid]: { online, name },
           },
         }));
@@ -145,24 +171,48 @@ export const usePresenceSystem = create((set, get) => ({
       };
 
       try {
-        const unsub = onValue(pref, handler, (err) => {
-          console.warn('[Presence] watch friend', uid, err?.code || err?.message || err);
-        });
+        const unsub = onValue(
+          pref,
+          handler,
+          (err) => {
+            if (isPermissionError(err)) {
+              blockPresence(err?.code || err);
+              set({ enabled: false });
+            } else {
+              console.warn('[Presence] watch friend', uid, err?.code || err?.message || err);
+            }
+          }
+        );
         if (typeof unsub === 'function') friendUnsubs.push(unsub);
       } catch (e) {
-        console.warn('[Presence] onValue failed', uid, e?.message || e);
+        if (isPermissionError(e)) {
+          blockPresence(e?.code || e);
+          set({ enabled: false });
+        }
       }
     }
 
+    // Limpa uids removidos — só set se mudou
     set((s) => {
-      const next = { ...(s.onlineByUid || {}) };
+      const prev = s.onlineByUid || EMPTY_ONLINE;
+      let changed = false;
+      const next = { ...prev };
       for (const uid of Object.keys(next)) {
-        if (!nextKnown.has(uid)) delete next[uid];
+        if (!nextKnown.has(uid)) {
+          delete next[uid];
+          changed = true;
+        }
       }
       for (const uid of [...knownOnline.keys()]) {
         if (!nextKnown.has(uid)) knownOnline.delete(uid);
       }
-      return { onlineByUid: next };
+      if (!changed) return s;
+      return { onlineByUid: Object.keys(next).length ? next : EMPTY_ONLINE };
     });
   },
 }));
+
+/** Selectors estáveis (nunca retornam `{}` / `[]` novos). */
+export const selectPresenceToasts = (s) =>
+  Array.isArray(s.toasts) ? s.toasts : EMPTY_TOASTS;
+export const selectOnlineByUid = (s) => s.onlineByUid || EMPTY_ONLINE;

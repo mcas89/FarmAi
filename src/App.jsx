@@ -193,7 +193,9 @@ function App() {
       } else if (auth.currentUser && useDatabaseSystem.getState().isDataLoaded) {
         const nick = useUISystem.getState().playerStats?.nickname || 'Jogador';
         import('./systems/usePresenceSystem').then((m) => {
-          m.usePresenceSystem.getState().startMyPresence(nick);
+          const api = m.usePresenceSystem.getState();
+          if (api.enabled === false) return;
+          api.startMyPresence(nick);
         });
       }
     };

@@ -1,27 +1,26 @@
 import React, { useEffect } from 'react';
 import { Users } from 'lucide-react';
-import { usePresenceSystem } from '../../systems/usePresenceSystem';
+import { usePresenceSystem, selectPresenceToasts } from '../../systems/usePresenceSystem';
 
 /**
  * Card flutuante global: "Fulano está online".
  * Aparece no menu, mapa e demais telas (montado no App).
  */
 export function FriendOnlineToast() {
-  const toasts = usePresenceSystem((s) => (Array.isArray(s.toasts) ? s.toasts : []));
-  const dismissToast = usePresenceSystem((s) => s.dismissToast);
+  const toasts = usePresenceSystem(selectPresenceToasts);
 
   useEffect(() => {
     if (!toasts.length) return undefined;
     const tick = setInterval(() => {
       const now = Date.now();
-      const live = usePresenceSystem.getState().toasts;
-      if (!Array.isArray(live)) return;
+      const { toasts: live, dismissToast } = usePresenceSystem.getState();
+      if (!Array.isArray(live) || !live.length) return;
       for (const t of live) {
         if (t.until <= now) dismissToast(t.id);
       }
-    }, 400);
+    }, 500);
     return () => clearInterval(tick);
-  }, [toasts.length, dismissToast]);
+  }, [toasts.length]);
 
   if (!toasts.length) return null;
 
@@ -58,7 +57,7 @@ export function FriendOnlineToast() {
             animation: 'friendOnlineIn 0.35s ease-out',
             cursor: 'pointer',
           }}
-          onClick={() => dismissToast(t.id)}
+          onClick={() => usePresenceSystem.getState().dismissToast(t.id)}
         >
           <div
             style={{
