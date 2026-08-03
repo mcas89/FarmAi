@@ -123,13 +123,17 @@ export function GameHUD() {
     // CONTROLES DE FARM (MOUSE / TOUCH / KEYBOARD)
     // ==========================================
     useEffect(() => {
+        const isRhythmMode = () => {
+            const m = useUISystem.getState().farmMode;
+            return m === 'six_seven' || m === 'passo_jamal';
+        };
         const handleKeyDown = (e) => {
-            if (useUISystem.getState().farmMode !== 'six_seven') return;
+            if (!isRhythmMode()) return;
             if (e.key === '6' && !e.repeat) AuraSystem.setRawInput('left', true, e.isTrusted);
             if (e.key === '7' && !e.repeat) AuraSystem.setRawInput('right', true, e.isTrusted);
         };
         const handleKeyUp = (e) => {
-            if (useUISystem.getState().farmMode !== 'six_seven') return;
+            if (!isRhythmMode()) return;
             if (e.key === '6') AuraSystem.setRawInput('left', false, e.isTrusted);
             if (e.key === '7') AuraSystem.setRawInput('right', false, e.isTrusted);
         };
@@ -876,7 +880,7 @@ export function GameHUD() {
 
             {/* CONTROLES DE GAMEPLAY — MEIAS-LUAS LATERAIS + JOYSTICK CENTRAL */}
             <div className="farm-controls-layer" style={{ opacity: menuOpacity }}>
-                {farmMode === 'six_seven' && (
+                {(farmMode === 'six_seven' || farmMode === 'passo_jamal') && (
                     <button
                         type="button"
                         className="farm-crescent farm-crescent-left"
@@ -894,7 +898,7 @@ export function GameHUD() {
                     <Joystick size={92} opacity={0.6} />
                 </div>
 
-                {farmMode === 'six_seven' && (
+                {(farmMode === 'six_seven' || farmMode === 'passo_jamal') && (
                     <button
                         type="button"
                         className="farm-crescent farm-crescent-right"
@@ -1155,6 +1159,33 @@ export function GameHUD() {
                                     background: farmMode === 'six_seven' ? '#eab308' : 'transparent'
                                 }}>
                                     {farmMode === 'six_seven' && <div style={{ width: '10px', height: '10px', background: '#000', borderRadius: '50%' }} />}
+                                </div>
+                            </div>
+
+                            {/* Card Passo do Jamal */}
+                            <div style={{
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                background: farmMode === 'passo_jamal' ? 'rgba(244, 114, 182, 0.18)' : 'rgba(255,255,255,0.05)',
+                                border: farmMode === 'passo_jamal' ? '1px solid #f472b6' : '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '12px', padding: '16px', cursor: 'pointer', transition: 'all 0.2s'
+                            }} onClick={() => {
+                                const { isFarmBlocked, unblockFarmMode } = useAuraSystem.getState();
+                                if (isFarmBlocked) {
+                                    unblockFarmMode();
+                                }
+                                setFarmMode(farmMode === 'passo_jamal' ? 'none' : 'passo_jamal');
+                                setShowFarmModal(false);
+                            }}>
+                                <div>
+                                    <h3 style={{ margin: 0, color: farmMode === 'passo_jamal' ? '#f9a8d4' : '#fff', fontSize: '1rem' }}>Passo do Jamal</h3>
+                                    <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>Dança ritmada com os toques 6 e 7.</p>
+                                </div>
+                                <div style={{
+                                    width: '24px', height: '24px', borderRadius: '50%', border: '2px solid #f472b6',
+                                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                                    background: farmMode === 'passo_jamal' ? '#f472b6' : 'transparent'
+                                }}>
+                                    {farmMode === 'passo_jamal' && <div style={{ width: '10px', height: '10px', background: '#000', borderRadius: '50%' }} />}
                                 </div>
                             </div>
                         </div>

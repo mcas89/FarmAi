@@ -15,6 +15,8 @@ export const CHARACTERS = [
     { file: 'kelly.vrm', name: 'Kelly', image: '/images/characters/Kelly.png', price: 3900, level: 7, desc: 'Especialista em botânica avançada. Dizem que as plantas crescem mais rápido com ela.' },
     { file: 'tio.vrm',   name: 'Tio',   image: '/images/characters/Tio.png',   price: 4000, level: 8, desc: 'Experiência inigualável. Consegue cultivar nas piores condições.' },
     { file: 'nick.vrm',  name: 'Nick',  image: '/images/characters/Nick.png',  price: 4500, level: 10, desc: 'Um cultivador mítico cujos segredos poucos conhecem.' },
+    { file: 'eric.vrm',  name: 'Eric',  image: '/images/characters/Eric.png',  price: 7300, level: 1, desc: 'Estilo urbano e presença marcante. Um colecionador raro da fazenda.' },
+    { file: 'cacau.vrm', name: 'Cacau', image: '/images/characters/Cacau.png', price: 7300, level: 1, desc: 'Lenda exclusiva. Aura misteriosa e look de elite — o personagem mais cobiçado.' },
 ];
 
 export function CharacterScreen() {

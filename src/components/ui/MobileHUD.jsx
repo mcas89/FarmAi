@@ -27,13 +27,13 @@ export function MobileHUD() {
     // Integração de Inputs: Envia apenas o estado puro para o AuraSystem
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === '6' && !e.repeat) AuraSystem.setRawInput('left', true);
-            if (e.key === '7' && !e.repeat) AuraSystem.setRawInput('right', true);
+            if (e.key === '6' && !e.repeat) AuraSystem.setRawInput('left', true, e.isTrusted);
+            if (e.key === '7' && !e.repeat) AuraSystem.setRawInput('right', true, e.isTrusted);
         };
 
         const handleKeyUp = (e) => {
-            if (e.key === '6') AuraSystem.setRawInput('left', false);
-            if (e.key === '7') AuraSystem.setRawInput('right', false);
+            if (e.key === '6') AuraSystem.setRawInput('left', false, e.isTrusted);
+            if (e.key === '7') AuraSystem.setRawInput('right', false, e.isTrusted);
         };
 
         window.addEventListener('keydown', handleKeyDown);
@@ -140,7 +140,7 @@ export function MobileHUD() {
 
             {/* Zonas de Farm */}
             <div style={{ flex: 1, display: 'flex', pointerEvents: 'none', position: 'relative' }}>
-                {farmMode === 'six_seven' && (
+                {farmMode === 'six_seven' || farmMode === 'passo_jamal' ? (
                     <>
                         {/* Botão 6 (Esquerda) */}
                         <div style={{ 
@@ -174,7 +174,7 @@ export function MobileHUD() {
                             7
                         </div>
                     </>
-                )}
+                ) : null}
             </div>
 
             <div style={{ position: 'absolute', left: '50%', bottom: '72px', transform: 'translateX(-50%)', width: '92px', height: '92px', pointerEvents: 'auto' }}><Joystick size={92} opacity={0.6} /></div>

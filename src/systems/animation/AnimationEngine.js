@@ -4,6 +4,7 @@ import { CharacterBrain } from './CharacterBrain';
 import { LifeAnimation } from './LifeAnimation';
 import { WalkAnimation } from './WalkAnimation';
 import { SixSevenAction } from './SixSevenAction';
+import { JamalAction } from './JamalAction';
 
 /**
  * AnimationEngine
@@ -34,14 +35,17 @@ export const AnimationEngine = {
         getEngineInstance(uuid).currentBasePose = poseName; 
     },
     
-    update: (vrm, delta, isLeftFarming, isRightFarming, isMoving = false, isIdle = false, isRunning = false, comboCount = 0) => {
+    update: (vrm, delta, isLeftFarming, isRightFarming, isMoving = false, isIdle = false, isRunning = false, comboCount = 0, farmMode = 'six_seven') => {
         if (!vrm || !vrm.humanoid) return;
 
         const uuid = vrm.scene.uuid;
         const inst = getEngineInstance(uuid);
 
-        // PRIO 5/6: Consulta estado atual das ações do usuário
-        const actionStates = SixSevenAction.update(delta, isLeftFarming, isRightFarming, comboCount, uuid);
+        // PRIO 5/6: ação de farm conforme modo selecionado
+        const actionStates =
+            farmMode === 'passo_jamal'
+                ? JamalAction.update(delta, isLeftFarming, isRightFarming, comboCount, uuid)
+                : SixSevenAction.update(delta, isLeftFarming, isRightFarming, comboCount, uuid);
         
         // PRIO 2: O Cérebro toma decisões do momento (olhar, respirar fundo, idle animations)
         const brainOffsets = CharacterBrain.update(delta, isIdle);
@@ -174,7 +178,7 @@ export const AnimationEngine = {
         // lerp mais rápido que o padrão (0.1) — pernas com giro grande (ex: pos2)
         // não tinham tempo de chegar na extensão total antes do próximo passo do
         // passinho, então nunca ficavam retas / pareciam voltar antes de esticar.
-        const LEG_LERP = 0.22;
+        const LEG_LERP = farmMode === 'passo_jamal' ? 0.42 : 0.22;
         applyBone('leftUpperLeg', ['x', 'y', 'z'], 'body', LEG_LERP);
         applyBone('leftLowerLeg', ['x', 'y', 'z'], 'body', LEG_LERP);
         applyBone('rightUpperLeg', ['x', 'y', 'z'], 'body', LEG_LERP);

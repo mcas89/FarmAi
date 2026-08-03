@@ -93,15 +93,16 @@ const saveOnComboBreak = () => {
 };
 
 // DEBUG: Registra o motivo do break no console
-const breakCombo = (reason = 'decay') => {
+const breakCombo = (reason = 'decay', { save = true } = {}) => {
     console.warn(`[COMBO BREAK] motivo="${reason}" combo_era=${comboCount}`);
     comboCount = 0;
     lastValidSide = null;
     lastHitTime = 0;
     comboStartTime = 0;
     useAuraSystem.getState().registerHit(0, '', 0);
-    // Salva aura e maxCombo no Firebase ao parar o combo
-    saveOnComboBreak();
+    if (save && reason !== 'anti_cheat' && reason !== 'fatigue') {
+        saveOnComboBreak();
+    }
 };
 
 // Decay normal = 800ms. Em milestones (múltiplos de 50) = 2000ms para absorver processamentos pesados.
@@ -114,7 +115,14 @@ const resetDecayTimer = (isMilestone = false) => {
 };
 
 export const AuraSystem = {
-    setRawInput: (side, isPressed) => {
+    /** Zera o combo do ritmo (anti-cheat / fadiga / externo). */
+    resetCombo: (reason = 'external') => {
+        if (decayTimer) clearTimeout(decayTimer);
+        decayTimer = null;
+        breakCombo(reason, { save: reason !== 'anti_cheat' && reason !== 'fatigue' });
+    },
+
+    setRawInput: (side, isPressed, isTrusted = true) => {
         const now = Date.now();
 
         // Se estiver em cooldown de tempo, ignora input
@@ -139,8 +147,6 @@ export const AuraSystem = {
                 return;
             }
 
-
-
             // SUCESSO (1,2,1,2 mantido de forma orgânica)
             lastHitTime = now;
             lastValidSide = side;
@@ -152,8 +158,15 @@ export const AuraSystem = {
             // Reseta decay DEPOIS de computar tudo — e com delay estendido se for milestone
             resetDecayTimer(isMilestone);
 
-            useAuraSystem.getState().registerHit(auraReward, message, comboCount, isMilestone, side);
-            
+            useAuraSystem.getState().registerHit(
+                auraReward,
+                message,
+                comboCount,
+                isMilestone,
+                side,
+                isTrusted !== false
+            );
+
             // Sincroniza a aura com o servidor multiplayer para os outros jogadores verem
             if (auraReward > 0) {
                 import('../useMultiplayerSystem').then(({ useMultiplayerSystem }) => {

@@ -144,6 +144,7 @@ export function Avatar({ url }) {
   }, [url]);
 
   const { isLeftFarming, isRightFarming } = useFarmSystem();
+  const farmMode = useUISystem((s) => s.farmMode || 'six_seven');
 
   useFrame((state, delta) => {
     if (!vrm) return;
@@ -159,7 +160,7 @@ export function Avatar({ url }) {
     const joystickDist = Math.hypot(joystick.x, joystick.y);
     const isRunning = isMoving && (keys.current.shift || joystickDist > 0.8);
 
-    AnimationEngine.update(vrm, delta, leftFarmActive, rightFarmActive, isMoving, isIdle, isRunning, comboCount);
+    AnimationEngine.update(vrm, delta, leftFarmActive, rightFarmActive, isMoving, isIdle, isRunning, comboCount, farmMode);
     // SISTEMA COMPLEMENTAR: PISCAR OLHOS (BLINK)
     // =====================================
     // Arquitetura preservada: O Engine de ossos não é tocado.
