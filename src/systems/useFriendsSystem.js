@@ -12,6 +12,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
+import { usePresenceSystem } from './usePresenceSystem';
 
 const nickKey = (s) =>
   String(s || '')
@@ -122,10 +123,11 @@ export const useFriendsSystem = create((set, get) => ({
         loading: false,
       });
 
-      // Presence: observar quem está online no app
-      import('./usePresenceSystem').then((m) => {
-        m.usePresenceSystem.getState().watchFriends(enriched);
-      });
+      try {
+        usePresenceSystem.getState().watchFriends?.(enriched);
+      } catch (err) {
+        console.warn('[Friends] watchFriends:', err?.message || err);
+      }
     } catch (e) {
       console.error('[Friends] refresh:', e);
       set({ loading: false, error: 'Não foi possível carregar amigos.' });

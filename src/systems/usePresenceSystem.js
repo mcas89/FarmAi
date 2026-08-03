@@ -17,7 +17,9 @@ const knownOnline = new Map(); // uid -> boolean
 
 function clearFriendWatchers() {
   for (const unsub of friendUnsubs) {
-    try { unsub(); } catch (_) { /* ignore */ }
+    try {
+      if (typeof unsub === 'function') unsub();
+    } catch (_) { /* ignore */ }
   }
   friendUnsubs = [];
 }
@@ -28,38 +30,46 @@ export const usePresenceSystem = create((set, get) => ({
   /** Cards flutuantes: { id, name, until } */
   toasts: [],
 
-  isFriendOnline: (uid) => !!(get().onlineByUid[uid]?.online),
+  isFriendOnline: (uid) => !!(get().onlineByUid?.[uid]?.online),
 
   dismissToast: (id) => {
-    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+    set((s) => ({
+      toasts: (Array.isArray(s.toasts) ? s.toasts : []).filter((t) => t.id !== id),
+    }));
   },
 
   pushOnlineToast: (name) => {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const until = Date.now() + TOAST_MS;
-    set((s) => ({
-      toasts: [...s.toasts.slice(-4), { id, name: name || 'Um amigo', until }],
-    }));
+    set((s) => {
+      const prev = Array.isArray(s.toasts) ? s.toasts : [];
+      return {
+        toasts: [...prev.slice(-4), { id, name: name || 'Um amigo', until }],
+      };
+    });
     setTimeout(() => {
       get().dismissToast(id);
     }, TOAST_MS + 50);
   },
 
-  /** Marca o jogador local como online (app inteiro). */
+  /** Marca o jogador local como online (app inteiro). Não limpa watchers de amigos. */
   startMyPresence: async (displayName) => {
     if (!rtdb || !auth?.currentUser) return;
     const uid = auth.currentUser.uid;
-    const name =
-      displayName ||
-      auth.currentUser.displayName ||
-      'Jogador';
+    const name = String(
+      displayName || auth.currentUser.displayName || 'Jogador'
+    ).split(' ')[0];
 
-    await get().stopMyPresence();
+    if (myPresenceRef) {
+      try {
+        await onDisconnect(myPresenceRef).cancel();
+      } catch (_) { /* ignore */ }
+    }
 
     myPresenceRef = ref(rtdb, `presence/${uid}`);
     const payload = {
       online: true,
-      name: String(name).split(' ')[0],
+      name,
       lastSeen: serverTimestamp(),
     };
 
@@ -67,14 +77,16 @@ export const usePresenceSystem = create((set, get) => ({
       await set(myPresenceRef, payload);
       await onDisconnect(myPresenceRef).set({
         online: false,
-        name: payload.name,
+        name,
         lastSeen: serverTimestamp(),
       });
     } catch (e) {
-      console.warn('[Presence] startMyPresence:', e?.message || e);
+      // 403 = regras do RTDB ainda não publicadas
+      console.warn('[Presence] startMyPresence:', e?.code || e?.message || e);
     }
   },
 
+  /** Logout / sair do app: zera presence e para de ouvir amigos. */
   stopMyPresence: async () => {
     clearFriendWatchers();
     knownOnline.clear();
@@ -86,7 +98,7 @@ export const usePresenceSystem = create((set, get) => ({
       try {
         await set(myPresenceRef, {
           online: false,
-          name: get().onlineByUid[auth.currentUser.uid]?.name || 'Jogador',
+          name: 'Jogador',
           lastSeen: serverTimestamp(),
         });
       } catch (_) { /* ignore */ }
@@ -122,26 +134,28 @@ export const usePresenceSystem = create((set, get) => ({
 
         set((s) => ({
           onlineByUid: {
-            ...s.onlineByUid,
+            ...(s.onlineByUid || {}),
             [uid]: { online, name },
           },
         }));
 
-        // Toast apenas em transição offline → online (após já conhecermos o estado)
         if (prev === false && online === true) {
           get().pushOnlineToast(name);
         }
       };
 
-      const unsub = onValue(pref, handler, (err) => {
-        console.warn('[Presence] watch friend', uid, err?.message || err);
-      });
-      friendUnsubs.push(unsub);
+      try {
+        const unsub = onValue(pref, handler, (err) => {
+          console.warn('[Presence] watch friend', uid, err?.code || err?.message || err);
+        });
+        if (typeof unsub === 'function') friendUnsubs.push(unsub);
+      } catch (e) {
+        console.warn('[Presence] onValue failed', uid, e?.message || e);
+      }
     }
 
-    // Limpa uids que saíram da lista
     set((s) => {
-      const next = { ...s.onlineByUid };
+      const next = { ...(s.onlineByUid || {}) };
       for (const uid of Object.keys(next)) {
         if (!nextKnown.has(uid)) delete next[uid];
       }

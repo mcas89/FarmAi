@@ -51,7 +51,7 @@ export function ProfileScreen() {
     const myFriendCode = useFriendsSystem((s) => s.myFriendCode);
     const searchQuery = useFriendsSystem((s) => s.searchQuery);
     const viewingFriend = useFriendsSystem((s) => s.viewingFriend);
-    const onlineByUid = usePresenceSystem((s) => s.onlineByUid);
+    const onlineByUid = usePresenceSystem((s) => s.onlineByUid || {});
 
     useEffect(() => {
         if (tab === 'friends') {

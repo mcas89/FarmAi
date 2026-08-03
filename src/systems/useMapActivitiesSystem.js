@@ -517,13 +517,14 @@ export const useMapActivitiesSystem = create((set, get) => ({
         const s = get();
         const remaining = Math.max(0, MAP_ORB_DAILY_CAP - (s.orbsCollectedToday || 0));
         if (remaining <= 0) {
-            if (s.mapOrbs.length) set({ mapOrbs: [] });
+            if ((s.mapOrbs || []).length) set({ mapOrbs: [] });
             return;
         }
-        const need = Math.min(MAP_ORB_ACTIVE, remaining) - s.mapOrbs.filter((o) => !o.collected).length;
+        const live = (s.mapOrbs || []).filter((o) => !o.collected);
+        const need = Math.min(MAP_ORB_ACTIVE, remaining) - live.length;
         if (need <= 0) return;
         let seq = s.orbSpawnSeq || 0;
-        const next = [...s.mapOrbs.filter((o) => !o.collected)];
+        const next = [...live];
         for (let i = 0; i < need; i++) {
             const pos = pickOneMapOrbSpot(s.dayId || getTodayDateString(), seq + 41 + i * 5, next);
             next.push({ id: seq++, x: pos.x, z: pos.z, collected: false });

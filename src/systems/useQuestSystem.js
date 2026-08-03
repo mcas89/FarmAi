@@ -88,6 +88,7 @@ export const useQuestSystem = create((set, get) => ({
     // Chamado no momento que o usuário loga e os dados do firebase chegam
     initializeQuests: (firebaseQuests, firebaseResetDate) => {
         const todayStr = getTodayDateString();
+        const safeQuests = Array.isArray(firebaseQuests) ? firebaseQuests : null;
         
         // Se a data de reset for diferente de hoje, gera novas missões
         if (firebaseResetDate !== todayStr) {
@@ -98,7 +99,7 @@ export const useQuestSystem = create((set, get) => ({
         } else {
             // Se ainda é hoje, apenas carrega as missões do banco
             set({
-                dailyQuests: firebaseQuests || generateRandomQuests(),
+                dailyQuests: safeQuests || generateRandomQuests(),
                 lastResetDate: firebaseResetDate || todayStr
             });
         }

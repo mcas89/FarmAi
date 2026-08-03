@@ -82,18 +82,23 @@ export function MainMenu() {
 
         import('../../../systems/useQuestSystem').then(m => {
             const unsub = m.useQuestSystem.subscribe((state) => {
-                setDailyQuests(state.dailyQuests);
+                setDailyQuests(Array.isArray(state.dailyQuests) ? state.dailyQuests : []);
             });
-            setDailyQuests(m.useQuestSystem.getState().dailyQuests);
+            const q = m.useQuestSystem.getState().dailyQuests;
+            setDailyQuests(Array.isArray(q) ? q : []);
+            return unsub;
         });
 
         import('../../../systems/useAchievementSystem').then(m => {
             const unsub = m.useAchievementSystem.subscribe((state) => {
-                const unclaimed = state.achievements.some(a => a.completed && !a.claimed);
+                const list = Array.isArray(state.achievements) ? state.achievements : [];
+                const unclaimed = list.some(a => a.completed && !a.claimed);
                 setHasUnclaimedAchievements(unclaimed);
             });
-            const unclaimed = m.useAchievementSystem.getState().achievements.some(a => a.completed && !a.claimed);
-            setHasUnclaimedAchievements(unclaimed);
+            const list = m.useAchievementSystem.getState().achievements;
+            const unclaimed = Array.isArray(list) && list.some(a => a.completed && !a.claimed);
+            setHasUnclaimedAchievements(!!unclaimed);
+            return unsub;
         });
 
         import('../../../systems/useRankingSystem').then(m => {
@@ -119,12 +124,7 @@ export function MainMenu() {
     };
 
     const handleCreateRoom = async () => {
-        const currentCount = Object.keys(rooms).length;
-        const roomName = `Farmaverso ${currentCount + 1}`;
-        const roomId = await createRoom(roomName);
-        if (roomId) {
-            handleJoinRoom(roomId);
-        }
+        await handleJoinRoom('global_lobby');
     };
 
     const handleClaimReward = async (questId) => {

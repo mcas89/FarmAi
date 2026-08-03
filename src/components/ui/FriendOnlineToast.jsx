@@ -7,14 +7,16 @@ import { usePresenceSystem } from '../../systems/usePresenceSystem';
  * Aparece no menu, mapa e demais telas (montado no App).
  */
 export function FriendOnlineToast() {
-  const toasts = usePresenceSystem((s) => s.toasts);
+  const toasts = usePresenceSystem((s) => (Array.isArray(s.toasts) ? s.toasts : []));
   const dismissToast = usePresenceSystem((s) => s.dismissToast);
 
   useEffect(() => {
     if (!toasts.length) return undefined;
     const tick = setInterval(() => {
       const now = Date.now();
-      for (const t of usePresenceSystem.getState().toasts) {
+      const live = usePresenceSystem.getState().toasts;
+      if (!Array.isArray(live)) return;
+      for (const t of live) {
         if (t.until <= now) dismissToast(t.id);
       }
     }, 400);
