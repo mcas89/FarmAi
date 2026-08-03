@@ -2,69 +2,158 @@ import { create } from 'zustand';
 import { useQuestSystem } from './useQuestSystem';
 import { useAchievementSystem } from './useAchievementSystem';
 
-/** Janela mínima de intervalos contínuos pra julgar ritmo de metrônomo. */
-const METRONOME_WINDOW = 48;
-/** Variância (ms²) abaixo disso + range apertado = tipicamente auto-clicker. */
-const METRONOME_VARIANCE_MAX = 6;
-/** Diferença max−min (ms) entre intervalos na janela. */
-const METRONOME_RANGE_MAX = 5;
-/** Gap maior que isso quebra a janela (humano pausou / lag). */
-const CONTINUOUS_GAP_MS = 450;
-/** Média &lt; isso em janela longa = fisicamente suspeito. */
-const IMPOSSIBLE_AVG_MS = 32;
-const IMPOSSIBLE_WINDOW = 40;
-/** Eventos sintéticos seguidos. */
-const UNTRUSTED_STREAK = 4;
-
 const CHEAT_MESSAGE = 'Cheat é proibido';
 
-function getIntervals(history, count) {
-    const slice = history.slice(-(count + 1));
-    if (slice.length < count + 1) return null;
-    const intervals = [];
-    for (let i = 1; i < slice.length; i++) {
-        intervals.push(slice[i].time - slice[i - 1].time);
-    }
-    return intervals;
-}
+/**
+ * Buffer FORA do Zustand — não zera quando o combo quebra.
+ * Só limpa após idle longo ou punição.
+ */
+const timingSamples = []; // { t, trusted }
+let metronomeStrikes = 0;
+let lastPunishAt = 0;
+
+const HISTORY_MAX = 100;
+/** Pausa longa = humano parou; reinicia análise. */
+const IDLE_RESET_MS = 1800;
+/** Gap dentro da janela que invalida o trecho contínuo. */
+const MAX_GAP_MS = 420;
+
+/** Auto-clicker típico: CV baixo + range apertado (ainda tolera jitter do SO). */
+const STRONG_WINDOW = 28;
+const STRONG_CV_MAX = 0.08;
+const STRONG_RANGE_MAX = 20;
+
+/** Janela curta ainda mais “metrônomo”. */
+const TIGHT_WINDOW = 18;
+const TIGHT_CV_MAX = 0.055;
+const TIGHT_RANGE_MAX = 14;
+
+/** Taxa absurda sustentada (~22+ CPS). */
+const FAST_WINDOW = 24;
+const FAST_AVG_MS = 45;
+
+/** Eventos JS sintéticos seguidos. */
+const UNTRUSTED_NEEDED = 3;
+
+/** Quantos “strikes” de ritmo robótico antes de punir (evita 1 falso positivo). */
+const STRIKES_TO_PUNISH = 2;
+/** Cooldown pra não spammar alert ao voltar. */
+const PUNISH_COOLDOWN_MS = 4000;
 
 function mean(arr) {
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
+    let s = 0;
+    for (let i = 0; i < arr.length; i++) s += arr[i];
+    return s / arr.length;
 }
 
-function varianceOf(arr, avg) {
-    return arr.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / arr.length;
+function stdDev(arr, avg) {
+    let s = 0;
+    for (let i = 0; i < arr.length; i++) {
+        const d = arr[i] - avg;
+        s += d * d;
+    }
+    return Math.sqrt(s / arr.length);
+}
+
+function sliceIntervals(count) {
+    if (timingSamples.length < count + 1) return null;
+    const start = timingSamples.length - (count + 1);
+    const intervals = [];
+    for (let i = start + 1; i < timingSamples.length; i++) {
+        const d = timingSamples[i].t - timingSamples[i - 1].t;
+        if (d <= 0 || d > MAX_GAP_MS) return null;
+        intervals.push(d);
+    }
+    return intervals.length === count ? intervals : null;
+}
+
+function isRobotic(intervals, cvMax, rangeMax) {
+    const avg = mean(intervals);
+    // Fora da faixa de farm normal — não julga
+    if (avg < 35 || avg > 380) return false;
+    const sd = stdDev(intervals, avg);
+    const cv = sd / avg;
+    const range = Math.max(...intervals) - Math.min(...intervals);
+    return cv <= cvMax && range <= rangeMax;
+}
+
+function checkUntrustedStreak() {
+    if (timingSamples.length < UNTRUSTED_NEEDED) return false;
+    for (let i = timingSamples.length - UNTRUSTED_NEEDED; i < timingSamples.length; i++) {
+        if (timingSamples[i].trusted !== false) return false;
+    }
+    return true;
+}
+
+function checkImpossibleRate() {
+    const intervals = sliceIntervals(FAST_WINDOW);
+    if (!intervals) return false;
+    return mean(intervals) < FAST_AVG_MS;
 }
 
 /**
- * Auto-clickers mantêm intervalo quase fixo.
- * Humanos, mesmo ritmados, oscilam o tempo entre toques.
+ * Registra um hit válido e decide se é cheat.
+ * @returns {{ cheated: boolean, reason: string|null }}
  */
-function isMetronomePattern(history) {
-    const intervals = getIntervals(history, METRONOME_WINDOW);
-    if (!intervals) return false;
-    if (intervals.some((d) => d > CONTINUOUS_GAP_MS || d <= 0)) return false;
+function recordFarmHit(isTrusted) {
+    const now = Date.now();
 
-    const avg = mean(intervals);
-    const variance = varianceOf(intervals, avg);
-    const range = Math.max(...intervals) - Math.min(...intervals);
+    if (timingSamples.length > 0) {
+        const gap = now - timingSamples[timingSamples.length - 1].t;
+        if (gap > IDLE_RESET_MS) {
+            timingSamples.length = 0;
+            metronomeStrikes = 0;
+        }
+    }
 
-    return variance <= METRONOME_VARIANCE_MAX && range <= METRONOME_RANGE_MAX;
+    timingSamples.push({ t: now, trusted: isTrusted !== false });
+    if (timingSamples.length > HISTORY_MAX) timingSamples.shift();
+
+    if (checkUntrustedStreak()) {
+        return { cheated: true, reason: 'untrusted' };
+    }
+    if (checkImpossibleRate()) {
+        return { cheated: true, reason: 'impossible_rate' };
+    }
+
+    const strong = sliceIntervals(STRONG_WINDOW);
+    const tight = sliceIntervals(TIGHT_WINDOW);
+    let roboticNow = false;
+
+    if (strong && isRobotic(strong, STRONG_CV_MAX, STRONG_RANGE_MAX)) {
+        roboticNow = true;
+    } else if (tight && isRobotic(tight, TIGHT_CV_MAX, TIGHT_RANGE_MAX)) {
+        roboticNow = true;
+    }
+
+    if (roboticNow) {
+        metronomeStrikes += 1;
+        // Exige 2 janelas robóticas próximas (hits consecutivos “suspeitos”)
+        // pra reduzir falso positivo de 1 trecho sortudo.
+        if (metronomeStrikes >= STRIKES_TO_PUNISH) {
+            return { cheated: true, reason: 'metronome' };
+        }
+    } else {
+        // Decai strikes aos poucos se voltou a oscilar (humano)
+        metronomeStrikes = Math.max(0, metronomeStrikes - 1);
+    }
+
+    return { cheated: false, reason: null };
 }
 
-function isImpossibleRate(history) {
-    const intervals = getIntervals(history, IMPOSSIBLE_WINDOW);
-    if (!intervals) return false;
-    if (intervals.some((d) => d > CONTINUOUS_GAP_MS || d <= 0)) return false;
-    return mean(intervals) < IMPOSSIBLE_AVG_MS;
+function clearAntiCheatState() {
+    timingSamples.length = 0;
+    metronomeStrikes = 0;
 }
 
-function isUntrustedStreak(history) {
-    if (history.length < UNTRUSTED_STREAK) return false;
-    return history.slice(-UNTRUSTED_STREAK).every((h) => h.isTrusted === false);
-}
+function punishCheat(reason) {
+    const now = Date.now();
+    if (now - lastPunishAt < PUNISH_COOLDOWN_MS) return;
+    lastPunishAt = now;
+    clearAntiCheatState();
 
-function punishCheat() {
+    console.warn(`[AntiCheat] bloqueado motivo=${reason}`);
+
     setTimeout(() => {
         import('./rhythm/AuraSystem').then((m) => {
             m.AuraSystem.resetCombo?.('anti_cheat');
@@ -128,7 +217,7 @@ export const useAuraSystem = create((set, get) => ({
         set((state) => {
             const now = Date.now();
 
-            // Combo quebrado / reset — não conta como toque pra anti-cheat
+            // Combo quebrado — NÃO apaga o buffer de timing do anti-cheat
             if (comboCount <= 0) {
                 return {
                     lastPoints: 0,
@@ -141,7 +230,7 @@ export const useAuraSystem = create((set, get) => ({
                 };
             }
 
-            // Fadiga: sessão contínua absurda (anti-macro AFK), msg própria
+            // Fadiga: sessão contínua absurda
             let newComboStartTime = state.comboStartTime;
             if (comboCount <= 1 || !newComboStartTime) {
                 newComboStartTime = now;
@@ -159,6 +248,7 @@ export const useAuraSystem = create((set, get) => ({
                         alert('Sessão longa demais. Volte ao menu e continue depois.');
                     }, 0);
 
+                    clearAntiCheatState();
                     return {
                         comboCount: 0,
                         comboStartTime: null,
@@ -171,16 +261,9 @@ export const useAuraSystem = create((set, get) => ({
                 }
             }
 
-            const newHistory = [...state.clickHistory, { time: now, side, isTrusted: !!isTrusted }];
-            if (newHistory.length > 90) newHistory.shift();
-
-            const cheated =
-                isUntrustedStreak(newHistory) ||
-                isMetronomePattern(newHistory) ||
-                isImpossibleRate(newHistory);
-
+            const { cheated, reason } = recordFarmHit(isTrusted);
             if (cheated) {
-                punishCheat();
+                punishCheat(reason);
                 return {
                     isFarmBlocked: false,
                     blockMessage: null,
@@ -232,8 +315,8 @@ export const useAuraSystem = create((set, get) => ({
                 hitId: Date.now() + Math.random(),
                 isMilestone: isMilestone,
                 hitSide: side,
-                suspicionScore: 0,
-                clickHistory: newHistory,
+                suspicionScore: metronomeStrikes,
+                clickHistory: [],
                 isFarmBlocked: false,
                 blockMessage: null,
             };
