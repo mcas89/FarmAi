@@ -2,7 +2,7 @@ const { Server, matchMaker } = require("colyseus");
 const { createServer } = require("http");
 const express = require("express");
 const cors = require("cors");
-const { FarmaAiRoom } = require("./rooms/FarmaAiRoom");
+const { FarmAiRoom } = require("./rooms/FarmAiRoom");
 const { DuelRoom } = require("./rooms/DuelRoom");
 
 const port = Number(process.env.PORT || 2567);
@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.send("FarmaAi Server está online!");
+    res.send("FarmAi Server está online!");
 });
 
 app.get("/api/online", async (req, res) => {
@@ -30,7 +30,7 @@ const gameServer = new Server({
     server: createServer(app)
 });
 
-gameServer.define("farma_room", FarmaAiRoom);
+gameServer.define("farma_room", FarmAiRoom);
 gameServer.define("duel_room", DuelRoom);
 
 gameServer.listen(port).then(() => {

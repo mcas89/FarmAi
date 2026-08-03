@@ -769,7 +769,7 @@ export function MainMenu() {
                             </div>
                             <div style={{ minWidth: 0 }}>
                                 <div style={{ fontWeight: 900, fontSize: '0.82rem', letterSpacing: '0.4px' }}>
-                                    Instale o FarmaAi
+                                    Instale o FarmAi
                                 </div>
                                 <div style={{ fontSize: '0.65rem', opacity: 0.9, marginTop: 2, lineHeight: 1.25 }}>
                                     App instalado recebe atualizações e abre mais rápido

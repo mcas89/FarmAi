@@ -1,5 +1,5 @@
 // ============================================================
-// InfinitePay Checkout — FarmaAI
+// InfinitePay Checkout — FarmAi
 // ============================================================
 // Gera o link de pagamento e valida o retorno após o checkout.
 // O "handle" é a InfiniteTag sem o "$".
@@ -164,24 +164,24 @@ export const AURACASH_PACKS = {
         auracash: 500,
         priceCents: 490,         // R$ 4,90
         label: "500 AuraCash",
-        description: "Pacote Básico - 500 AuraCash no FarmaAI"
+        description: "Pacote Básico - 500 AuraCash no FarmAi"
     },
     pack_1000: {
         auracash: 1000,
         priceCents: 990,         // R$ 9,90
         label: "1.000 AuraCash",
-        description: "Pacote Pequeno - 1.000 AuraCash no FarmaAI"
+        description: "Pacote Pequeno - 1.000 AuraCash no FarmAi"
     },
     pack_3000: {
         auracash: 3000,
         priceCents: 1990,        // R$ 19,90
         label: "3.000 AuraCash",
-        description: "Pacote Médio - 3.000 AuraCash no FarmaAI"
+        description: "Pacote Médio - 3.000 AuraCash no FarmAi"
     },
     pack_5000: {
         auracash: 5000,
         priceCents: 3990,        // R$ 39,90
         label: "5.000 AuraCash",
-        description: "Pacote Grande - 5.000 AuraCash no FarmaAI"
+        description: "Pacote Grande - 5.000 AuraCash no FarmAi"
     }
 };

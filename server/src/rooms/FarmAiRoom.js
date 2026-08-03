@@ -25,22 +25,22 @@ type("string")(Player.prototype, "animation");
 type("boolean")(Player.prototype, "leftFarm");  // braço esquerdo ativo
 type("boolean")(Player.prototype, "rightFarm"); // braço direito ativo
 
-class FarmaAiState extends Schema {
+class FarmAiState extends Schema {
     constructor() {
         super();
         this.players = new MapSchema();
     }
 }
-type({ map: Player })(FarmaAiState.prototype, "players");
+type({ map: Player })(FarmAiState.prototype, "players");
 
-class FarmaAiRoom extends Room {
+class FarmAiRoom extends Room {
     constructor() {
         super();
         this.maxClients = 30;
     }
 
     onCreate (options) {
-        this.setState(new FarmaAiState());
+        this.setState(new FarmAiState());
         
         // 30 atualizações de estado por segundo (padrão é 20)
         // Aumentar demais (ex: 60) pode sobrecarregar clientes mobile
@@ -86,12 +86,12 @@ class FarmaAiRoom extends Room {
             });
         });
         
-        console.log(`[FarmaAiRoom] Sala criada!`);
+        console.log(`[FarmAiRoom] Sala criada!`);
     }
 
     onJoin (client, options) {
         const uid = (options.uid || "").toString();
-        console.log(`[FarmaAiRoom] Jogador entrou: ${client.sessionId} | nome: ${options.name} | uid: ${uid || "-"}`);
+        console.log(`[FarmAiRoom] Jogador entrou: ${client.sessionId} | nome: ${options.name} | uid: ${uid || "-"}`);
 
         // Remove sessões fantasma do mesmo usuário (reentrada / aba duplicada)
         if (uid) {
@@ -99,7 +99,7 @@ class FarmaAiRoom extends Room {
                 if (other.sessionId === client.sessionId) continue;
                 const existing = this.state.players.get(other.sessionId);
                 if (existing && existing.uid === uid) {
-                    console.log(`[FarmaAiRoom] Removendo sessão fantasma ${other.sessionId} (uid=${uid})`);
+                    console.log(`[FarmAiRoom] Removendo sessão fantasma ${other.sessionId} (uid=${uid})`);
                     this.state.players.delete(other.sessionId);
                     try { other.leave(4000); } catch (_) { /* ignore */ }
                 }
@@ -124,13 +124,13 @@ class FarmaAiRoom extends Room {
     }
 
     onLeave (client, consented) {
-        console.log(`[FarmaAiRoom] Jogador saiu: ${client.sessionId}`);
+        console.log(`[FarmAiRoom] Jogador saiu: ${client.sessionId}`);
         this.state.players.delete(client.sessionId);
     }
 
     onDispose() {
-        console.log(`[FarmaAiRoom] Sala descartada.`);
+        console.log(`[FarmAiRoom] Sala descartada.`);
     }
 }
 
-module.exports = { FarmaAiRoom };
+module.exports = { FarmAiRoom };

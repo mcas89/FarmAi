@@ -1,6 +1,6 @@
 {
-  "name": "Farma AI",
-  "short_name": "FarmaAI",
+  "name": "FarmAi",
+  "short_name": "FarmAi",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#05050a",

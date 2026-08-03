@@ -9,7 +9,7 @@ const STAGES = [
   { until: 55, label: 'Baixando o novo patch…' },
   { until: 80, label: 'Ativando a nova versão…' },
   { until: 95, label: 'Quase pronto…' },
-  { until: 100, label: 'Recarregando o FarmaAI…' },
+  { until: 100, label: 'Recarregando o FarmAi…' },
 ];
 
 function stageLabel(pct) {
@@ -198,7 +198,7 @@ export function ReloadPrompt() {
             </div>
 
             <div style={{ color: '#fff', fontWeight: 900, fontSize: '1.15rem', marginBottom: 6 }}>
-              Atualizando FarmaAI
+              Atualizando FarmAi
             </div>
             <div style={{ color: '#c4b5fd', fontSize: '0.85rem', fontWeight: 600, minHeight: 22, marginBottom: 18 }}>
               {label}
@@ -287,7 +287,7 @@ export function ReloadPrompt() {
           </div>
 
           <p style={{ color: '#d8b4fe', margin: 0, fontSize: '0.85rem', lineHeight: '1.4' }}>
-            O FarmaAI acabou de receber um novo patch mágico. Atualize para receber as novidades!
+            O FarmAi acabou de receber um novo patch mágico. Atualize para receber as novidades!
           </p>
 
           <button

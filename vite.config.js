@@ -18,8 +18,8 @@ export default defineConfig({
       // Não force precache de todos os 3D no install (deixa o update lento/travado)
       includeAssets: ['favicon.svg', 'manifest.json'],
       manifest: {
-        name: 'FarmaAi Metaverse',
-        short_name: 'FarmaAi',
+        name: 'FarmAi Metaverse',
+        short_name: 'FarmAi',
         description: 'Explore o parque no metaverso!',
         theme_color: '#15151e',
         background_color: '#15151e',
