@@ -3,6 +3,7 @@ import { useUISystem } from '../../systems/useUISystem';
 
 /**
  * Modal próprio do anti-cheat — sem alert() do navegador.
+ * Só volta ao menu ao clicar em Fechar / Entendi.
  */
 export function AntiCheatModal() {
     const modal = useUISystem((s) => s.antiCheatModal);
@@ -28,7 +29,6 @@ export function AntiCheatModal() {
                 pointerEvents: 'auto',
                 animation: 'antiCheatFadeIn 0.28s ease-out',
             }}
-            onClick={dismiss}
         >
             <style>{`
                 @keyframes antiCheatFadeIn {
@@ -49,8 +49,8 @@ export function AntiCheatModal() {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="anticheat-title"
-                onClick={(e) => e.stopPropagation()}
                 style={{
+                    position: 'relative',
                     width: '100%',
                     maxWidth: 360,
                     borderRadius: 20,
@@ -62,13 +62,40 @@ export function AntiCheatModal() {
                     animation: 'antiCheatPop 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
                 }}
             >
+                {/* Botão fechar (X) — só aqui / no CTA volta ao home */}
+                <button
+                    type="button"
+                    aria-label="Fechar e ir ao menu"
+                    onClick={dismiss}
+                    style={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        border: '1px solid rgba(248,113,113,0.45)',
+                        background: 'rgba(239,68,68,0.15)',
+                        color: '#fca5a5',
+                        fontSize: 18,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    ✕
+                </button>
+
                 {/* Selo proibido */}
                 <div
                     aria-hidden
                     style={{
                         width: 84,
                         height: 84,
-                        margin: '0 auto 18px',
+                        margin: '8px auto 18px',
                         borderRadius: '50%',
                         border: '5px solid #ef4444',
                         display: 'flex',
@@ -76,7 +103,6 @@ export function AntiCheatModal() {
                         justifyContent: 'center',
                         background: 'rgba(239,68,68,0.12)',
                         animation: 'antiCheatPulseX 1.6s ease-in-out infinite',
-                        position: 'relative',
                     }}
                 >
                     <span
@@ -115,6 +141,7 @@ export function AntiCheatModal() {
                         color: '#fff',
                         fontWeight: 800,
                         lineHeight: 1.25,
+                        paddingRight: 8,
                     }}
                 >
                     {title}
@@ -147,7 +174,7 @@ export function AntiCheatModal() {
                         boxShadow: '0 8px 24px rgba(220,38,38,0.35)',
                     }}
                 >
-                    Entendi — vou jogar limpo
+                    Fechar e ir ao menu
                 </button>
             </div>
         </div>

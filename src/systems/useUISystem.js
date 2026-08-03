@@ -92,5 +92,10 @@ export const useUISystem = create((set, get) => ({
             body: 'Que feio… Usar auto-clique estraga a economia e a diversão de quem joga limpo. No FarmAi o farm é na mão — trapaça não tem vez.',
         },
     }),
-    dismissAntiCheatModal: () => set({ antiCheatModal: null }),
+    /** Fecha o modal e só então volta ao menu. */
+    dismissAntiCheatModal: () => {
+        set({ antiCheatModal: null });
+        get().setFarmMode('none');
+        get().setScreen('MENU');
+    },
 }));

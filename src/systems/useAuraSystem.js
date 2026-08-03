@@ -7,19 +7,24 @@ const CHEAT_MESSAGE = 'Cheat é proibido';
 /**
  * Buffer FORA do Zustand — sobrevive a quebra de combo.
  * Só limpa após idle longo ou punição.
+ *
+ * Calibragem: humano ritmado costuma ter CV ~0.15–0.35.
+ * Auto-clicker (mesmo com jitter leve) fica bem abaixo disso.
+ * Soft-score a cada toque foi removido — era o que banía jogador limpo.
  */
 const timingSamples = []; // { t, trusted }
-let suspicionScore = 0;
+/** Quantas avaliações seguidas com sinal “muito robótico”. */
+let roboticStreak = 0;
 let lastPunishAt = 0;
 
-const HISTORY_MAX = 140;
-const IDLE_RESET_MS = 2200;
-/** Gap que só invalida a janela atual (não zera o buffer). */
-const MAX_WINDOW_GAP_MS = 520;
+const HISTORY_MAX = 160;
+const IDLE_RESET_MS = 2500;
+const MAX_WINDOW_GAP_MS = 560;
 
 const UNTRUSTED_NEEDED = 3;
-const PUNISH_SCORE = 5;
-const PUNISH_COOLDOWN_MS = 3500;
+/** Precisa manter ritmo robótico por várias avaliações (não 1 trecho sortudo). */
+const ROBOTIC_STREAK_TO_PUNISH = 5;
+const PUNISH_COOLDOWN_MS = 4000;
 
 function nowMs() {
     return typeof performance !== 'undefined' && performance.now
@@ -48,7 +53,6 @@ function stdDev(arr, avg) {
     return Math.sqrt(s / arr.length);
 }
 
-/** Últimos `count` intervalos contínuos (sem gap grande). */
 function sliceIntervals(count) {
     if (timingSamples.length < count + 1) return null;
     const start = timingSamples.length - (count + 1);
@@ -67,20 +71,20 @@ function intervalStats(intervals) {
     const sd = stdDev(intervals, avg);
     const cv = avg > 0 ? sd / avg : 99;
     const range = Math.max(...intervals) - Math.min(...intervals);
-    let near12 = 0;
-    let near18 = 0;
+    let near8 = 0;
+    let near10 = 0;
     for (let i = 0; i < intervals.length; i++) {
         const d = Math.abs(intervals[i] - med);
-        if (d <= 12) near12++;
-        if (d <= 18) near18++;
+        if (d <= 8) near8++;
+        if (d <= 10) near10++;
     }
     return {
         avg,
         med,
         cv,
         range,
-        near12Ratio: near12 / intervals.length,
-        near18Ratio: near18 / intervals.length,
+        near8Ratio: near8 / intervals.length,
+        near10Ratio: near10 / intervals.length,
     };
 }
 
@@ -92,67 +96,61 @@ function checkUntrustedStreak() {
     return true;
 }
 
-/** Taxa absurda (~18+ CPS sustentado). */
+/** ~24+ CPS sustentado — humano não mantém isso alternando. */
 function checkImpossibleRate() {
-    const intervals = sliceIntervals(20);
+    const intervals = sliceIntervals(28);
     if (!intervals) return false;
-    return mean(intervals) < 55;
+    return mean(intervals) < 42;
 }
 
 /**
- * Sinais fortes = ban imediato.
- * Sinais médios = sobem score; humano sobe pouco / decai.
+ * Só marca robótico se CV + range + cluster forem todos bem apertados.
+ * Humano bom quase nunca fecha os três ao mesmo tempo por muito tempo.
  */
-function evaluateRhythm() {
-    const mid = sliceIntervals(20);
-    if (mid) {
-        const s = intervalStats(mid);
-        if (s.avg >= 40 && s.avg <= 400) {
-            if (s.cv <= 0.14 && s.range <= 32) {
-                return { instant: true, reason: 'metronome_mid', add: 0 };
-            }
-            if (s.near12Ratio >= 0.7 && s.range <= 40) {
-                return { instant: true, reason: 'cluster_mid', add: 0 };
-            }
-            if (s.cv <= 0.18 && s.near18Ratio >= 0.65) {
-                return { instant: false, reason: 'soft_mid', add: 2 };
-            }
-            if (s.cv <= 0.22 && s.near18Ratio >= 0.55) {
-                return { instant: false, reason: 'soft_mid2', add: 1 };
-            }
-        }
-    }
-
-    const long = sliceIntervals(36);
+function isClearlyRobotic() {
+    // Ban imediato: janela longa absurdamente estável (macro clássico)
+    const long = sliceIntervals(40);
     if (long) {
         const s = intervalStats(long);
-        if (s.avg >= 40 && s.avg <= 400) {
-            if (s.cv <= 0.16 && s.range <= 42) {
-                return { instant: true, reason: 'metronome_long', add: 0 };
-            }
-            if (s.near18Ratio >= 0.65 && s.cv <= 0.2) {
-                return { instant: true, reason: 'cluster_long', add: 0 };
-            }
-            if (s.cv <= 0.2) {
-                return { instant: false, reason: 'soft_long', add: 2 };
-            }
+        if (
+            s.avg >= 45 && s.avg <= 380 &&
+            s.cv <= 0.065 &&
+            s.range <= 14 &&
+            s.near8Ratio >= 0.78
+        ) {
+            return { instant: true, reason: 'metronome_strict' };
         }
     }
 
-    const short = sliceIntervals(12);
-    if (short) {
-        const s = intervalStats(short);
-        if (s.avg >= 40 && s.avg <= 400) {
-            if (s.cv <= 0.1 && s.range <= 22) {
-                return { instant: true, reason: 'metronome_short', add: 0 };
-            }
-            if (s.cv <= 0.15 && s.range <= 28) {
-                return { instant: false, reason: 'soft_short', add: 2 };
-            }
+    // Ban imediato: curto porém quase perfeito
+    const mid = sliceIntervals(28);
+    if (mid) {
+        const s = intervalStats(mid);
+        if (
+            s.avg >= 45 && s.avg <= 380 &&
+            s.cv <= 0.05 &&
+            s.range <= 11 &&
+            s.near8Ratio >= 0.82
+        ) {
+            return { instant: true, reason: 'metronome_perfect' };
         }
     }
 
-    return { instant: false, reason: null, add: -1 };
+    // Sinal sustentado (precisa de streak): ainda bem abaixo do humano típico
+    const win = sliceIntervals(32);
+    if (win) {
+        const s = intervalStats(win);
+        if (
+            s.avg >= 45 && s.avg <= 380 &&
+            s.cv <= 0.085 &&
+            s.range <= 18 &&
+            s.near10Ratio >= 0.72
+        ) {
+            return { instant: false, robotic: true, reason: 'metronome_sustained' };
+        }
+    }
+
+    return { instant: false, robotic: false, reason: null };
 }
 
 /**
@@ -165,7 +163,7 @@ function recordFarmHit(isTrusted) {
         const gap = t - timingSamples[timingSamples.length - 1].t;
         if (gap > IDLE_RESET_MS) {
             timingSamples.length = 0;
-            suspicionScore = 0;
+            roboticStreak = 0;
         }
     }
 
@@ -179,19 +177,19 @@ function recordFarmHit(isTrusted) {
         return { cheated: true, reason: 'impossible_rate' };
     }
 
-    const evalResult = evaluateRhythm();
-    if (evalResult.instant) {
-        return { cheated: true, reason: evalResult.reason };
+    const result = isClearlyRobotic();
+    if (result.instant) {
+        return { cheated: true, reason: result.reason };
     }
 
-    if (evalResult.add > 0) {
-        suspicionScore += evalResult.add;
-    } else if (evalResult.add < 0) {
-        suspicionScore = Math.max(0, suspicionScore - 1);
-    }
-
-    if (suspicionScore >= PUNISH_SCORE) {
-        return { cheated: true, reason: 'suspicion_score' };
+    if (result.robotic) {
+        roboticStreak += 1;
+        if (roboticStreak >= ROBOTIC_STREAK_TO_PUNISH) {
+            return { cheated: true, reason: result.reason };
+        }
+    } else {
+        // Humano: zera streak rápido (não acumula injustiça)
+        roboticStreak = 0;
     }
 
     return { cheated: false, reason: null };
@@ -199,7 +197,7 @@ function recordFarmHit(isTrusted) {
 
 function clearAntiCheatState() {
     timingSamples.length = 0;
-    suspicionScore = 0;
+    roboticStreak = 0;
 }
 
 function punishCheat(reason) {
@@ -217,7 +215,7 @@ function punishCheat(reason) {
         import('./useUISystem').then((m) => {
             const ui = m.useUISystem.getState();
             ui.setFarmMode('none');
-            ui.setScreen('MENU');
+            // Fica na tela atual; só vai ao MENU quando fechar o modal
             ui.showAntiCheatModal({
                 title: 'Que feio… auto-clique?',
                 body: 'Usar auto-clique é trapaça: desequilibra a economia e tira a graça de quem farmar na mão. No FarmAi isso é proibido — joga limpo e respeita a comunidade.',
@@ -373,7 +371,7 @@ export const useAuraSystem = create((set, get) => ({
                 hitId: Date.now() + Math.random(),
                 isMilestone: isMilestone,
                 hitSide: side,
-                suspicionScore,
+                suspicionScore: roboticStreak,
                 clickHistory: [],
                 isFarmBlocked: false,
                 blockMessage: null,
