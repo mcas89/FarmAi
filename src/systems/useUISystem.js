@@ -82,5 +82,15 @@ export const useUISystem = create((set, get) => ({
     },
 
     isMapMode: false,
-    toggleMapMode: () => set((state) => ({ isMapMode: !state.isMapMode }))
+    toggleMapMode: () => set((state) => ({ isMapMode: !state.isMapMode })),
+
+    /** Modal customizado de anti-cheat (substitui alert do navegador). */
+    antiCheatModal: null, // { title, body } | null
+    showAntiCheatModal: (payload) => set({
+        antiCheatModal: payload || {
+            title: 'Auto-clique proibido',
+            body: 'Que feio… Usar auto-clique estraga a economia e a diversão de quem joga limpo. No FarmAi o farm é na mão — trapaça não tem vez.',
+        },
+    }),
+    dismissAntiCheatModal: () => set({ antiCheatModal: null }),
 }));

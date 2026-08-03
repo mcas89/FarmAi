@@ -2,6 +2,7 @@ import React from 'react';
 import { useUISystem } from '../../systems/useUISystem';
 import { ShopModal } from './ShopModal';
 import { GraphicsToast } from './GraphicsToast';
+import { AntiCheatModal } from './AntiCheatModal';
 
 // Import Screens
 import { SplashScreen } from './screens/SplashScreen';
@@ -61,6 +62,7 @@ export function GameInterface() {
                 <ShopModal />
             </div>
             <GraphicsToast />
+            <AntiCheatModal />
         </div>
     );
 }
