@@ -15,12 +15,15 @@ export function MapTopBanner() {
     const [open, setOpen] = useState(true);
     const nearFountain = useMapActivitiesSystem((s) => s.nearFountain);
     const nearShop = useMapActivitiesSystem((s) => s.nearShop);
+    const nearMageTable = useMapActivitiesSystem((s) => s.nearMageTable);
     const nearChest = useMapActivitiesSystem((s) => s.nearChest);
     const chestOpened = useMapActivitiesSystem((s) => s.chestOpened);
     const keyFound = useMapActivitiesSystem((s) => s.keyFound);
     const fountainState = useMapActivitiesSystem((s) => s.fountainState);
     const fountainTarget = useMapActivitiesSystem((s) => s.fountainTarget);
-    const potionSpawns = useMapActivitiesSystem((s) => s.potionSpawns);
+    const potionsLeft = useMapActivitiesSystem(
+        (s) => s.potionSpawns.reduce((n, p) => n + (p.collected ? 0 : 1), 0)
+    );
     const tipIndex = useMapActivitiesSystem((s) => s.tipIndex);
     const comboCount = useAuraSystem((s) => s.comboCount);
     const mapToast = useMapActivitiesSystem((s) => s.mapToast);
@@ -34,7 +37,7 @@ export function MapTopBanner() {
     useEffect(() => {
         const id = setInterval(() => {
             const s = useMapActivitiesSystem.getState();
-            if (s.nearFountain || s.nearShop || s.nearChest) return;
+            if (s.nearFountain || s.nearShop || s.nearChest || s.nearMageTable) return;
             s.advanceTip();
         }, 6000);
         return () => clearInterval(id);
@@ -42,20 +45,21 @@ export function MapTopBanner() {
 
     // Ao chegar perto de algo importante, abre o painel automaticamente
     useEffect(() => {
-        if (nearFountain || nearShop || nearChest) setOpen(true);
-    }, [nearFountain, nearShop, nearChest]);
+        if (nearFountain || nearShop || nearChest || nearMageTable) setOpen(true);
+    }, [nearFountain, nearShop, nearChest, nearMageTable]);
 
     const banner = useMapActivitiesSystem.getState().getTopBanner();
     const toastLive = mapToast && Date.now() < mapToast.until;
 
     void nearFountain;
     void nearShop;
+    void nearMageTable;
     void nearChest;
     void chestOpened;
     void keyFound;
     void fountainState;
     void fountainTarget;
-    void potionSpawns;
+    void potionsLeft;
     void tipIndex;
     void comboCount;
 

@@ -50,20 +50,21 @@ export const useUISystem = create((set, get) => ({
     addPotionToInventory: (potion) => {
         set((state) => {
             const inventory = [...state.inventory, { ...potion, instanceId: Date.now() + Math.random() }];
-            cacheInventory(inventory);
+            // localStorage fora do caminho síncrono do set (menos hitch no collect)
+            setTimeout(() => cacheInventory(inventory), 0);
             return { inventory };
         });
     },
     removePotionFromInventory: (instanceId) => {
         set((state) => {
             const inventory = state.inventory.filter(p => p.instanceId !== instanceId);
-            cacheInventory(inventory);
+            setTimeout(() => cacheInventory(inventory), 0);
             return { inventory };
         });
     },
     setInventory: (inventory) => {
         const next = Array.isArray(inventory) ? inventory : [];
-        cacheInventory(next);
+        setTimeout(() => cacheInventory(next), 0);
         set({ inventory: next });
     },
 

@@ -6,14 +6,17 @@ import { useGraphicsSystem } from '../../systems/useGraphicsSystem';
 import { usePlayerSystem } from '../../systems/usePlayerSystem';
 import { useAuraSystem } from '../../systems/useAuraSystem';
 import { useCollisionSystem } from '../../systems/useCollisionSystem';
-import { useMapActivitiesSystem } from '../../systems/useMapActivitiesSystem';
+import { useMapActivitiesSystem, MAGE_TABLE_POS } from '../../systems/useMapActivitiesSystem';
 import { AuraCashGem } from './AuraCashGem';
 
-const POTION_URL = '/itens/' + encodeURIComponent('poção2x.glb');
+const CHEST_URL = '/itens/bau.glb';
+const KEY_URL = '/itens/chave.glb';
 
-useGLTF.preload('/itens/bau.glb');
-useGLTF.preload('/itens/chave.glb');
-// poção2x.glb: só carrega sob demanda no Médio/Alto (Baixo/Mín. usam mesh leve)
+useGLTF.preload(CHEST_URL);
+useGLTF.preload(KEY_URL);
+
+/** IDs já “pegos” visualmente antes do React atualizar o store. */
+const potionTakenVisual = new Set();
 
 function PromptLabel({ children, color = '#a855f7' }) {
     return (
@@ -131,14 +134,14 @@ function DailyChestHunt() {
     return (
         <>
             <group position={chestPos}>
-                <ClonedGLB url="/itens/bau.glb" scale={2.8} sitOnGround />
+                <ClonedGLB url={CHEST_URL} scale={3.6} sitOnGround />
             </group>
 
             {!keyFound && (
                 <group position={keyPos}>
                     <group ref={keySpin}>
                         <group rotation={[-Math.PI / 2, 0, 0]}>
-                            <ClonedGLB url="/itens/chave.glb" scale={0.85} />
+                            <ClonedGLB url={KEY_URL} scale={0.85} />
                         </group>
                     </group>
                     {nearKey && (
@@ -209,8 +212,12 @@ function FountainComboChallenge() {
 
 function HourlyMapPotions() {
     const potionSpawns = useMapActivitiesSystem((s) => s.potionSpawns);
+    const potionHourId = useMapActivitiesSystem((s) => s.potionHourId);
     const hourTick = useRef(0);
-    const collectingRef = useRef(false);
+
+    useEffect(() => {
+        potionTakenVisual.clear();
+    }, [potionHourId]);
 
     useFrame((_, delta) => {
         hourTick.current += delta;
@@ -219,20 +226,18 @@ function HourlyMapPotions() {
             useMapActivitiesSystem.getState().ensureActive();
         }
 
-        if (collectingRef.current) return;
-
         const player = usePlayerSystem.getState().position;
         const spawns = useMapActivitiesSystem.getState().potionSpawns;
         for (const p of spawns) {
-            if (p.collected) continue;
+            if (p.collected || potionTakenVisual.has(p.id)) continue;
             const d = Math.hypot(player[0] - p.x, player[2] - p.z);
-            if (d < 1.7) {
-                collectingRef.current = true;
-                useMapActivitiesSystem.getState().collectPotion(p.id);
-                // Libera no próximo tick — evita double-collect no mesmo frame
-                queueMicrotask(() => {
-                    collectingRef.current = false;
-                });
+            if (d < 1.85) {
+                potionTakenVisual.add(p.id);
+                const id = p.id;
+                // Fora do frame 3D — evita hitch no iPhone ao coletar
+                setTimeout(() => {
+                    useMapActivitiesSystem.getState().collectPotion(id);
+                }, 0);
                 break;
             }
         }
@@ -240,58 +245,149 @@ function HourlyMapPotions() {
 
     return (
         <group>
-            {potionSpawns
-                .filter((p) => !p.collected)
-                .map((p) => (
-                    <PotionPickup key={p.id} x={p.x} z={p.z} />
+            {potionSpawns.map((p) => (
+                <PotionPickup
+                    key={p.id}
+                    id={p.id}
+                    x={p.x}
+                    z={p.z}
+                    collected={!!p.collected}
+                />
+            ))}
+        </group>
+    );
+}
+
+/** Poção sempre em mesh leve (sem GLB/pointLight) — maior e estável em mobile. */
+function PotionPickup({ id, x, z, collected }) {
+    const ref = useRef();
+
+    useFrame((state, delta) => {
+        if (!ref.current) return;
+        const gone = collected || potionTakenVisual.has(id);
+        ref.current.visible = !gone;
+        if (gone) return;
+        ref.current.rotation.y += delta * 1.2;
+        ref.current.position.y = 1.05 + Math.sin(state.clock.elapsedTime * 2 + x) * 0.14;
+    });
+
+    // Não desmonta a geometria no collect — só esconde (menos hitch)
+    return (
+        <group ref={ref} position={[x, 1.05, z]} scale={1.75} visible={!collected}>
+            <mesh position={[0, 0.15, 0]}>
+                <cylinderGeometry args={[0.14, 0.16, 0.4, 8]} />
+                <meshBasicMaterial color="#38bdf8" />
+            </mesh>
+            <mesh position={[0, 0.42, 0]}>
+                <cylinderGeometry args={[0.07, 0.09, 0.14, 6]} />
+                <meshBasicMaterial color="#0ea5e9" />
+            </mesh>
+            <mesh position={[0, 0.54, 0]}>
+                <sphereGeometry args={[0.1, 6, 6]} />
+                <meshBasicMaterial color="#7dd3fc" />
+            </mesh>
+        </group>
+    );
+}
+
+/** Orbes vermelhas do mapa — mesh leve, banco acumulativo. */
+const mapOrbTakenVisual = new Set();
+
+function MageTableSensor() {
+    useFrame(() => {
+        const player = usePlayerSystem.getState().position;
+        const d = Math.hypot(player[0] - MAGE_TABLE_POS[0], player[2] - MAGE_TABLE_POS[2]);
+        useMapActivitiesSystem.getState().setNearMageTable(d < 4.2);
+    });
+
+    useEffect(() => {
+        return () => useMapActivitiesSystem.getState().setNearMageTable(false);
+    }, []);
+
+    return null;
+}
+
+function RedMapOrbs({ isOnlineMode = false }) {
+    const mapOrbs = useMapActivitiesSystem((s) => s.mapOrbs);
+    const dayId = useMapActivitiesSystem((s) => s.dayId);
+    const orbsCollectedToday = useMapActivitiesSystem((s) => s.orbsCollectedToday);
+
+    useEffect(() => {
+        mapOrbTakenVisual.clear();
+    }, [dayId]);
+
+    useEffect(() => {
+        if (isOnlineMode) {
+            useMapActivitiesSystem.getState().refillMapOrbsIfNeeded();
+        }
+    }, [isOnlineMode, dayId, orbsCollectedToday]);
+
+    useFrame(() => {
+        if (!isOnlineMode) return;
+        const player = usePlayerSystem.getState().position;
+        const spawns = useMapActivitiesSystem.getState().mapOrbs;
+        for (const o of spawns) {
+            if (o.collected || mapOrbTakenVisual.has(o.id)) continue;
+            const d = Math.hypot(player[0] - o.x, player[2] - o.z);
+            if (d < 1.7) {
+                mapOrbTakenVisual.add(o.id);
+                const id = o.id;
+                setTimeout(() => {
+                    useMapActivitiesSystem.getState().collectMapOrb(id);
+                    mapOrbTakenVisual.delete(id);
+                }, 0);
+                break;
+            }
+        }
+    });
+
+    if (!isOnlineMode) return null;
+
+    return (
+        <group>
+            {mapOrbs
+                .filter((o) => !o.collected)
+                .map((o) => (
+                    <RedOrbPickup
+                        key={o.id}
+                        id={o.id}
+                        x={o.x}
+                        z={o.z}
+                        collected={!!o.collected}
+                    />
                 ))}
         </group>
     );
 }
 
-function PotionPickup({ x, z }) {
+function RedOrbPickup({ id, x, z, collected }) {
     const ref = useRef();
-    const lite = useGraphicsSystem((s) => {
-        const tier = s.effectiveTier;
-        return tier === 'potato' || tier === 'low' || s.settings.particles === 'none' || s.settings.particles === 'reduced';
-    });
 
     useFrame((state, delta) => {
         if (!ref.current) return;
-        ref.current.rotation.y += delta * 1.2;
-        ref.current.position.y = 0.85 + Math.sin(state.clock.elapsedTime * 2 + x) * 0.12;
+        const gone = collected || mapOrbTakenVisual.has(id);
+        ref.current.visible = !gone;
+        if (gone) return;
+        ref.current.rotation.y += delta * 1.4;
+        ref.current.position.y = 0.95 + Math.sin(state.clock.elapsedTime * 2.4 + id) * 0.12;
     });
 
     return (
-        <group ref={ref} position={[x, 0.85, z]}>
-            {lite ? (
-                // Mesh leve — evita GLB + pointLight em aparelhos fracos
-                <group>
-                    <mesh position={[0, 0.15, 0]}>
-                        <cylinderGeometry args={[0.12, 0.14, 0.35, 8]} />
-                        <meshBasicMaterial color="#38bdf8" />
-                    </mesh>
-                    <mesh position={[0, 0.38, 0]}>
-                        <cylinderGeometry args={[0.06, 0.08, 0.12, 6]} />
-                        <meshBasicMaterial color="#0ea5e9" />
-                    </mesh>
-                    <mesh position={[0, 0.48, 0]}>
-                        <sphereGeometry args={[0.08, 6, 6]} />
-                        <meshBasicMaterial color="#7dd3fc" />
-                    </mesh>
-                </group>
-            ) : (
-                <>
-                    <ClonedGLB url={POTION_URL} scale={0.7} />
-                    <pointLight color="#38bdf8" intensity={0.35} distance={2.2} />
-                </>
-            )}
+        <group ref={ref} position={[x, 0.95, z]} scale={1.15} visible={!collected}>
+            <mesh>
+                <sphereGeometry args={[0.28, 10, 10]} />
+                <meshBasicMaterial color="#ef4444" />
+            </mesh>
+            <mesh scale={0.55}>
+                <sphereGeometry args={[0.28, 8, 8]} />
+                <meshBasicMaterial color="#fecaca" transparent opacity={0.55} depthWrite={false} />
+            </mesh>
         </group>
     );
 }
 
 /** Toast 2D flutuante é renderizado no GameHUD via mapToast do store. */
-export function MapActivities() {
+export function MapActivities({ isOnlineMode = false }) {
     useEffect(() => {
         // Fonte: nova missão só ao montar o mapa (não no tick horário)
         useMapActivitiesSystem.getState().ensureActive({ resetFountain: true });
@@ -302,6 +398,8 @@ export function MapActivities() {
             <DailyChestHunt />
             <FountainComboChallenge />
             <HourlyMapPotions />
+            <RedMapOrbs isOnlineMode={isOnlineMode} />
+            <MageTableSensor />
         </group>
     );
 }

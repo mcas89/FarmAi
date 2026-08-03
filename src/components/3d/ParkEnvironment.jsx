@@ -22,7 +22,7 @@ useGLTF.preload('/itens/arbusto2.glb');
 useGLTF.preload('/itens/arbusto3.glb');
 useGLTF.preload('/itens/mesa_piquinique.glb');
 useGLTF.preload('/itens/poste_luz.glb');
-useGLTF.preload('/itens/foodtruck1.glb');
+useGLTF.preload('/itens/mesa_mago.glb');
 useGLTF.preload('/itens/pipoqueiro.glb');
 useGLTF.preload('/itens/predio1.glb');
 useGLTF.preload('/itens/predio2.glb');
@@ -32,20 +32,36 @@ useGLTF.preload('/itens/fonte2.glb');
 useGLTF.preload('/itens/maquinaderefri.glb');
 
 // Componente utilitário para renderizar instâncias de GLTF
-function GLTFModel({ url, position, rotation, scale = 1 }) {
+function GLTFModel({ url, position, rotation, scale = 1, sitOnGround = false }) {
     const { scene } = useGLTF(url);
     const propCastShadows = useGraphicsSystem((state) => state.settings.propCastShadows);
-    const copiedScene = useMemo(() => scene.clone(), [scene]);
-    
-    useMemo(() => {
-        copiedScene.traverse((child) => {
+    const copiedScene = useMemo(() => {
+        const clone = scene.clone(true);
+        clone.traverse((child) => {
             if (child.isMesh) {
                 child.castShadow = propCastShadows;
                 child.receiveShadow = true;
             }
         });
-    }, [copiedScene, propCastShadows]);
-    
+        if (sitOnGround) {
+            clone.scale.setScalar(scale);
+            clone.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(clone);
+            if (Number.isFinite(box.min.y)) {
+                clone.position.y -= box.min.y;
+            }
+        }
+        return clone;
+    }, [scene, propCastShadows, scale, sitOnGround]);
+
+    if (sitOnGround) {
+        return (
+            <group position={position} rotation={rotation}>
+                <primitive object={copiedScene} />
+            </group>
+        );
+    }
+
     return <primitive object={copiedScene} position={position} rotation={rotation} scale={scale} />;
 }
 
@@ -369,23 +385,23 @@ function ParkFurniture() {
             });
         });
 
-        // 2. Food Truck e Pipoqueiro (Nas ruas laterais da praça)
+        // 2. Mesa do Mago (orbes) e Pipoqueiro
         items.push({
-            id: 'foodtruck',
-            type: 'foodtruck1',
-            position: [-30, 0, 30], // posição mais estratégica
+            id: 'mesa_mago',
+            type: 'mesa_mago',
+            position: [-30, 0, 30],
             rotation: [0, Math.PI / 2, 0],
-            scale: 0.9, // um pouco maior para facilitar a visualização
-            colRadius: 2.0 
+            scale: 1.15,
+            colRadius: 2.2,
         });
 
         items.push({
             id: 'pipoqueiro',
             type: 'pipoqueiro',
-            position: [22, 1.5, 0], // Subi bastante (1.5m)
-            rotation: [0, -Math.PI / 2, 0], 
-            scale: 3.0, 
-            colRadius: 1.5 
+            position: [22, 1.5, 0],
+            rotation: [0, -Math.PI / 2, 0],
+            scale: 3.0,
+            colRadius: 1.5,
         });
 
         // 3. Postes de Luz ao redor da praça / vias
@@ -427,7 +443,8 @@ function ParkFurniture() {
                     url={`/itens/${item.type}.glb`} 
                     position={item.position} 
                     rotation={item.rotation} 
-                    scale={item.scale} 
+                    scale={item.scale}
+                    sitOnGround={item.type === 'mesa_mago'}
                 />
             ))}
         </group>
@@ -673,7 +690,7 @@ function createSplotchTexture(color1, color2, splotchesCount = 50, size = 512, r
     return texture;
 }
 
-export function ParkEnvironment() {
+export function ParkEnvironment({ isOnlineMode = false }) {
     const registerObstacle = useCollisionSystem((state) => state.registerObstacle);
     const removeObstacle = useCollisionSystem((state) => state.removeObstacle);
     const settings = useGraphicsSystem((state) => state.settings);
@@ -819,7 +836,7 @@ export function ParkEnvironment() {
                 <DarkFountain position={[0, 0.0, 0]} rotation={[0, 0, 0]} scale={2} />
 
                 {/* 7.5 Atividades do mapa (baú/chave, fonte, poções) — local + online */}
-                <MapActivities />
+                <MapActivities isOnlineMode={isOnlineMode} />
                 
                 {/* 8. Partículas mágicas (sem vapor/névoa na fonte) */}
                 {showAmbientMagic && (

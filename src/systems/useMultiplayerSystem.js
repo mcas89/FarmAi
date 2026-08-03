@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as Colyseus from '@colyseus/sdk';
+import { auth } from '../config/firebase';
 
 // URL do servidor de produção (Render)
 // Troque para ws://localhost:2567 para testar localmente
@@ -8,6 +9,20 @@ const ROOM_NAME = "farma_room";
 
 let colyseusClient = null;
 let currentRoom = null;
+/** Evita que onLeave/onStateChange de uma sala antiga baguncem a conexão nova. */
+let roomEpoch = 0;
+
+async function forceLeaveRoom(room) {
+    if (!room) return;
+    try {
+        await room.leave(true);
+    } catch (e) {
+        console.warn("[Multiplayer] leave:", e?.message || e);
+        try {
+            room.connection?.close();
+        } catch (_) { /* ignore */ }
+    }
+}
 
 export const useMultiplayerSystem = create((set, get) => ({
     isConnected: false,
@@ -40,18 +55,53 @@ export const useMultiplayerSystem = create((set, get) => ({
         }
     },
 
+    leaveRoom: async () => {
+        const room = currentRoom;
+        const epochAtLeave = roomEpoch;
+        currentRoom = null;
+        roomEpoch += 1;
+
+        await forceLeaveRoom(room);
+
+        // Só limpa se ninguém entrou em outra sala nesse meio tempo
+        if (roomEpoch === epochAtLeave + 1 && !currentRoom) {
+            set({
+                isConnected: false,
+                isTryingToJoin: false,
+                currentRoomId: null,
+                mySessionId: null,
+                remotePlayers: {},
+            });
+        }
+    },
+
     joinRoom: async (roomId, playerInfo = {}) => {
+        if (get().isTryingToJoin) return false;
+
+        // Sempre sai da sessão anterior (evita clone/fantasma da própria sessão)
+        await get().leaveRoom();
+
         const { initColyseusClient } = get();
         const client = initColyseusClient();
-        
-        set({ localPlayerInfo: playerInfo, isTryingToJoin: true });
+        const epoch = roomEpoch;
+        const uid = playerInfo?.uid || auth?.currentUser?.uid || '';
+
+        const localInfo = { ...playerInfo, uid };
+        set({ localPlayerInfo: localInfo, isTryingToJoin: true, remotePlayers: {} });
 
         try {
             const room = await client.joinOrCreate(ROOM_NAME, {
-                name: playerInfo?.name || 'Jogador',
-                model: playerInfo?.model || 'carol.vrm',
-                aura: playerInfo?.aura || 0,
+                name: localInfo?.name || 'Jogador',
+                model: localInfo?.model || 'carol.vrm',
+                aura: localInfo?.aura || 0,
+                uid,
             });
+
+            // leaveRoom paralelo / cancelamento
+            if (epoch !== roomEpoch) {
+                await forceLeaveRoom(room);
+                return false;
+            }
 
             currentRoom = room;
 
@@ -60,40 +110,55 @@ export const useMultiplayerSystem = create((set, get) => ({
                 isTryingToJoin: false,
                 currentRoomId: room.id,
                 mySessionId: room.sessionId,
+                remotePlayers: {},
             });
 
             console.log(`[Multiplayer] Conectado! Sessão: ${room.sessionId}`);
 
+            const isActiveRoom = () => currentRoom === room && get().mySessionId === room.sessionId;
+
             // Escuta mudanças de estado e sincroniza os remotePlayers
             room.onStateChange((state) => {
+                if (!isActiveRoom()) return;
                 if (!state.players) return;
 
-                set((storeState) => {
-                    const newRemotePlayers = {};
-                    
-                    state.players.forEach((player, sessionId) => {
-                        // Ignora o próprio jogador
-                        if (sessionId === room.sessionId) return;
-                        
-                        newRemotePlayers[sessionId] = {
-                            id: sessionId,
-                            name: player.name,
-                            model: player.model || 'carol.vrm',
-                            position: [player.x || 0, player.y || 0, player.z || 0],
-                            rotation: player.rotation || 0,
-                            animation: player.animation || 'idle',
-                            leftFarm: player.leftFarm || false,
-                            rightFarm: player.rightFarm || false,
-                            aura: player.aura || 0,
-                        };
-                    });
+                const myId = room.sessionId;
+                const myUid = get().localPlayerInfo?.uid || uid || '';
+                const myName = get().localPlayerInfo?.name || '';
+                const myModel = get().localPlayerInfo?.model || '';
+                const newRemotePlayers = {};
 
-                    return { remotePlayers: newRemotePlayers };
+                state.players.forEach((player, sessionId) => {
+                    if (sessionId === myId) return;
+
+                    const pUid = player.uid || '';
+                    // Fantasma da própria conta (mesmo uid) — não renderiza
+                    if (myUid && pUid && pUid === myUid) return;
+                    // Fallback enquanto o servidor antigo ainda não envia uid
+                    if (!pUid && myName && player.name === myName && (player.model || 'carol.vrm') === myModel) {
+                        return;
+                    }
+
+                    newRemotePlayers[sessionId] = {
+                        id: sessionId,
+                        uid: pUid,
+                        name: player.name,
+                        model: player.model || 'carol.vrm',
+                        position: [player.x || 0, player.y || 0, player.z || 0],
+                        rotation: player.rotation || 0,
+                        animation: player.animation || 'idle',
+                        leftFarm: player.leftFarm || false,
+                        rightFarm: player.rightFarm || false,
+                        aura: player.aura || 0,
+                    };
                 });
+
+                set({ remotePlayers: newRemotePlayers });
             });
 
             // Chat
             room.onMessage("chat", (message) => {
+                if (!isActiveRoom()) return;
                 set((state) => ({
                     chatMessages: [...state.chatMessages.slice(-49), message]
                 }));
@@ -101,8 +166,17 @@ export const useMultiplayerSystem = create((set, get) => ({
 
             room.onLeave((code) => {
                 console.log("[Multiplayer] Saiu da sala. Código:", code);
-                currentRoom = null;
-                set({ isConnected: false, currentRoomId: null, mySessionId: null, remotePlayers: {} });
+                if (currentRoom === room) {
+                    currentRoom = null;
+                }
+                // Não zerar se o jogador já entrou em outra sala
+                if (get().mySessionId !== room.sessionId) return;
+                set({
+                    isConnected: false,
+                    currentRoomId: null,
+                    mySessionId: null,
+                    remotePlayers: {},
+                });
             });
 
             room.onError((code, message) => {
@@ -111,7 +185,9 @@ export const useMultiplayerSystem = create((set, get) => ({
 
         } catch (e) {
             console.error("[Multiplayer] Erro ao conectar:", e);
-            set({ isTryingToJoin: false, isConnected: false });
+            if (epoch === roomEpoch) {
+                set({ isTryingToJoin: false, isConnected: false });
+            }
             return false;
         }
 
@@ -160,12 +236,4 @@ export const useMultiplayerSystem = create((set, get) => ({
             text: text,
         });
     },
-
-    leaveRoom: () => {
-        if (currentRoom) {
-            currentRoom.leave();
-            currentRoom = null;
-        }
-        set({ isConnected: false, currentRoomId: null, mySessionId: null, remotePlayers: {} });
-    }
 }));

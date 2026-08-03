@@ -270,6 +270,7 @@ export function Scene() {
     const activeModel = usePlayerSystem(state => state.activeModel);
     const isOnlineMode = useUISystem(state => state.isOnlineMode);
     const remotePlayers = useMultiplayerSystem(state => state.remotePlayers);
+    const mySessionId = useMultiplayerSystem(state => state.mySessionId);
     const settings = useGraphicsSystem(state => state.settings);
 
     return (
@@ -284,12 +285,12 @@ export function Scene() {
             camera={{ position: [0, 5.5, -14], fov: 45, near: 0.1, far: 500 }}
         >
             <ambientLight intensity={0.2} />
-            <ParkEnvironment />
+            <ParkEnvironment isOnlineMode={isOnlineMode} />
             
             <Avatar key={activeModel} url={`/models/${activeModel}`} />
             
             {isOnlineMode && Object.entries(remotePlayers).map(([sessionId, data]) => {
-                if (sessionId === useMultiplayerSystem.getState().currentRoomId) return null;
+                if (!sessionId || sessionId === mySessionId) return null;
                 return <RemotePlayer key={sessionId} playerData={data} />;
             })}
             

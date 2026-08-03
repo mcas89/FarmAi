@@ -62,3 +62,29 @@ export function readCachedMapActivities() {
         return null;
     }
 }
+
+const ORB_KEY = 'farmaai_orb_bank_v1';
+
+export function cacheOrbBank(orbBank) {
+    try {
+        localStorage.setItem(
+            ORB_KEY,
+            JSON.stringify({ updatedAt: Date.now(), orbBank: Math.max(0, Number(orbBank) || 0) })
+        );
+    } catch {
+        // ignore
+    }
+}
+
+export function readOrbBank(serverValue) {
+    const server = Math.max(0, Number(serverValue) || 0);
+    try {
+        const raw = localStorage.getItem(ORB_KEY);
+        if (!raw) return server;
+        const data = JSON.parse(raw);
+        const local = Math.max(0, Number(data.orbBank) || 0);
+        return Math.max(local, server);
+    } catch {
+        return server;
+    }
+}

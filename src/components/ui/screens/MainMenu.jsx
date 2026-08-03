@@ -104,10 +104,12 @@ export function MainMenu() {
     const handleJoinRoom = async (roomId) => {
         setIsJoining(true);
         const aura = useAuraSystem.getState().aura || 0;
+        const { auth } = await import('../../../config/firebase');
         const success = await joinRoom(roomId, { 
             name: nickname, 
             model: activeModel || 'carol.vrm',
-            aura
+            aura,
+            uid: auth?.currentUser?.uid || '',
         });
         if (success) {
             setIsOnlineMode(true);
@@ -515,7 +517,11 @@ export function MainMenu() {
                 <div style={{ display: 'flex', gap: '15px', margin: '0 15px 12px 15px' }}>
                     
                     {/* FARMAR LOCAL */}
-                    <div className="play-card" onClick={() => { setIsOnlineMode(false); setScreen('GAME'); }} style={{ margin: 0, flex: 1, padding: '12px', background: 'linear-gradient(135deg, rgba(52,211,153,0.3), rgba(16,185,129,0.3))', borderColor: 'rgba(52,211,153,0.3)' }}>
+                    <div className="play-card" onClick={() => {
+                        setIsOnlineMode(false);
+                        import('../../../systems/useMultiplayerSystem').then((m) => m.useMultiplayerSystem.getState().leaveRoom());
+                        setScreen('GAME');
+                    }} style={{ margin: 0, flex: 1, padding: '12px', background: 'linear-gradient(135deg, rgba(52,211,153,0.3), rgba(16,185,129,0.3))', borderColor: 'rgba(52,211,153,0.3)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 1 }}>
                             <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.6rem', fontWeight: 'bold', letterSpacing: '1px' }}>SOZINHO</div>
                             <div style={{ color: '#fff', fontSize: '1.1rem', fontWeight: '900', letterSpacing: '1px' }}>LOCAL</div>

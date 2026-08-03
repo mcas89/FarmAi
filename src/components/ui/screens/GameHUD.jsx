@@ -9,7 +9,7 @@ import { Joystick } from '../Joystick';
 import { 
     Trophy, Crown, Swords,
     BarChart2, Shield, ScrollText, Gift, Briefcase, ShoppingCart, 
-    Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map, FlaskConical, Pickaxe
+    Flame, Zap, Sparkles, Home, UserSquare, Sparkle, User, ChevronRight, ChevronLeft, Loader2, Map, FlaskConical, Pickaxe, Circle
 } from 'lucide-react';
 import { MultiplayerChat } from '../MultiplayerChat';
 import { DuelModal } from './DuelModal';
@@ -55,9 +55,11 @@ export function GameHUD() {
     const nickname = stats.nickname || 'Marcos';
     const isDancing = useDanceSystem(state => state.isDancing);
     const inventory = useUISystem(state => state.inventory || []);
+    const orbBank = useMapActivitiesSystem((s) => s.orbBank || 0);
     const farmMode = useUISystem(state => state.farmMode);
     const setFarmMode = useUISystem(state => state.setFarmMode);
     const [showInventoryModal, setShowInventoryModal] = useState(false);
+    const [showOrbModal, setShowOrbModal] = useState(false);
     const [showFarmModal, setShowFarmModal] = useState(false);
     const [showDuelModal, setShowDuelModal] = useState(false);
 
@@ -498,7 +500,14 @@ export function GameHUD() {
                                 const stats = useUISystem.getState().playerStats;
                                 const aura = useAuraSystem.getState().aura;
                                 const activeModel = usePlayerSystem.getState().activeModel;
-                                joinRoom('farma_room', { name: stats.nickname || 'Jogador', aura: aura, model: activeModel });
+                                import('../../../config/firebase').then(({ auth }) => {
+                                    joinRoom('farma_room', {
+                                        name: stats.nickname || 'Jogador',
+                                        aura,
+                                        model: activeModel,
+                                        uid: auth?.currentUser?.uid || '',
+                                    });
+                                });
                             }}
                             className="action-button"
                             style={{ padding: '15px 30px', fontSize: '1.2rem', background: '#3b82f6', border: 'none', borderRadius: '10px', color: '#fff', cursor: 'pointer' }}
@@ -508,7 +517,8 @@ export function GameHUD() {
                         
                         <button 
                             onClick={() => {
-                                useUISystem.getState().toggleOnlineMode();
+                                useUISystem.getState().setIsOnlineMode(false);
+                                useMultiplayerSystem.getState().leaveRoom();
                             }}
                             className="action-button"
                             style={{ padding: '15px 30px', fontSize: '1.2rem', background: '#333', border: '1px solid #555', borderRadius: '10px', color: '#fff', cursor: 'pointer' }}
@@ -660,7 +670,9 @@ export function GameHUD() {
                             onPointerDown={e => e.currentTarget.style.transform = 'scale(0.88)'}
                             onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
                             onClick={async () => {
-                                import('../../../systems/useMultiplayerSystem').then(m => m.useMultiplayerSystem.getState().leaveRoom());
+                                const mp = await import('../../../systems/useMultiplayerSystem');
+                                await mp.useMultiplayerSystem.getState().leaveRoom();
+                                useUISystem.getState().setIsOnlineMode(false);
                                 const [pSys, aSys, dbSys, qSys, achSys] = await Promise.all([
                                     import('../../../systems/usePlayerSystem'),
                                     import('../../../systems/useAuraSystem'),
@@ -938,6 +950,24 @@ export function GameHUD() {
                     )}
                 </div>
 
+                {/* Banco de Orbes */}
+                <div className="top-btn anim-float" style={{
+                    width: '45px', height: '45px', borderRadius: '50%', position: 'relative',
+                    background: showOrbModal ? 'rgba(239, 68, 68, 0.4)' : 'var(--bg-glass)',
+                    border: showOrbModal ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: showOrbModal ? '0 0 15px rgba(239, 68, 68, 0.5)' : 'none'
+                }} onClick={() => setShowOrbModal(true)}>
+                    <Circle size={22} color={showOrbModal ? '#fff' : '#ef4444'} fill={showOrbModal ? '#fecaca' : '#ef4444'} />
+                    <div style={{
+                        position: 'absolute', top: '-5px', right: '-5px',
+                        background: '#ef4444', color: '#fff', borderRadius: '50%',
+                        minWidth: '20px', height: '20px', padding: '0 4px', display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        fontSize: '0.55rem', fontWeight: 'bold', border: '2px solid #000'
+                    }}>
+                        {orbBank > 99 ? '99+' : orbBank}
+                    </div>
+                </div>
+
                 {/* Botão Mapa */}
                 <div className="top-btn anim-float" style={{ 
                     width: '45px', height: '45px', borderRadius: '50%', 
@@ -1030,6 +1060,52 @@ export function GameHUD() {
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL BANCO DE ORBES */}
+            {showOrbModal && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 100,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'auto'
+                }} onClick={() => setShowOrbModal(false)}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+                        border: '2px solid #ef4444', borderRadius: '16px',
+                        width: '90%', maxWidth: '380px', padding: '24px',
+                        boxShadow: '0 0 30px rgba(239, 68, 68, 0.4)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Circle color="#ef4444" fill="#ef4444" size={22} /> Orbes
+                            </h2>
+                            <button onClick={() => setShowOrbModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
+                        </div>
+
+                        <div style={{
+                            textAlign: 'center',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                            borderRadius: '12px',
+                            padding: '20px 16px',
+                            marginBottom: '16px'
+                        }}>
+                            <div style={{ color: '#fecaca', fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                Você tem
+                            </div>
+                            <div style={{ color: '#fff', fontSize: '2.2rem', fontWeight: 800, lineHeight: 1 }}>
+                                {orbBank}
+                            </div>
+                            <div style={{ color: '#f87171', fontSize: '0.9rem', marginTop: '4px' }}>
+                                {orbBank === 1 ? 'orbe' : 'orbes'}
+                            </div>
+                        </div>
+
+                        <p style={{ margin: 0, textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.45 }}>
+                            Em breve você poderá trocar orbes por poderes na mesa de feitiços.
+                        </p>
                     </div>
                 </div>
             )}

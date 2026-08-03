@@ -14,6 +14,7 @@ class Player extends Schema {
 }
 type("string")(Player.prototype, "id");
 type("string")(Player.prototype, "name");
+type("string")(Player.prototype, "uid");       // Firebase uid — evita clones ao reentrar
 type("string")(Player.prototype, "model");      // modelo VRM do jogador ex: 'san.vrm'
 type("number")(Player.prototype, "x");
 type("number")(Player.prototype, "y");
@@ -89,11 +90,26 @@ class FarmaAiRoom extends Room {
     }
 
     onJoin (client, options) {
-        console.log(`[FarmaAiRoom] Jogador entrou: ${client.sessionId} | nome: ${options.name} | modelo: ${options.model}`);
-        
+        const uid = (options.uid || "").toString();
+        console.log(`[FarmaAiRoom] Jogador entrou: ${client.sessionId} | nome: ${options.name} | uid: ${uid || "-"}`);
+
+        // Remove sessões fantasma do mesmo usuário (reentrada / aba duplicada)
+        if (uid) {
+            for (const other of [...this.clients]) {
+                if (other.sessionId === client.sessionId) continue;
+                const existing = this.state.players.get(other.sessionId);
+                if (existing && existing.uid === uid) {
+                    console.log(`[FarmaAiRoom] Removendo sessão fantasma ${other.sessionId} (uid=${uid})`);
+                    this.state.players.delete(other.sessionId);
+                    try { other.leave(4000); } catch (_) { /* ignore */ }
+                }
+            }
+        }
+
         const newPlayer = new Player();
         newPlayer.id = client.sessionId;
         newPlayer.name = options.name || "Jogador";
+        newPlayer.uid = uid;
         newPlayer.model = options.model || "san.vrm";
         newPlayer.x = 0;
         newPlayer.y = 0;
