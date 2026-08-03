@@ -134,7 +134,7 @@ function DailyChestHunt() {
     return (
         <>
             <group position={chestPos}>
-                <ClonedGLB url={CHEST_URL} scale={3.6} sitOnGround />
+                <ClonedGLB url={CHEST_URL} scale={0.9} sitOnGround />
             </group>
 
             {!keyFound && (
@@ -273,7 +273,7 @@ function PotionPickup({ id, x, z, collected }) {
 
     // Não desmonta a geometria no collect — só esconde (menos hitch)
     return (
-        <group ref={ref} position={[x, 1.05, z]} scale={1.75} visible={!collected}>
+        <group ref={ref} position={[x, 1.05, z]} scale={0.875} visible={!collected}>
             <mesh position={[0, 0.15, 0]}>
                 <cylinderGeometry args={[0.14, 0.16, 0.4, 8]} />
                 <meshBasicMaterial color="#38bdf8" />
